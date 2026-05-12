@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanbanFlowConsole", "KanbanFlowConsole\KanbanFlowConsole.csproj", "{9CA1D826-FAFB-4B21-83C5-49EA23EA8683}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanbanFlowConsole.Tests", "KanbanFlowConsole.Tests\KanbanFlowConsole.Tests.csproj", "{42A05954-AAA7-4D25-9E61-2C152FFA93E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{9CA1D826-FAFB-4B21-83C5-49EA23EA8683}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CA1D826-FAFB-4B21-83C5-49EA23EA8683}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CA1D826-FAFB-4B21-83C5-49EA23EA8683}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42A05954-AAA7-4D25-9E61-2C152FFA93E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42A05954-AAA7-4D25-9E61-2C152FFA93E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42A05954-AAA7-4D25-9E61-2C152FFA93E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42A05954-AAA7-4D25-9E61-2C152FFA93E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
