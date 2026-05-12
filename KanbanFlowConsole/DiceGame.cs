@@ -36,6 +36,7 @@ public class DiceGame
         }
 
         Console.WriteLine($"\nИгра в кости: {_workers} рабочих, {_rounds} раундов\n");
+        Console.WriteLine("Столбцы: Бросок = результат кубика, Получено = от предыдущего, Передано = следующему, Накоплено = запас");
         Console.WriteLine($"{"",-12} {"Бросок",-8} {"Получено",-10} {"Передано",-10} {"Накоплено"}");
         Console.WriteLine(new string('-', 60));
 
