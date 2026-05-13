@@ -1,4 +1,4 @@
-namespace KanbanFlowConsole;
+namespace DiceGameConsole;
 
 /// <summary>
 /// Конфигурация игры.

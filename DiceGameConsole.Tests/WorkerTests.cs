@@ -1,4 +1,4 @@
-using KanbanFlowConsole;
+using DiceGameConsole;
 
 namespace KanbanFlowConsole.Tests;
 
