@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiceGameConsole.Tests", "Di
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiceGameConsole", "DiceGameConsole\DiceGameConsole.csproj", "{C6CFCD8E-C8BE-4BC7-A625-077427979DEE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanbanFlow.Tests", "KanbanFlow.Tests\KanbanFlow.Tests.csproj", "{789893F3-1798-4683-A5BD-778395A33483}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{C6CFCD8E-C8BE-4BC7-A625-077427979DEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6CFCD8E-C8BE-4BC7-A625-077427979DEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C6CFCD8E-C8BE-4BC7-A625-077427979DEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{789893F3-1798-4683-A5BD-778395A33483}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{789893F3-1798-4683-A5BD-778395A33483}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{789893F3-1798-4683-A5BD-778395A33483}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{789893F3-1798-4683-A5BD-778395A33483}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
