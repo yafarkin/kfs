@@ -1,6 +1,9 @@
 using KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Board;
+using KanbanFlowConsole.Dtos.Config;
 using KanbanFlowConsole.Dtos.History;
 using KanbanFlowConsole.Enums;
+using Task = KanbanFlowConsole.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -43,7 +46,7 @@ public class HistoryTests
     public void HistoryActivity_ContainsBoardReferences()
     {
         // Arrange
-        var task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } };
+        var task = new BoardTask { Task = new Task { Key = "TASK-1" } };
         var worker = new BoardWorker { Worker = new Worker { Login = "dev1", Role = "Backend Developer", Performance = 100 } };
         var stage = new BoardStage { Stage = new Stage { Name = "Developing", Type = StageType.Work } };
 
@@ -68,7 +71,7 @@ public class HistoryTests
     public void BoardTask_TransitionHistory_IsInitialized()
     {
         // Arrange
-        var task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } };
+        var task = new BoardTask { Task = new Task { Key = "TASK-1" } };
 
         // Act & Assert
         Assert.NotNull(task.TransitionHistory);
@@ -79,7 +82,7 @@ public class HistoryTests
     public void BoardTask_AddTransitionHistory()
     {
         // Arrange
-        var task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } };
+        var task = new BoardTask { Task = new Task { Key = "TASK-1" } };
         var fromStage = new BoardStage { Stage = new Stage { Name = "Todo", Type = StageType.Buffer } };
         var toStage = new BoardStage { Stage = new Stage { Name = "Developing", Type = StageType.Work } };
         var day = new HistoryDay { DayNumber = 1 };
@@ -113,7 +116,7 @@ public class HistoryTests
     public void BoardTask_CurrentStage_CanBeSet()
     {
         // Arrange
-        var task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } };
+        var task = new BoardTask { Task = new Task { Key = "TASK-1" } };
         var stage = new BoardStage { Stage = new Stage { Name = "Developing", Type = StageType.Work } };
 
         // Act

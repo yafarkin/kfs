@@ -1,24 +1,27 @@
+using KanbanFlowConsole.Dtos.Board;
+using KanbanFlowConsole.Dtos.Config;
+
 namespace KanbanFlowConsole.Mappers;
 
 public static class BoardStageMapper
 {
-    public static Dtos.BoardStage MapToBoardStage(Dtos.Stage stage)
+    public static BoardStage MapToBoardStage(Stage stage)
     {
-        return new Dtos.BoardStage
+        return new BoardStage
         {
             Stage = stage,
-            PrevStages = new List<Dtos.BoardStage>(),
-            NextStages = new List<Dtos.BoardStage>(),
-            Tasks = new List<Dtos.BoardTask>()
+            PrevStages = new List<BoardStage>(),
+            NextStages = new List<BoardStage>(),
+            Tasks = new List<BoardTask>()
         };
     }
 
-    public static Dictionary<string, Dtos.BoardStage> MapToBoardStageDictionary(IEnumerable<Dtos.Stage> stages)
+    public static Dictionary<string, BoardStage> MapToBoardStageDictionary(IEnumerable<Stage> stages)
     {
         return stages.ToDictionary(s => s.Name, MapToBoardStage);
     }
 
-    public static void LinkStages(Dictionary<string, Dtos.BoardStage> stageMap, IEnumerable<Dtos.Stage> stageConfigs)
+    public static void LinkStages(Dictionary<string, BoardStage> stageMap, IEnumerable<Stage> stageConfigs)
     {
         foreach (var stageConfig in stageConfigs)
         {
@@ -44,7 +47,7 @@ public static class BoardStageMapper
         }
     }
 
-    public static List<Dtos.BoardStage> MapToBoardStages(IEnumerable<Dtos.Stage> stages)
+    public static List<BoardStage> MapToBoardStages(IEnumerable<Stage> stages)
     {
         var stageMap = MapToBoardStageDictionary(stages);
         LinkStages(stageMap, stages);

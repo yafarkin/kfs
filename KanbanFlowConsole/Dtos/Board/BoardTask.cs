@@ -1,6 +1,7 @@
 using KanbanFlowConsole.Dtos.History;
+using Task = KanbanFlowConsole.Dtos.Config.Task;
 
-namespace KanbanFlowConsole.Dtos;
+namespace KanbanFlowConsole.Dtos.Board;
 
 public sealed record BoardTask
 {
@@ -8,7 +9,10 @@ public sealed record BoardTask
 
     public decimal Progress { get; set; }
 
-    public BoardWorker? Assignee { get; set; }
+    /// <summary>
+    ///     Воркер, назначенный на задачу
+    /// </summary>
+    public BoardWorker? Worker { get; set; }
 
     /// <summary>
     ///     История всех переходов задачи (для расчёта метрик)
@@ -19,30 +23,4 @@ public sealed record BoardTask
     ///     Текущая стадия задачи
     /// </summary>
     public BoardStage? CurrentStage { get; set; }
-}
-
-/// <summary>
-///     Запись о переходе задачи в истории
-/// </summary>
-public sealed record TaskTransitionHistory
-{
-    /// <summary>
-    ///     Событие истории, связанное с переходом
-    /// </summary>
-    public HistoryActivity Activity { get; set; } = null!;
-
-    /// <summary>
-    ///     Исходная стадия (может быть null для первой стадии)
-    /// </summary>
-    public BoardStage? FromStage { get; set; }
-
-    /// <summary>
-    ///     Целевая стадия
-    /// </summary>
-    public BoardStage ToStage { get; set; } = null!;
-
-    /// <summary>
-    ///     Тик симуляции, когда произошёл переход
-    /// </summary>
-    public int Tick { get; set; }
 }

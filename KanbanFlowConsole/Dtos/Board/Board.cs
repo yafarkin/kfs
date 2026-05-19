@@ -1,4 +1,4 @@
-namespace KanbanFlowConsole.Dtos;
+namespace KanbanFlowConsole.Dtos.Board;
 
 public sealed record Board
 {

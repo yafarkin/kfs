@@ -1,5 +1,8 @@
 using KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Board;
+using KanbanFlowConsole.Dtos.Config;
 using KanbanFlowConsole.Enums;
+using Task = KanbanFlowConsole.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -14,9 +17,9 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-3" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } },
+                new() { Task = new Task { Key = "TASK-3" } }
             }
         };
 
@@ -33,8 +36,8 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = null },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } }
             }
         };
 
@@ -51,8 +54,8 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 3 },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } }
             }
         };
 
@@ -69,9 +72,9 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-3" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } },
+                new() { Task = new Task { Key = "TASK-3" } }
             }
         };
 
@@ -88,8 +91,8 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } }
             }
         };
 
@@ -106,7 +109,7 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = null },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } }
+                new() { Task = new Task { Key = "TASK-1" } }
             }
         };
 
@@ -123,8 +126,8 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 3 },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } }
             }
         };
 
@@ -141,8 +144,8 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } }
             }
         };
 
@@ -159,9 +162,9 @@ public class BoardStageTests
             Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
             Tasks = new List<BoardTask>
             {
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } },
-                new() { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-3" } }
+                new() { Task = new Task { Key = "TASK-1" } },
+                new() { Task = new Task { Key = "TASK-2" } },
+                new() { Task = new Task { Key = "TASK-3" } }
             }
         };
 

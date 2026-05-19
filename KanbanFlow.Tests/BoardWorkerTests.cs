@@ -1,5 +1,8 @@
 using KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Board;
+using KanbanFlowConsole.Dtos.Config;
 using KanbanFlowConsole.Enums;
+using Task = KanbanFlowConsole.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -22,7 +25,7 @@ public class BoardWorkerTests
             {
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-1" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 }
             }
@@ -49,7 +52,7 @@ public class BoardWorkerTests
             {
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-1" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 }
             }
@@ -76,12 +79,12 @@ public class BoardWorkerTests
             {
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-1" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 },
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-2" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 }
             }
@@ -108,7 +111,7 @@ public class BoardWorkerTests
             {
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-1" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 }
             }
@@ -129,17 +132,17 @@ public class BoardWorkerTests
             {
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-1" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-1" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 },
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-2" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-2" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Testing" } }
                 },
                 new()
                 {
-                    Task = new BoardTask { Task = new KanbanFlowConsole.Dtos.Task { Key = "TASK-3" } },
+                    Task = new BoardTask { Task = new Task { Key = "TASK-3" } },
                     Stage = new BoardStage { Stage = new Stage { Name = "Developing" } }
                 }
             }

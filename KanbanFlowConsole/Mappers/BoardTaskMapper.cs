@@ -1,25 +1,29 @@
+using KanbanFlowConsole.Dtos.Board;
+using KanbanFlowConsole.Dtos.Config;
+using Task = KanbanFlowConsole.Dtos.Config.Task;
+
 namespace KanbanFlowConsole.Mappers;
 
 public static class BoardTaskMapper
 {
-    public static Dtos.BoardTask MapToBoardTask(Dtos.Task task, decimal initialProgress = 0)
+    public static BoardTask MapToBoardTask(Task task, decimal initialProgress = 0)
     {
-        return new Dtos.BoardTask
+        return new BoardTask
         {
             Task = task,
             Progress = initialProgress
         };
     }
 
-    public static List<Dtos.BoardTask> MapToBoardTasks(IEnumerable<Dtos.Task> tasks, decimal initialProgress = 0)
+    public static List<BoardTask> MapToBoardTasks(IEnumerable<Task> tasks, decimal initialProgress = 0)
     {
         return tasks.Select(t => MapToBoardTask(t, initialProgress)).ToList();
     }
 
     public static void DistributeTasksToStartStages(
-        List<Dtos.BoardTask> boardTasks,
-        Dictionary<string, Dtos.BoardStage> stageMap,
-        IEnumerable<Dtos.Stage> stageConfigs)
+        List<BoardTask> boardTasks,
+        Dictionary<string, BoardStage> stageMap,
+        IEnumerable<Stage> stageConfigs)
     {
         var startStages = stageConfigs.Where(s => s.IsStart).ToList();
         if (startStages.Count == 0)

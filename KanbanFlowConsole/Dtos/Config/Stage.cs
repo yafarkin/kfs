@@ -1,6 +1,6 @@
 using KanbanFlowConsole.Enums;
 
-namespace KanbanFlowConsole.Dtos;
+namespace KanbanFlowConsole.Dtos.Config;
 
 public sealed record Stage
 {

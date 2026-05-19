@@ -1,3 +1,4 @@
+using KanbanFlowConsole.Dtos.Config;
 using KanbanFlowConsole.Dtos.History;
 using KanbanFlowConsole.Mappers;
 
@@ -6,7 +7,7 @@ namespace KanbanFlowConsole.Dtos;
 public sealed record Simulation
 {
     public SimulationConfig Config { get; private set; } = null!;
-    public Board Board { get; set; } = null!;
+    public Board.Board Board { get; set; } = null!;
 
     /// <summary>
     ///     История действий симуляции по дням

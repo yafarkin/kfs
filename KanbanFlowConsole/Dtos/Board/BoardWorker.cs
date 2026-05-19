@@ -1,8 +1,15 @@
-namespace KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Config;
+
+namespace KanbanFlowConsole.Dtos.Board;
 
 public sealed record BoardWorker
 {
     public Worker Worker { get; set; } = null!;
+
+    /// <summary>
+    ///     WIP лимит воркера (берётся из конфигурации)
+    /// </summary>
+    public int? WipLimit => Worker.WipLimit;
 
     /// <summary>
     ///     Текущие задачи воркера с указанием стадий
@@ -17,21 +24,5 @@ public sealed record BoardWorker
     /// <summary>
     ///     Доступен ли воркер для взятия новых задач (с учётом WIP лимита)
     /// </summary>
-    public bool IsAvailable => !Worker.WipLimit.HasValue || WipCount < Worker.WipLimit.Value;
-}
-
-/// <summary>
-///     Назначение задачи воркеру (связь задачи и стадии)
-/// </summary>
-public sealed record BoardTaskAssignment
-{
-    /// <summary>
-    ///     Задача
-    /// </summary>
-    public BoardTask Task { get; set; } = null!;
-
-    /// <summary>
-    ///     Стадия, на которой воркер работает над задачей
-    /// </summary>
-    public BoardStage Stage { get; set; } = null!;
+    public bool IsAvailable => !WipLimit.HasValue || WipCount < WipLimit.Value;
 }

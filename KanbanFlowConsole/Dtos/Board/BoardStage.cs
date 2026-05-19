@@ -1,4 +1,6 @@
-namespace KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Config;
+
+namespace KanbanFlowConsole.Dtos.Board;
 
 public sealed record BoardStage
 {
@@ -13,6 +15,11 @@ public sealed record BoardStage
     public List<BoardTask> Tasks { get; set; } = new();
 
     /// <summary>
+    ///     WIP лимит стадии (берётся из конфигурации)
+    /// </summary>
+    public int? WipLimit => Stage.WipLimit;
+
+    /// <summary>
     ///     Текущее количество задач на стадии (WIP)
     /// </summary>
     public int WipCount => Tasks.Count;
@@ -20,10 +27,10 @@ public sealed record BoardStage
     /// <summary>
     ///     Превышает ли стадия свой WIP лимит
     /// </summary>
-    public bool IsWipExceeded => Stage.WipLimit.HasValue && WipCount > Stage.WipLimit.Value;
+    public bool IsWipExceeded => WipLimit.HasValue && WipCount > WipLimit.Value;
 
     /// <summary>
     ///     Доступна ли стадия для приёма новых задач (с учётом WIP лимита)
     /// </summary>
-    public bool CanAcceptTasks => !Stage.WipLimit.HasValue || WipCount < Stage.WipLimit.Value;
+    public bool CanAcceptTasks => !WipLimit.HasValue || WipCount < WipLimit.Value;
 }

@@ -1,10 +1,12 @@
 using KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Board;
+using KanbanFlowConsole.Dtos.Config;
 
 namespace KanbanFlowConsole.Mappers;
 
 public static class BoardMapper
 {
-    public static Dtos.Board MapToBoard(SimulationConfig config)
+    public static Board MapToBoard(SimulationConfig config)
     {
         var boardWorkers = BoardWorkerMapper.MapToBoardWorkers(config.Workers);
         var boardStages = BoardStageMapper.MapToBoardStages(config.Workflow.Stages);

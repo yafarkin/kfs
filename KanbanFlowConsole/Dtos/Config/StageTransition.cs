@@ -1,4 +1,4 @@
-namespace KanbanFlowConsole.Dtos;
+namespace KanbanFlowConsole.Dtos.Config;
 
 /// <summary>
 ///     Переход к следующей стадии в DAG

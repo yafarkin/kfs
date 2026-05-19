@@ -1,6 +1,6 @@
 using KanbanFlowConsole.Enums;
 
-namespace KanbanFlowConsole.Dtos;
+namespace KanbanFlowConsole.Dtos.Config;
 
 public sealed record Task
 {
@@ -8,7 +8,6 @@ public sealed record Task
     public string? Summary { get; set; }
     public TShirtType? ShirtType { get; set; }
     public string? Role { get; set; }
-    public string? Developer { get; set; }
     public List<Task>? Children { get; set; }
 
     /// <summary>

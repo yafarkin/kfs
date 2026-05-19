@@ -1,4 +1,4 @@
-namespace KanbanFlowConsole.Dtos;
+namespace KanbanFlowConsole.Dtos.Config;
 
 public sealed record Workflow
 {

@@ -1,3 +1,5 @@
+using KanbanFlowConsole.Dtos.Board;
+
 namespace KanbanFlowConsole.Dtos.History;
 
 /// <summary>
