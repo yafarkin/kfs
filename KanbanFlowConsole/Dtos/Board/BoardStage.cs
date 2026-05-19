@@ -33,4 +33,19 @@ public sealed record BoardStage
     ///     Доступна ли стадия для приёма новых задач (с учётом WIP лимита)
     /// </summary>
     public bool CanAcceptTasks => !WipLimit.HasValue || WipCount < WipLimit.Value;
+
+    /// <summary>
+    ///     Требуется ли воркер, отличный от того, что работал в указанной стадии
+    /// </summary>
+    public bool RequiresDifferentResource => Stage.RequiresDifferentResource;
+
+    /// <summary>
+    ///     Имя стадии, откуда нельзя брать того же воркера
+    /// </summary>
+    public string? RequiresDifferentResourceFromStage => Stage.RequiresDifferentResourceFromStage;
+
+    /// <summary>
+    ///     Стадия, откуда нельзя брать того же воркера (если задана)
+    /// </summary>
+    public BoardStage? ExcludedStage { get; set; }
 }

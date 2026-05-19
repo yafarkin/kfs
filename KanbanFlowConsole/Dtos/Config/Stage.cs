@@ -10,10 +10,20 @@ public sealed record Stage
     public bool IsLeadTimeStart { get; set; }
     public int? WipLimit { get; set; }
     public string[] AllowedRoles { get; set; } = [];
+
+    /// <summary>
+    ///     Требуется ли, чтобы воркер отличался от того, что работал в предыдущей стадии
+    /// </summary>
     public bool RequiresDifferentResource { get; set; }
 
     /// <summary>
-    /// Переходы к следующим стадиям (DAG)
+    ///     Имя стадии, откуда нельзя брать того же воркера (если RequiresDifferentResource = true)
+    ///     Если null, проверяется последняя стадия, где воркер выполнял задачу
+    /// </summary>
+    public string? RequiresDifferentResourceFromStage { get; set; }
+
+    /// <summary>
+    ///     Переходы к следующим стадиям (DAG)
     /// </summary>
     public List<StageTransition> Transitions { get; set; } = new();
 }

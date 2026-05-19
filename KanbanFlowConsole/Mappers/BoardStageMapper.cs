@@ -44,6 +44,15 @@ public static class BoardStageMapper
                     boardStage.NextStages.Add(nextStage);
                 }
             }
+
+            // Устанавливаем исключаемую стадию для RequiresDifferentResource
+            if (stageConfig.RequiresDifferentResource && stageConfig.RequiresDifferentResourceFromStage != null)
+            {
+                if (stageMap.TryGetValue(stageConfig.RequiresDifferentResourceFromStage, out var excludedStage))
+                {
+                    boardStage.ExcludedStage = excludedStage;
+                }
+            }
         }
     }
 
