@@ -1,4 +1,5 @@
 using KanbanFlowConsole.Dtos;
+using KanbanFlowConsole.Dtos.Config;
 using KanbanFlowConsole.Dtos.History;
 using KanbanFlowConsole.Enums;
 using KanbanFlowConsole.Services;
@@ -156,6 +157,79 @@ public class SimulationSmokeTests
         }
     }
 
+    [Fact]
+    public void Simulation_FullLifecycle_StageProgressPercentIsApplied()
+    {
+        // Arrange
+        var config = TestConfigFactory.CreateDefaultConfig();
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+        var service = new TaskMovementService(simulation);
+
+        // Получаем стадии для проверки
+        var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+        var testingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Testing");
+        var releaseStage = simulation.Board.Stages.First(s => s.Stage.Name == "Release Preparation");
+
+        // Получаем задачи
+        var taskL = simulation.Board.Tasks.First(t => t.Task.Key == "TASK-1"); // L = 15 дней
+        var taskM = simulation.Board.Tasks.First(t => t.Task.Key == "TASK-2"); // M = 6 дней
+
+        // Act - первый шаг симуляции (задачи переходят в Developing)
+        service.ProcessMovements();
+
+        // Assert - Проверяем расчёт времени для стадий
+        // Developing (100%): L = 15 дней, M = 6 дней
+        Assert.Equal(15, developingStage.Stage.GetDaysForTask(TShirtType.L));
+        Assert.Equal(6, developingStage.Stage.GetDaysForTask(TShirtType.M));
+        
+        // Testing (30%): L = 15 * 0.3 = 4.5 → 5 дней, M = 6 * 0.3 = 1.8 → 2 дня
+        Assert.Equal(5, testingStage.Stage.GetDaysForTask(TShirtType.L));
+        Assert.Equal(2, testingStage.Stage.GetDaysForTask(TShirtType.M));
+        
+        // Release Preparation (20%): L = 15 * 0.2 = 3 дня, M = 6 * 0.2 = 1.2 → 2 дня
+        Assert.Equal(3, releaseStage.Stage.GetDaysForTask(TShirtType.L));
+        Assert.Equal(2, releaseStage.Stage.GetDaysForTask(TShirtType.M));
+
+        // Проверяем что буферные стадии не имеют расчёта (процент = 0 или не используется)
+        var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");
+        var readyForTestingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Ready for Testing");
+        
+        // Буферные стадии не должны иметь StageProgressPercent = 100 (по умолчанию)
+        // но они не являются рабочими, поэтому расчёт времени для них не применяется
+        Assert.Equal(StageType.Buffer, todoStage.Stage.Type);
+        Assert.Equal(StageType.Buffer, readyForTestingStage.Stage.Type);
+    }
+
+    [Fact]
+    public void Simulation_FullLifecycle_WorkerCalculatesDaysForTask()
+    {
+        // Arrange
+        var config = TestConfigFactory.CreateDefaultConfig();
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+
+        var devWorker = simulation.Board.Workers.First(w => w.Worker.Role == "Backend Developer");
+        var qaWorker = simulation.Board.Workers.First(w => w.Worker.Role == "QA Engineer");
+
+        var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+        var testingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Testing");
+
+        // Act & Assert - Проверяем расчёт дней worker'ами
+        // Dev worker на Developing (100%): L = 15 дней
+        Assert.Equal(15, devWorker.Worker.GetDaysForTask(developingStage.Stage, TShirtType.L));
+        
+        // Dev worker на Release Preparation (20%): L = 3 дня
+        var releaseStage = simulation.Board.Stages.First(s => s.Stage.Name == "Release Preparation");
+        Assert.Equal(3, devWorker.Worker.GetDaysForTask(releaseStage.Stage, TShirtType.L));
+        
+        // QA worker на Testing (30%): M = 2 дня
+        Assert.Equal(2, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.M));
+        
+        // QA worker на Testing (30%): L = 5 дней
+        Assert.Equal(5, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.L));
+    }
+
     /// <summary>
     ///     Запускает симуляцию до тех пор, пока все задачи не достигнут стадии Done
     /// </summary>
@@ -173,7 +247,7 @@ public class SimulationSmokeTests
             service.ProcessMovements();
 
             // Проверяем, все ли задачи в Done
-            var doneStage = simulation.Board.Stages.FirstOrDefault(s => s.Stage.Name == "Done");
+            var doneStage = simulation.Board.Stages.SingleOrDefault(s => s.Stage.Name == "Done");
             if (doneStage != null && doneStage.Tasks.Count == simulation.Board.Tasks.Count)
             {
                 break;

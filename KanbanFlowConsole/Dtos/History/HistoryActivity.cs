@@ -92,4 +92,14 @@ public sealed record HistoryActivity
     ///     Обратная ссылка на день, в котором произошло событие
     /// </summary>
     public HistoryDay? Day { get; set; }
+
+    /// <summary>
+    ///     Тик начала работы над задачей (для метрик flow efficiency)
+    /// </summary>
+    public int? StartedAtTick { get; set; }
+
+    /// <summary>
+    ///     Тик завершения работы над задачей (для метрик throughput)
+    /// </summary>
+    public int? CompletedAtTick { get; set; }
 }

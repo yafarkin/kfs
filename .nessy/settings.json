@@ -4,7 +4,8 @@
       "Bash(dotnet *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(sed *)"
+      "Bash(sed *)",
+      "Bash(git stash)"
     ]
   },
   "$version": 3

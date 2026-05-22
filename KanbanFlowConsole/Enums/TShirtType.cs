@@ -25,3 +25,25 @@ public enum TShirtType
     /// </summary>
     L
 }
+
+/// <summary>
+///     Методы расширения для TShirtType
+/// </summary>
+public static class TShirtTypeExtensions
+{
+    /// <summary>
+    ///     Возвращает количество дней для выполнения задачи (по верхней границе)
+    ///     Используется для расчёта времени выполнения задачи на стадии
+    /// </summary>
+    public static int GetDaysToComplete(this TShirtType shirtType)
+    {
+        return shirtType switch
+        {
+            TShirtType.XS => 1,
+            TShirtType.S => 3,
+            TShirtType.M => 6,
+            TShirtType.L => 15,
+            _ => 1
+        };
+    }
+}

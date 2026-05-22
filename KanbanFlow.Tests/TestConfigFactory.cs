@@ -27,6 +27,7 @@ public static class TestConfigFactory
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = ["Backend Developer"],
+            StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
         };
 
@@ -47,6 +48,7 @@ public static class TestConfigFactory
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = ["QA Engineer"],
+            StageProgressPercent = 30,
             Transitions = new List<StageTransition>()
         };
 
@@ -57,6 +59,7 @@ public static class TestConfigFactory
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = ["Backend Developer"],
+            StageProgressPercent = 20,
             Transitions = new List<StageTransition>()
         };
 

@@ -113,8 +113,17 @@ public sealed class TaskMovementService
         // Определяем требуемую роль из задачи
         var requiredRole = task.Task.Role;
 
+        // Проверяем есть ли требование к конкретному worker'у для этой стадии
+        var requiredWorkerLogin = GetRequiredWorkerForStage(task, toStage);
+
         foreach (var worker in _simulation.Board.Workers)
         {
+            // Если задача требует конкретного worker'а для этой стадии — пропускаем остальных
+            if (!string.IsNullOrEmpty(requiredWorkerLogin) && worker.Worker.Login != requiredWorkerLogin)
+            {
+                continue;
+            }
+
             // Проверяем роль воркера
             if (!string.IsNullOrEmpty(requiredRole) && worker.Worker.Role != requiredRole)
             {
@@ -152,6 +161,25 @@ public sealed class TaskMovementService
                 // Только один воркер - не может выполнить требование "другой ресурс"
                 return null;
             }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     Получает требуемого worker'а для задачи на конкретной стадии из AcceptableWorkers
+    /// </summary>
+    private static string? GetRequiredWorkerForStage(BoardTask task, BoardStage stage)
+    {
+        if (task.Task.AcceptableWorkers == null || task.Task.AcceptableWorkers.Count == 0)
+        {
+            return null;
+        }
+
+        // Ищем требование для текущей стадии
+        if (task.Task.AcceptableWorkers.TryGetValue(stage.Stage.Name, out var requiredWorker))
+        {
+            return requiredWorker;
         }
 
         return null;
@@ -218,20 +246,61 @@ public sealed class TaskMovementService
         }
         else
         {
+            // Задача перемещается в буферную стадию — освобождаем воркера
+            var previousWorker = task.Worker;
+            if (previousWorker != null)
+            {
+                var oldAssignments = previousWorker.Assignments.Where(a => a.Task == task).ToList();
+                foreach (var oldAssignment in oldAssignments)
+                {
+                    previousWorker.Assignments.Remove(oldAssignment);
+                }
+            }
             task.Worker = null;
         }
 
         // Добавляем запись в историю
+        var workerInfo = worker != null ? $" (worker: {worker.Worker.Login})" : "";
         var activity = new HistoryActivity
         {
             Type = ActivityType.TaskMoved,
-            Description = $"Задача {task.Task.Key} перемещена из {fromStage.Stage.Name} в {toStage.Stage.Name}",
+            Description = $"Задача {task.Task.Key} перемещена из {fromStage.Stage.Name} в {toStage.Stage.Name}{workerInfo}",
             Task = task,
             Worker = worker,
             Stage = toStage
         };
 
         _simulation.LogActivity(activity);
+
+        // Если задача перемещена на рабочую стадию с worker'ом — записываем что worker взял задачу
+        if (toStage.Stage.Type == StageType.Work && worker != null)
+        {
+            var workerTookTaskActivity = new HistoryActivity
+            {
+                Type = ActivityType.WorkerTookTask,
+                Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {toStage.Stage.Name}",
+                Task = task,
+                Worker = worker,
+                Stage = toStage,
+                StartedAtTick = _simulation.CurrentTick
+            };
+            _simulation.LogActivity(workerTookTaskActivity);
+        }
+
+        // Если задача была завершена на предыдущей стадии — записываем что worker завершил задачу
+        if (fromStage.Stage.Type == StageType.Work && task.Progress >= 100)
+        {
+            var workerCompletedTaskActivity = new HistoryActivity
+            {
+                Type = ActivityType.WorkerCompletedTask,
+                Description = $"Worker {task.Worker?.Worker.Login} завершил задачу {task.Task.Key} на стадии {fromStage.Stage.Name}",
+                Task = task,
+                Worker = task.Worker,
+                Stage = fromStage,
+                CompletedAtTick = _simulation.CurrentTick
+            };
+            _simulation.LogActivity(workerCompletedTaskActivity);
+        }
 
         // Добавляем запись в историю переходов задачи
         task.TransitionHistory.Add(new TaskTransitionHistory
