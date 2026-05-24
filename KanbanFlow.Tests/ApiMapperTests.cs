@@ -409,4 +409,181 @@ public class ApiMapperTests
             }
         };
     }
+
+    #region Simulation State Tests
+
+    [Fact]
+    public void ToApiDto_Simulation_ReturnsFullState()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        simulation.StartNewDay();
+        simulation.AdvanceTick(24);
+
+        // Act
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Assert
+        Assert.NotNull(apiState);
+        Assert.NotNull(apiState.Config);
+        Assert.NotNull(apiState.Board);
+        Assert.NotNull(apiState.History);
+        Assert.Equal(1, apiState.CurrentDay);
+        Assert.Equal(24, apiState.CurrentTick);
+        Assert.Single(apiState.History);
+    }
+
+    [Fact]
+    public void ToApiDto_Board_ContainsStagesWorkersTasks()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+
+        // Act
+        var apiState = ApiMapper.ToApiDto(simulation);
+        var board = apiState.Board;
+
+        // Assert
+        Assert.NotNull(board);
+        Assert.Equal(3, board.Stages.Count);
+        Assert.Equal(2, board.Workers.Count);
+        Assert.Equal(2, board.Tasks.Count);
+    }
+
+    [Fact]
+    public void ToApiDto_BoardStage_ContainsCorrectInfo()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+
+        // Act
+        var apiState = ApiMapper.ToApiDto(simulation);
+        var todoStage = Assert.Single(apiState.Board.Stages, s => s.Name == "Todo");
+
+        // Assert
+        Assert.Equal(KanbanFlowConsole.Enums.StageType.Buffer, todoStage.Type);
+        Assert.True(todoStage.IsStart);
+        Assert.Single(todoStage.NextStageNames, n => n == "Developing");
+        // Задачи находятся на стадии Todo после инициализации
+        Assert.Equal(2, todoStage.TaskKeys.Count);
+        Assert.Contains("TASK-1", todoStage.TaskKeys);
+        Assert.Contains("TASK-2", todoStage.TaskKeys);
+    }
+
+    [Fact]
+    public void ToApiDto_BoardWorker_ContainsCorrectInfo()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+
+        // Act
+        var apiState = ApiMapper.ToApiDto(simulation);
+        var devWorker = Assert.Single(apiState.Board.Workers, w => w.Login == "dev1");
+
+        // Assert
+        Assert.Equal("Backend Developer", devWorker.Role);
+        Assert.True(devWorker.IsAvailable);
+        Assert.Empty(devWorker.AssignedTaskKeys);
+    }
+
+    [Fact]
+    public void ToApiDto_BoardTask_ContainsCorrectInfo()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+
+        // Act
+        var apiState = ApiMapper.ToApiDto(simulation);
+        var task1 = Assert.Single(apiState.Board.Tasks, t => t.Key == "TASK-1");
+
+        // Assert
+        Assert.Equal("Implement feature", task1.Summary);
+        Assert.Equal(KanbanFlowConsole.Enums.TShirtType.L, task1.ShirtType);
+        Assert.Null(task1.WorkerLogin); // Задача ещё не назначена
+        Assert.Null(task1.CurrentStageName);
+    }
+
+    [Fact]
+    public void ToDomainSimulation_RestoresBoardFromDto()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Act
+        var restoredSimulation = ApiMapper.ToDomainSimulation(apiState);
+
+        // Assert
+        Assert.NotNull(restoredSimulation.Board);
+        Assert.Equal(3, restoredSimulation.Board.Stages.Count);
+        Assert.Equal(2, restoredSimulation.Board.Workers.Count);
+        Assert.Equal(2, restoredSimulation.Board.Tasks.Count);
+    }
+
+    [Fact]
+    public void ToDomainSimulation_RestoresHistoryFromDto()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        simulation.StartNewDay();
+        simulation.LogActivity(new KanbanFlowConsole.Dtos.History.HistoryActivity
+        {
+            Type = KanbanFlowConsole.Dtos.History.ActivityType.WorkerTookTask,
+            Description = "Test activity",
+            Tick = 5
+        });
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Act
+        var restoredSimulation = ApiMapper.ToDomainSimulation(apiState);
+
+        // Assert
+        Assert.Single(restoredSimulation.History);
+        Assert.Single(restoredSimulation.History[0].Activities);
+    }
+
+    [Fact]
+    public void ToApiDto_HistoryDay_ContainsActivities()
+    {
+        // Arrange
+        var config = CreateDomainConfig();
+        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        simulation.StartNewDay();
+        simulation.AdvanceTick(10); // Устанавливаем тик перед логированием
+        simulation.LogActivity(new KanbanFlowConsole.Dtos.History.HistoryActivity
+        {
+            Type = KanbanFlowConsole.Dtos.History.ActivityType.TaskMoved,
+            Description = "Task moved",
+            Progress = 50
+        });
+
+        // Act
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Assert
+        var historyDay = Assert.Single(apiState.History);
+        Assert.Equal(1, historyDay.DayNumber);
+        var activity = Assert.Single(historyDay.Activities);
+        Assert.Equal(KanbanFlowConsole.Dtos.History.ActivityType.TaskMoved, activity.Type);
+        Assert.Equal(10, activity.Tick); // Tick устанавливается из CurrentTick симуляции
+        Assert.Equal("Task moved", activity.Description);
+        Assert.Equal(50, activity.Progress);
+    }
+
+    #endregion
 }
