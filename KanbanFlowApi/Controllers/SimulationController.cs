@@ -22,6 +22,22 @@ public class SimulationController : ControllerBase
     }
 
     /// <summary>
+    /// Инициализировать новую симуляцию из конфигурации.
+    /// Возвращает начальное состояние для передачи в simulate-day.
+    /// </summary>
+    [HttpPost("init")]
+    public ActionResult<ApiSimulationStateDto> InitSimulation([FromBody] ApiSimulationConfigDto config)
+    {
+        // Создаём доменную симуляцию
+        var domainConfig = ApiMapper.ToDomainConfig(config);
+        var simulation = new Simulation();
+        simulation.InitFromConfig(domainConfig);
+
+        // Возвращаем начальное состояние
+        return Ok(ApiMapper.ToApiDto(simulation));
+    }
+
+    /// <summary>
     /// Выполнить расчёт одного дня симуляции.
     /// Принимает полное состояние симуляции (конфиг + доска + история) и возвращает обновлённое состояние.
     /// Можно использовать результат предыдущего вызова для симуляции следующего дня.
@@ -81,6 +97,13 @@ public class SimulationController : ControllerBase
         var tasksNotInDone = simulation.Board.Tasks
             .Where(t => t.CurrentStage != null && t.CurrentStage.Stage.Name != "Done")
             .ToList();
+
+        // Если все задачи без стадии (новая симуляция) — это нормально
+        var allTasksWithoutStage = simulation.Board.Tasks.All(t => t.CurrentStage == null);
+        if (allTasksWithoutStage)
+        {
+            return ValidationResult.Valid();
+        }
 
         if (!tasksNotInDone.Any())
         {

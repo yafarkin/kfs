@@ -5,7 +5,16 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(sed *)",
-      "Bash(git stash)"
+      "Bash(git stash)",
+      "Bash(mkdir *)",
+      "Bash(sleep *)",
+      "Bash(curl *)",
+      "Bash(python3 *)",
+      "Bash(pkill *)",
+      "Bash(true)",
+      "Bash(cd *)",
+      "Bash(head *)",
+      "Bash(nohup *)"
     ]
   },
   "$version": 3
