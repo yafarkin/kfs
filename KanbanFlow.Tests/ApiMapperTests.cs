@@ -1,0 +1,412 @@
+using KanbanFlowApi.Dtos;
+using KanbanFlowApi.Mappers;
+using KanbanFlowConsole.Dtos.Config;
+using KanbanFlowConsole.Enums;
+using Stage = KanbanFlowConsole.Dtos.Config.Stage;
+using Task = KanbanFlowConsole.Dtos.Config.Task;
+
+namespace KanbanFlow.Tests;
+
+public class ApiMapperTests
+{
+    [Fact]
+    public void ToApiDto_ConvertsDomainConfig_ToApiDto()
+    {
+        // Arrange
+        var domainConfig = CreateDomainConfig();
+
+        // Act
+        var apiDto = ApiMapper.ToApiDto(domainConfig);
+
+        // Assert
+        Assert.NotNull(apiDto);
+        Assert.Equal(42, apiDto.Seed);
+        Assert.Equal(2, apiDto.Workers.Count);
+        Assert.Equal(2, apiDto.Tasks.Count);
+        Assert.Equal(3, apiDto.Workflow.Stages.Count);
+    }
+
+    [Fact]
+    public void ToApiDto_Workers_MappedCorrectly()
+    {
+        // Arrange
+        var domainConfig = CreateDomainConfig();
+
+        // Act
+        var apiDto = ApiMapper.ToApiDto(domainConfig);
+
+        // Assert
+        var devWorker = Assert.Single(apiDto.Workers, w => w.Login == "dev1");
+        Assert.Equal("Backend Developer", devWorker.Role);
+        Assert.Equal(100, devWorker.Performance);
+    }
+
+    [Fact]
+    public void ToApiDto_Stages_MappedCorrectly()
+    {
+        // Arrange
+        var domainConfig = CreateDomainConfig();
+
+        // Act
+        var apiDto = ApiMapper.ToApiDto(domainConfig);
+
+        // Assert
+        var todoStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Todo");
+        Assert.Equal(StageType.Buffer, todoStage.Type);
+        Assert.True(todoStage.IsStart);
+        Assert.Single(todoStage.TransitionStageNames, n => n == "Developing");
+
+        var developingStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Developing");
+        Assert.Equal(StageType.Work, developingStage.Type);
+        Assert.False(developingStage.IsStart);
+        Assert.Single(developingStage.TransitionStageNames, n => n == "Done");
+    }
+
+    [Fact]
+    public void ToApiDto_Tasks_MappedCorrectly()
+    {
+        // Arrange
+        var domainConfig = CreateDomainConfig();
+
+        // Act
+        var apiDto = ApiMapper.ToApiDto(domainConfig);
+
+        // Assert
+        var task1 = Assert.Single(apiDto.Tasks, t => t.Key == "TASK-1");
+        Assert.Equal("Implement feature", task1.Summary);
+        Assert.Equal(TShirtType.L, task1.ShirtType);
+    }
+
+    [Fact]
+    public void ToDomainConfig_ConvertsApiDto_ToDomainConfig()
+    {
+        // Arrange
+        var apiDto = CreateApiDto();
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert
+        Assert.NotNull(domainConfig);
+        Assert.Equal(42, domainConfig.Seed);
+        Assert.Equal(2, domainConfig.Workers.Count);
+        Assert.Equal(2, domainConfig.Tasks.Count);
+        Assert.Equal(3, domainConfig.Workflow.Stages.Count);
+    }
+
+    [Fact]
+    public void ToDomainConfig_Workers_MappedCorrectly()
+    {
+        // Arrange
+        var apiDto = CreateApiDto();
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert
+        var devWorker = Assert.Single(domainConfig.Workers, w => w.Login == "dev1");
+        Assert.Equal("Backend Developer", devWorker.Role);
+        Assert.Equal(100, devWorker.Performance);
+    }
+
+    [Fact]
+    public void ToDomainConfig_Stages_MappedCorrectly()
+    {
+        // Arrange
+        var apiDto = CreateApiDto();
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert
+        var todoStage = Assert.Single(domainConfig.Workflow.Stages, s => s.Name == "Todo");
+        Assert.Equal(StageType.Buffer, todoStage.Type);
+        Assert.True(todoStage.IsStart);
+        Assert.Single(todoStage.Transitions, t => t.Stage.Name == "Developing");
+
+        var developingStage = Assert.Single(domainConfig.Workflow.Stages, s => s.Name == "Developing");
+        Assert.Equal(StageType.Work, developingStage.Type);
+        Assert.False(developingStage.IsStart);
+        Assert.Single(developingStage.Transitions, t => t.Stage.Name == "Done");
+    }
+
+    [Fact]
+    public void ToDomainConfig_Transitions_ReferenceCorrectStages()
+    {
+        // Arrange
+        var apiDto = CreateApiDto();
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert - проверяем что переходы ссылаются на правильные объекты стадий
+        var todoStage = domainConfig.Workflow.Stages.First(s => s.Name == "Todo");
+        var developingStage = domainConfig.Workflow.Stages.First(s => s.Name == "Developing");
+        var doneStage = domainConfig.Workflow.Stages.First(s => s.Name == "Done");
+
+        // Todo -> Developing
+        var todoTransition = Assert.Single(todoStage.Transitions);
+        Assert.Same(developingStage, todoTransition.Stage);
+
+        // Developing -> Done
+        var developingTransition = Assert.Single(developingStage.Transitions);
+        Assert.Same(doneStage, developingTransition.Stage);
+
+        // Done - нет переходов
+        Assert.Empty(doneStage.Transitions);
+    }
+
+    [Fact]
+    public void ToDomainConfig_Tasks_MappedCorrectly()
+    {
+        // Arrange
+        var apiDto = CreateApiDto();
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert
+        var task1 = Assert.Single(domainConfig.Tasks, t => t.Key == "TASK-1");
+        Assert.Equal("Implement feature", task1.Summary);
+        Assert.Equal(TShirtType.L, task1.ShirtType);
+    }
+
+    [Fact]
+    public void RoundTrip_DomainToApiToDomain_PreservesData()
+    {
+        // Arrange
+        var originalDomain = CreateDomainConfig();
+
+        // Act - Domain -> API -> Domain
+        var apiDto = ApiMapper.ToApiDto(originalDomain);
+        var roundTripDomain = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert
+        Assert.Equal(originalDomain.Seed, roundTripDomain.Seed);
+        Assert.Equal(originalDomain.Workers.Count, roundTripDomain.Workers.Count);
+        Assert.Equal(originalDomain.Tasks.Count, roundTripDomain.Tasks.Count);
+        Assert.Equal(originalDomain.Workflow.Stages.Count, roundTripDomain.Workflow.Stages.Count);
+
+        // Проверяем воркеров
+        foreach (var originalWorker in originalDomain.Workers)
+        {
+            var roundTripWorker = Assert.Single(
+                roundTripDomain.Workers,
+                w => w.Login == originalWorker.Login);
+            Assert.Equal(originalWorker.Role, roundTripWorker.Role);
+            Assert.Equal(originalWorker.Performance, roundTripWorker.Performance);
+        }
+
+        // Проверяем задачи
+        foreach (var originalTask in originalDomain.Tasks)
+        {
+            var roundTripTask = Assert.Single(
+                roundTripDomain.Tasks,
+                t => t.Key == originalTask.Key);
+            Assert.Equal(originalTask.Summary, roundTripTask.Summary);
+            Assert.Equal(originalTask.ShirtType, roundTripTask.ShirtType);
+        }
+
+        // Проверяем стадии и переходы
+        foreach (var originalStage in originalDomain.Workflow.Stages)
+        {
+            var roundTripStage = Assert.Single(
+                roundTripDomain.Workflow.Stages,
+                s => s.Name == originalStage.Name);
+            Assert.Equal(originalStage.Type, roundTripStage.Type);
+            Assert.Equal(originalStage.Transitions.Count, roundTripStage.Transitions.Count);
+
+            // Проверяем имена целевых стадий переходов
+            var originalTargetNames = originalStage.Transitions.Select(t => t.Stage.Name).OrderBy(n => n);
+            var roundTripTargetNames = roundTripStage.Transitions.Select(t => t.Stage.Name).OrderBy(n => n);
+            Assert.Equal(originalTargetNames, roundTripTargetNames);
+        }
+    }
+
+    [Fact]
+    public void RoundTrip_ApiToDomainToApi_PreservesData()
+    {
+        // Arrange
+        var originalApi = CreateApiDto();
+
+        // Act - API -> Domain -> API
+        var domain = ApiMapper.ToDomainConfig(originalApi);
+        var roundTripApi = ApiMapper.ToApiDto(domain);
+
+        // Assert
+        Assert.Equal(originalApi.Seed, roundTripApi.Seed);
+        Assert.Equal(originalApi.Workers.Count, roundTripApi.Workers.Count);
+        Assert.Equal(originalApi.Tasks.Count, roundTripApi.Tasks.Count);
+        Assert.Equal(originalApi.Workflow.Stages.Count, roundTripApi.Workflow.Stages.Count);
+
+        // Проверяем стадии и transitionStageNames
+        foreach (var originalStage in originalApi.Workflow.Stages)
+        {
+            var roundTripStage = Assert.Single(
+                roundTripApi.Workflow.Stages,
+                s => s.Name == originalStage.Name);
+            Assert.Equal(originalStage.Type, roundTripStage.Type);
+            Assert.Equal(originalStage.TransitionStageNames.Count, roundTripStage.TransitionStageNames.Count);
+
+            var originalNames = originalStage.TransitionStageNames.OrderBy(n => n);
+            var roundTripNames = roundTripStage.TransitionStageNames.OrderBy(n => n);
+            Assert.Equal(originalNames, roundTripNames);
+        }
+    }
+
+    [Fact]
+    public void ToDomainConfig_EmptyTransitionStageNames_CreatesEmptyTransitions()
+    {
+        // Arrange
+        var apiDto = new ApiSimulationConfigDto
+        {
+            Seed = 1,
+            Workers = new List<ApiWorkerDto>(),
+            Workflow = new ApiWorkflowDto
+            {
+                Stages = new List<ApiStageDto>
+                {
+                    new()
+                    {
+                        Name = "Done",
+                        Type = StageType.Buffer,
+                        IsStart = false,
+                        TransitionStageNames = new List<string>() // Пустой список
+                    }
+                }
+            },
+            Tasks = new List<ApiTaskDto>()
+        };
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert
+        var doneStage = Assert.Single(domainConfig.Workflow.Stages);
+        Assert.Empty(doneStage.Transitions);
+    }
+
+    [Fact]
+    public void ToApiDto_NullAllowedRoles_MappedToEmptyList()
+    {
+        // Arrange
+        var domainConfig = CreateDomainConfig();
+
+        // Act
+        var apiDto = ApiMapper.ToApiDto(domainConfig);
+
+        // Assert
+        foreach (var stage in apiDto.Workflow.Stages)
+        {
+            Assert.NotNull(stage.AllowedRoles);
+        }
+    }
+
+    private static SimulationConfig CreateDomainConfig()
+    {
+        var todo = new Stage
+        {
+            Name = "Todo",
+            Type = StageType.Buffer,
+            IsStart = true,
+            IsLeadTimeStart = true,
+            AllowedRoles = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var developing = new Stage
+        {
+            Name = "Developing",
+            Type = StageType.Work,
+            IsStart = false,
+            IsLeadTimeStart = false,
+            AllowedRoles = ["Backend Developer"],
+            StageProgressPercent = 100,
+            Transitions = new List<StageTransition>()
+        };
+
+        var done = new Stage
+        {
+            Name = "Done",
+            Type = StageType.Buffer,
+            IsStart = false,
+            IsLeadTimeStart = false,
+            AllowedRoles = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
+        developing.Transitions.Add(new StageTransition { Stage = done, Probability = 1.0 });
+
+        return new SimulationConfig
+        {
+            Seed = 42,
+            Workers = new List<Worker>
+            {
+                new() { Login = "dev1", Role = "Backend Developer", Performance = 100 },
+                new() { Login = "qa1", Role = "QA Engineer", Performance = 100 }
+            },
+            Workflow = new Workflow
+            {
+                Stages = new List<Stage> { todo, developing, done }
+            },
+            Tasks = new List<Task>
+            {
+                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer" },
+                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer" }
+            }
+        };
+    }
+
+    private static ApiSimulationConfigDto CreateApiDto()
+    {
+        return new ApiSimulationConfigDto
+        {
+            Seed = 42,
+            Workers = new List<ApiWorkerDto>
+            {
+                new() { Login = "dev1", Role = "Backend Developer", Performance = 100 },
+                new() { Login = "qa1", Role = "QA Engineer", Performance = 100 }
+            },
+            Workflow = new ApiWorkflowDto
+            {
+                Stages = new List<ApiStageDto>
+                {
+                    new()
+                    {
+                        Name = "Todo",
+                        Type = StageType.Buffer,
+                        IsStart = true,
+                        IsLeadTimeStart = true,
+                        AllowedRoles = new List<string>(),
+                        TransitionStageNames = new List<string> { "Developing" }
+                    },
+                    new()
+                    {
+                        Name = "Developing",
+                        Type = StageType.Work,
+                        IsStart = false,
+                        IsLeadTimeStart = false,
+                        AllowedRoles = new List<string> { "Backend Developer" },
+                        StageProgressPercent = 100,
+                        TransitionStageNames = new List<string> { "Done" }
+                    },
+                    new()
+                    {
+                        Name = "Done",
+                        Type = StageType.Buffer,
+                        IsStart = false,
+                        IsLeadTimeStart = false,
+                        AllowedRoles = new List<string>(),
+                        TransitionStageNames = new List<string>()
+                    }
+                }
+            },
+            Tasks = new List<ApiTaskDto>
+            {
+                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer" },
+                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer" }
+            }
+        };
+    }
+}

@@ -18,6 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\KanbanFlowApi\KanbanFlowApi.csproj" />
       <ProjectReference Include="..\KanbanFlowConsole\KanbanFlowConsole.csproj" />
     </ItemGroup>
 
