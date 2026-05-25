@@ -11,13 +11,6 @@ public sealed record ApiWorkerDto
     public string Login { get; set; } = null!;
 
     /// <summary>
-    /// Роль исполнителя (например, Backend Developer).
-    /// Устаревшее поле, используется для обратной совместимости.
-    /// </summary>
-    [Obsolete("Используйте Skills вместо Role")]
-    public string? Role { get; set; }
-
-    /// <summary>
     /// Навыки исполнителя. Например: ["backend", "api"], ["frontend", "react"], ["qa-manual", "qa-auto"].
     /// </summary>
     public List<string> Skills { get; set; } = new();
@@ -35,5 +28,5 @@ public sealed record ApiWorkerDto
     /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
-    public override string ToString() => $"{Login} ({string.Join(", ", Skills.Any() ? Skills : [Role ?? "no skills"])})";
+    public override string ToString() => $"{Login} ({string.Join(", ", Skills)})";
 }
