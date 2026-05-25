@@ -127,7 +127,7 @@ public static class SimulationFactory
                 {
                     Key = "TASK-1",
                     Summary = "Реализовать API для пользователей",
-                    ShirtType = TShirtType.L,
+                    ShirtType = TShirtType.S,
                     Role = "Backend Developer"
                 },
                 new()
