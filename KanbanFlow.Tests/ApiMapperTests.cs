@@ -293,22 +293,6 @@ public class ApiMapperTests
         Assert.Empty(doneStage.Transitions);
     }
 
-    [Fact]
-    public void ToApiDto_NullAllowedRoles_MappedToEmptyList()
-    {
-        // Arrange
-        var domainConfig = CreateDomainConfig();
-
-        // Act
-        var apiDto = ApiMapper.ToApiDto(domainConfig);
-
-        // Assert
-        foreach (var stage in apiDto.Workflow.Stages)
-        {
-            Assert.NotNull(stage.AllowedRoles);
-        }
-    }
-
     private static SimulationConfig CreateDomainConfig()
     {
         var todo = new Stage

@@ -33,13 +33,6 @@ public sealed record ApiStageDto
     public int? WipLimit { get; set; }
 
     /// <summary>
-    /// Роли, которым разрешено работать на стадии (пусто = всем разрешено).
-    /// Устаревшее поле, используется для обратной совместимости.
-    /// </summary>
-    [Obsolete("Используйте RequiredSkills вместо AllowedRoles")]
-    public List<string> AllowedRoles { get; set; } = new();
-
-    /// <summary>
     /// Навыки, требуемые для работы на стадии.
     /// Например: ["backend"], ["qa-manual"], ["qa-auto"].
     /// </summary>
