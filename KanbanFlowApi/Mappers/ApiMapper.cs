@@ -260,10 +260,16 @@ public static class ApiMapper
         {
             var boardWorker = workersMap[workerDto.Login];
             boardWorker.Assignments = workerDto.AssignedTaskKeys
-                .Select(key => new DomainBoard.BoardTaskAssignment
+                .Select(key =>
                 {
-                    Task = tasksMap[key],
-                    Stage = tasksMap[key].CurrentStage
+                    var task = tasksMap[key];
+                    return new DomainBoard.BoardTaskAssignment
+                    {
+                        Task = task,
+                        Stage = task.CurrentStage ?? workersMap[workerDto.Login].Assignments
+                            .FirstOrDefault()?.Stage 
+                            ?? stagesMap.Values.First(s => s.Stage.IsStart)
+                    };
                 })
                 .ToList();
         }
