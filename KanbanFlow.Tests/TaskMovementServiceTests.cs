@@ -66,7 +66,14 @@ public class TaskMovementServiceTests
         service.ProcessMovements();
 
         // Assert
-        Assert.Contains(newTask, todoStage.Tasks);
+        // Задача переместится в Developing, но останется без воркера (ждёт доступного)
+        var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+        Assert.Contains(newTask, developingStage.Tasks);
+        Assert.DoesNotContain(newTask, todoStage.Tasks);
+        
+        // Новая задача должна быть без воркера
+        var newTaskInDeveloping = developingStage.Tasks.First(t => t.Task.Key == "TASK-2");
+        Assert.Null(newTaskInDeveloping.Worker);
     }
 
     [Fact]
@@ -566,14 +573,15 @@ public class TaskMovementServiceTests
         Assert.Equal("Developing", task1.CurrentStage?.Stage.Name);
         Assert.Equal(50, task1.Progress);
         Assert.Equal(dev1, task1.Worker);
-        
+
         // TASK-2 всё ещё в qa (прогресс 50%, не готова к перемещению)
         Assert.Equal("QA", task2.CurrentStage?.Stage.Name);
         Assert.Equal(50, task2.Progress);
         Assert.Equal(qa1, task2.Worker);
-        
+
         // TASK-3 всё ещё в todo (dev1 занят, а задача требует именно dev1)
         Assert.Equal("Todo", task3.CurrentStage?.Stage.Name);
+        Assert.Null(task3.Worker);
 
         // Act - Шаг 2: завершаем TASK-1 (dev1 освобождается)
         task1.Progress = 100;
@@ -772,5 +780,131 @@ public class TaskMovementServiceTests
         
         // Задача без размера = 1 день
         Assert.Equal(1, worker.GetDaysForTask(developingStage, null));
+    }
+
+    [Fact]
+    public void FindAvailableWorker_QaCannotWorkOnDeveloping_WhenSkillsDontMatch()
+    {
+        // Arrange
+        var todo = new Stage
+        {
+            Name = "Todo",
+            Type = StageType.Buffer,
+            IsStart = true,
+            IsLeadTimeStart = true,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        // Стадия Developing требует навыки backend или frontend
+        var developing = new Stage
+        {
+            Name = "Developing",
+            Type = StageType.Work,
+            IsStart = false,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["backend", "frontend"],
+            Transitions = new List<StageTransition>()
+        };
+
+        todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
+
+        var config = new SimulationConfig
+        {
+            Seed = 42,
+            Workers = new List<Worker>
+            {
+                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
+            },
+            Workflow = new Workflow
+            {
+                Stages = new List<Stage> { todo, developing }
+            },
+            Tasks = new List<TaskDto>
+            {
+                // Задача с навыками backend и qa
+                new() { Key = "TASK-1", RequiredSkills = ["backend", "qa"] }
+            }
+        };
+
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+        var service = new TaskMovementService(simulation);
+
+        // Act
+        service.ProcessMovements();
+
+        // Assert
+        // Задача должна перейти в Developing, но не быть назначенной на qa1
+        // (у qa1 нет навыков backend или frontend для стадии Developing)
+        var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+        Assert.Single(developingStage.Tasks);
+        
+        // Задача не должна быть назначена на воркера
+        var task = developingStage.Tasks[0];
+        Assert.Null(task.Worker);
+    }
+
+    [Fact]
+    public void FindAvailableWorker_BackendCanWorkOnDeveloping_WhenSkillsMatch()
+    {
+        // Arrange
+        var todo = new Stage
+        {
+            Name = "Todo",
+            Type = StageType.Buffer,
+            IsStart = true,
+            IsLeadTimeStart = true,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        // Стадия Developing требует навыки backend или frontend
+        var developing = new Stage
+        {
+            Name = "Developing",
+            Type = StageType.Work,
+            IsStart = false,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["backend", "frontend"],
+            Transitions = new List<StageTransition>()
+        };
+
+        todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
+
+        var config = new SimulationConfig
+        {
+            Seed = 42,
+            Workers = new List<Worker>
+            {
+                new() { Login = "dev1", Skills = ["backend"], Performance = 100 }
+            },
+            Workflow = new Workflow
+            {
+                Stages = new List<Stage> { todo, developing }
+            },
+            Tasks = new List<TaskDto>
+            {
+                // Задача с навыками backend и qa
+                new() { Key = "TASK-1", RequiredSkills = ["backend", "qa"] }
+            }
+        };
+
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+        var service = new TaskMovementService(simulation);
+
+        // Act
+        service.ProcessMovements();
+
+        // Assert
+        // Задача должна быть назначена на dev1, потому что у него есть backend для стадии Developing
+        var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+        Assert.Single(developingStage.Tasks);
+        
+        // Задача должна быть назначена на dev1
+        var task = developingStage.Tasks[0];
+        Assert.NotNull(task.Worker);
+        Assert.Equal("dev1", task.Worker?.Worker.Login);
     }
 }

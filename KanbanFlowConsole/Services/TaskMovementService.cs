@@ -52,7 +52,7 @@ public sealed class TaskMovementService
     }
 
     /// <summary>
-    ///     Пытается переместить задачу из предыдущей стадии в текущую
+    ///     Пытается переместить задачу из одной стадии в другую
     /// </summary>
     private bool TryMoveTask(BoardStage fromStage, BoardStage toStage)
     {
@@ -71,15 +71,21 @@ public sealed class TaskMovementService
                 continue;
             }
 
-            // Для рабочих стадий нужен исполнитель
+            // Для рабочих стадий пытаемся найти исполнителя
             BoardWorker? worker = null;
             if (toStage.Stage.Type == StageType.Work)
             {
                 worker = FindAvailableWorker(task, toStage);
-                if (worker == null)
+                
+                // Если задача требует конкретного воркера (AcceptableWorkers), но он недоступен — не перемещаем
+                var requiredWorkerLogin = GetRequiredWorkerForStage(task, toStage);
+                if (!string.IsNullOrEmpty(requiredWorkerLogin) && worker == null)
                 {
-                    continue; // Нет доступного воркера
+                    continue; // Задача ждёт конкретного воркера
                 }
+                
+                // Если воркер не найден — задача всё равно может переместиться в стадию,
+                // но будет ждать доступного воркера
             }
 
             // Выполняем перемещение
@@ -110,11 +116,14 @@ public sealed class TaskMovementService
     /// </summary>
     private BoardWorker? FindAvailableWorker(BoardTask task, BoardStage toStage)
     {
+        // Проверяем, может ли задача работать на этой стадии (пересечение навыков задачи и стадии)
+        if (!CanTaskMoveToStage(task, toStage))
+        {
+            return null;
+        }
+
         // Проверяем есть ли требование к конкретному worker'у для этой стадии
         var requiredWorkerLogin = GetRequiredWorkerForStage(task, toStage);
-
-        // Получаем требуемые навыки для этой стадии
-        var requiredSkillsForStage = GetRequiredSkillsForStage(task, toStage);
 
         foreach (var worker in _simulation.Board.Workers)
         {
@@ -124,8 +133,8 @@ public sealed class TaskMovementService
                 continue;
             }
 
-            // Проверяем, есть ли у воркера все требуемые навыки
-            if (!HasAllRequiredSkills(worker, requiredSkillsForStage))
+            // Проверяем, есть ли у воркера навыки для работы на этой стадии с этой задачей
+            if (!HasSkillsForTaskOnStage(worker, task, toStage))
             {
                 continue;
             }
@@ -153,7 +162,7 @@ public sealed class TaskMovementService
         if (toStage.RequiresDifferentResource)
         {
             var workersWithSkills = _simulation.Board.Workers
-                .Where(w => HasAllRequiredSkills(w, requiredSkillsForStage))
+                .Where(w => HasSkillsForTaskOnStage(w, task, toStage))
                 .ToList();
 
             if (workersWithSkills.Count == 1)
@@ -163,7 +172,70 @@ public sealed class TaskMovementService
             }
         }
 
+        // Если задача требует конкретного воркера (AcceptableWorkers), но он недоступен — не возвращаем null,
+        // задача может переместиться в стадию и ждать
+        // Но если это буферная стадия после Work - задача не должна перемещаться без воркера
+        if (!string.IsNullOrEmpty(requiredWorkerLogin))
+        {
+            return null;
+        }
+
         return null;
+    }
+
+    /// <summary>
+    ///     Проверяет, может ли задача работать на данной стадии (пересечение навыков)
+    ///     У задачи должен быть хотя бы один общий навык с требуемыми навыками стадии
+    /// </summary>
+    private bool CanTaskMoveToStage(BoardTask task, BoardStage toStage)
+    {
+        // Если у стадии нет требуемых навыков — задача может работать
+        if (toStage.Stage.RequiredSkills.Count == 0)
+        {
+            return true;
+        }
+
+        // Если у задачи нет требуемых навыков — задача может работать (без ограничений)
+        if (task.Task.RequiredSkills.Count == 0)
+        {
+            return true;
+        }
+
+        // Проверяем пересечение: есть ли хотя бы один общий навык между задачей и стадией
+        return task.Task.RequiredSkills.Any(skill => toStage.Stage.RequiredSkills.Contains(skill));
+    }
+
+    /// <summary>
+    ///     Проверяет, есть ли у воркера навыки для работы на данной стадии с данной задачей
+    ///     У воркера должен быть хотя бы один общий навык И со стадией, И с задачей
+    /// </summary>
+    private bool HasSkillsForTaskOnStage(BoardWorker worker, BoardTask task, BoardStage toStage)
+    {
+        var stageSkills = toStage.Stage.RequiredSkills;
+        var taskSkills = task.Task.RequiredSkills;
+
+        // Если у стадии нет требуемых навыков — проверяем только навыки задачи
+        if (stageSkills.Count == 0)
+        {
+            if (taskSkills.Count == 0)
+            {
+                return true; // Нет требований ни у стадии, ни у задачи
+            }
+            return worker.Worker.Skills.Any(skill => taskSkills.Contains(skill));
+        }
+
+        // Если у задачи нет требуемых навыков — проверяем только навыки стадии
+        if (taskSkills.Count == 0)
+        {
+            return worker.Worker.Skills.Any(skill => stageSkills.Contains(skill));
+        }
+
+        // Проверяем, что у воркера есть навык И для стадии, И для задачи
+        var workerSkills = worker.Worker.Skills;
+        var hasStageSkill = workerSkills.Any(skill => stageSkills.Contains(skill));
+        var hasTaskSkill = workerSkills.Any(skill => taskSkills.Contains(skill));
+
+        return hasStageSkill && hasTaskSkill;
     }
 
     /// <summary>

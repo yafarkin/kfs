@@ -109,14 +109,14 @@ public static class TestConfigFactory
                     Key = "TASK-1",
                     Summary = "Реализовать API для пользователей",
                     ShirtType = TShirtType.L,
-                    RequiredSkills = ["backend"]
+                    RequiredSkills = ["backend", "qa"]
                 },
                 new()
                 {
                     Key = "TASK-2",
                     Summary = "Написать тесты для сервиса",
                     ShirtType = TShirtType.M,
-                    RequiredSkills = ["backend"]
+                    RequiredSkills = ["backend", "qa"]
                 }
             }
         };
