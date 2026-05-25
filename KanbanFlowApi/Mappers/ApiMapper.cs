@@ -367,7 +367,9 @@ public static class ApiMapper
             Key = task.Key,
             Summary = task.Summary,
             ShirtType = task.ShirtType,
-            Role = task.Role
+            Role = task.Role,
+            Children = task.Children?.Select(ToApiDto).ToList(),
+            AcceptableWorkers = task.AcceptableWorkers
         };
     }
 
@@ -389,7 +391,9 @@ public static class ApiMapper
             Key = dto.Key,
             Summary = dto.Summary,
             ShirtType = dto.ShirtType,
-            Role = dto.Role
+            Role = dto.Role,
+            Children = dto.Children?.Select(ToDomainTask).ToList(),
+            AcceptableWorkers = dto.AcceptableWorkers
         };
     }
 

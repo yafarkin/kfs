@@ -109,6 +109,16 @@ public sealed class ApiTaskDto
     /// Роль, необходимая для выполнения задачи.
     /// </summary>
     public string? Role { get; set; }
+
+    /// <summary>
+    /// Дочерние задачи (для иерархических структур).
+    /// </summary>
+    public List<ApiTaskDto>? Children { get; set; }
+
+    /// <summary>
+    /// Предпочтительные исполнители для стадий (ключ: имя стадии, значение: логин воркера).
+    /// </summary>
+    public Dictionary<string, string>? AcceptableWorkers { get; set; }
 }
 
 /// <summary>

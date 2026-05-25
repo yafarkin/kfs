@@ -2,14 +2,30 @@ using KanbanFlowConsole.Enums;
 
 namespace KanbanFlowConsole.Dtos.Config;
 
+/// <summary>
+/// Воркер (исполнитель) в конфигурации симуляции — представляет участника workflow с ролью и производительностью.
+/// </summary>
 public sealed record Worker
 {
+    /// <summary>
+    /// Уникальный логин воркера.
+    /// </summary>
     public string Login { get; set; } = null!;
+
+    /// <summary>
+    /// Роль воркера (например, "Backend Developer", "QA Engineer").
+    /// </summary>
     public string Role { get; set; } = null!;
+
+    /// <summary>
+    /// Персональный WIP-лимит (максимум задач одновременно).
+    /// Null = без лимита.
+    /// </summary>
     public int? WipLimit { get; set; }
 
     /// <summary>
-    ///     Производительность ресурса в процентах (100 = стандартная скорость)
+    ///     Производительность ресурса в процентах (100 = стандартная скорость).
+    ///     Значения > 100 означают повышенную производительность.
     /// </summary>
     public double Performance { get; set; }
 }
@@ -20,9 +36,9 @@ public sealed record Worker
 public static class WorkerExtensions
 {
     /// <summary>
-    ///     Рассчитывает количество дней для выполнения задачи worker'ом на данной стадии
-    ///     Учитывает размер задачи (ShirtType) и процент стадии
-    ///     В дальнейшем будет учитывать Performance worker'а
+    ///     Рассчитывает количество дней для выполнения задачи worker'ом на данной стадии.
+    ///     Учитывает размер задачи (ShirtType) и процент стадии.
+    ///     В дальнейшем будет учитывать Performance worker'а.
     /// </summary>
     public static int GetDaysForTask(this Worker worker, Stage stage, TShirtType? shirtType)
     {
