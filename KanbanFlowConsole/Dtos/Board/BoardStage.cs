@@ -2,11 +2,25 @@ using KanbanFlowConsole.Dtos.Config;
 
 namespace KanbanFlowConsole.Dtos.Board;
 
+/// <summary>
+/// Стадия на доске симуляции — представляет конкретный этап workflow с задачами, WIP-лимитом и переходами.
+/// Содержит ссылки на предыдущие и следующие стадии для навигации по workflow.
+/// </summary>
 public sealed record BoardStage
 {
+    /// <summary>
+    /// Конфигурация стадии (имя, тип, WIP-лимит и т.д.).
+    /// </summary>
     public Stage Stage { get; set; } = null!;
 
+    /// <summary>
+    /// Предыдущие стадии в workflow (откуда задачи могут приходить).
+    /// </summary>
     public List<BoardStage> PrevStages { get; set; } = new();
+
+    /// <summary>
+    /// Следующие стадии в workflow (куда задачи могут переходить).
+    /// </summary>
     public List<BoardStage> NextStages { get; set; } = new();
 
     /// <summary>

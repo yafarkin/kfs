@@ -2,8 +2,15 @@ using KanbanFlowConsole.Dtos.Config;
 
 namespace KanbanFlowConsole.Dtos.Board;
 
+/// <summary>
+/// Воркер (исполнитель) на доске симуляции — представляет участника workflow с персональным WIP-лимитом.
+/// Отслеживает назначенные задачи и доступность для новой работы.
+/// </summary>
 public sealed record BoardWorker
 {
+    /// <summary>
+    /// Конфигурация воркера (логин, роль, производительность).
+    /// </summary>
     public Worker Worker { get; set; } = null!;
 
     /// <summary>
