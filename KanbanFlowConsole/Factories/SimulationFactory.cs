@@ -43,7 +43,7 @@ public static class SimulationFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            RequiredSkills = ["backend"],
+            RequiredSkills = ["backend", "frontend"],
             StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
         };
@@ -111,6 +111,13 @@ public static class SimulationFactory
                 },
                 new()
                 {
+                    Login = "dev2",
+                    Skills = ["frontend"],
+                    WipLimit = 1,
+                    Performance = 100
+                },
+                new()
+                {
                     Login = "qa1",
                     Skills = ["qa"],
                     WipLimit = 1,
@@ -128,14 +135,21 @@ public static class SimulationFactory
                     Key = "TASK-1",
                     Summary = "Реализовать API для пользователей",
                     ShirtType = TShirtType.S,
-                    RequiredSkills = ["backend"]
+                    RequiredSkills = ["backend", "qa"]
                 },
                 new()
                 {
                     Key = "TASK-2",
                     Summary = "Написать тесты для сервиса",
                     ShirtType = TShirtType.M,
-                    RequiredSkills = ["backend"]
+                    RequiredSkills = ["backend", "qa"]
+                },
+                new()
+                {
+                    Key = "TASK-3",
+                    Summary = "Создать UI компонент формы",
+                    ShirtType = TShirtType.S,
+                    RequiredSkills = ["frontend"]
                 }
             }
         };
