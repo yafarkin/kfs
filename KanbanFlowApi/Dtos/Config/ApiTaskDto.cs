@@ -23,13 +23,6 @@ public sealed record ApiTaskDto
     public TShirtType? ShirtType { get; set; }
 
     /// <summary>
-    /// Роль, необходимая для выполнения задачи.
-    /// Устаревшее поле, используется для обратной совместимости.
-    /// </summary>
-    [Obsolete("Используйте RequiredSkills вместо Role")]
-    public string? Role { get; set; }
-
-    /// <summary>
     /// Навыки, необходимые для выполнения задачи.
     /// Например: ["backend"], ["frontend", "react"], ["qa-manual"].
     /// Задача подходит стадии, если есть хотя бы один общий навык.

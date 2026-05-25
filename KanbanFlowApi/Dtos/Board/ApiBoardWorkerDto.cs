@@ -11,9 +11,9 @@ public sealed record ApiBoardWorkerDto
     public string Login { get; set; } = null!;
 
     /// <summary>
-    /// Роль исполнителя (например, Backend Developer).
+    /// Навыки исполнителя.
     /// </summary>
-    public string? Role { get; set; }
+    public List<string> Skills { get; set; } = new();
 
     /// <summary>
     /// Персональный WIP-лимит (максимум задач одновременно). Null = без лимита.

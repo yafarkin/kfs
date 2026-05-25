@@ -40,7 +40,7 @@ public class ApiMapperTests
 
         // Assert
         var devWorker = Assert.Single(apiDto.Workers, w => w.Login == "dev1");
-        Assert.Equal("Backend Developer", devWorker.Role);
+        Assert.Contains("backend", devWorker.Skills);
         Assert.Equal(100, devWorker.Performance);
     }
 
@@ -112,7 +112,7 @@ public class ApiMapperTests
 
         // Assert
         var devWorker = Assert.Single(domainConfig.Workers, w => w.Login == "dev1");
-        Assert.Equal("Backend Developer", devWorker.Role);
+        Assert.Contains("backend", devWorker.Skills);
         Assert.Equal(100, devWorker.Performance);
     }
 
@@ -200,7 +200,7 @@ public class ApiMapperTests
             var roundTripWorker = Assert.Single(
                 roundTripDomain.Workers,
                 w => w.Login == originalWorker.Login);
-            Assert.Equal(originalWorker.Role, roundTripWorker.Role);
+            Assert.Equal(originalWorker.Skills, roundTripWorker.Skills);
             Assert.Equal(originalWorker.Performance, roundTripWorker.Performance);
         }
 
@@ -317,7 +317,7 @@ public class ApiMapperTests
             Type = StageType.Buffer,
             IsStart = true,
             IsLeadTimeStart = true,
-            AllowedRoles = [],
+            
             Transitions = new List<StageTransition>()
         };
 
@@ -327,7 +327,6 @@ public class ApiMapperTests
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["Backend Developer"],
             StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
         };
@@ -338,7 +337,7 @@ public class ApiMapperTests
             Type = StageType.Buffer,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
+            
             Transitions = new List<StageTransition>()
         };
 
@@ -350,8 +349,8 @@ public class ApiMapperTests
             Seed = 42,
             Workers = new List<Worker>
             {
-                new() { Login = "dev1", Role = "Backend Developer", Skills = ["backend"], Performance = 100 },
-                new() { Login = "qa1", Role = "QA Engineer", Skills = ["qa"], Performance = 100 }
+                new() { Login = "dev1", Skills = ["backend"], Performance = 100 },
+                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
             },
             Workflow = new Workflow
             {
@@ -359,8 +358,8 @@ public class ApiMapperTests
             },
             Tasks = new List<Task>
             {
-                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer", RequiredSkills = ["backend"] },
-                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer", RequiredSkills = ["backend"] }
+                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, RequiredSkills = ["backend"] },
+                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, RequiredSkills = ["backend"] }
             }
         };
     }
@@ -372,8 +371,8 @@ public class ApiMapperTests
             Seed = 42,
             Workers = new List<ApiWorkerDto>
             {
-                new() { Login = "dev1", Role = "Backend Developer", Skills = ["backend"], Performance = 100 },
-                new() { Login = "qa1", Role = "QA Engineer", Skills = ["qa"], Performance = 100 }
+                new() { Login = "dev1", Skills = ["backend"], Performance = 100 },
+                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
             },
             Workflow = new ApiWorkflowDto
             {
@@ -385,7 +384,6 @@ public class ApiMapperTests
                         Type = StageType.Buffer,
                         IsStart = true,
                         IsLeadTimeStart = true,
-                        AllowedRoles = new List<string>(),
                         RequiredSkills = new List<string>(),
                         Transitions = new List<ApiStageTransitionDto>
                         {
@@ -398,7 +396,6 @@ public class ApiMapperTests
                         Type = StageType.Work,
                         IsStart = false,
                         IsLeadTimeStart = false,
-                        AllowedRoles = new List<string>(),
                         RequiredSkills = new List<string> { "backend" },
                         StageProgressPercent = 100,
                         Transitions = new List<ApiStageTransitionDto>
@@ -412,7 +409,6 @@ public class ApiMapperTests
                         Type = StageType.Buffer,
                         IsStart = false,
                         IsLeadTimeStart = false,
-                        AllowedRoles = new List<string>(),
                         RequiredSkills = new List<string>(),
                         Transitions = new List<ApiStageTransitionDto>()
                     }
@@ -420,8 +416,8 @@ public class ApiMapperTests
             },
             Tasks = new List<ApiTaskDto>
             {
-                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer", RequiredSkills = new List<string> { "backend" } },
-                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer", RequiredSkills = new List<string> { "backend" } }
+                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, RequiredSkills = new List<string> { "backend" } },
+                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, RequiredSkills = new List<string> { "backend" } }
             }
         };
     }
@@ -505,7 +501,7 @@ public class ApiMapperTests
         var devWorker = Assert.Single(apiState.Board.Workers, w => w.Login == "dev1");
 
         // Assert
-        Assert.Equal("Backend Developer", devWorker.Role);
+        Assert.Contains("backend", devWorker.Skills);
         Assert.True(devWorker.IsAvailable);
         Assert.Empty(devWorker.AssignedTaskKeys);
     }

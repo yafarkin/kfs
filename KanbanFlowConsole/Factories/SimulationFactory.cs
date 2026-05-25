@@ -33,7 +33,6 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsStart = true,
             IsLeadTimeStart = true,
-            AllowedRoles = [],
             RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
@@ -44,7 +43,6 @@ public static class SimulationFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
             RequiredSkills = ["backend"],
             StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
@@ -56,7 +54,6 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
             RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
@@ -67,7 +64,6 @@ public static class SimulationFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
             RequiredSkills = ["qa"],
             StageProgressPercent = 30,
             Transitions = new List<StageTransition>()
@@ -79,7 +75,6 @@ public static class SimulationFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
             RequiredSkills = ["backend"],
             StageProgressPercent = 20,
             Transitions = new List<StageTransition>()
@@ -91,7 +86,6 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
             RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
@@ -111,7 +105,6 @@ public static class SimulationFactory
                 new()
                 {
                     Login = "dev1",
-                    Role = "Backend Developer",
                     Skills = ["backend"],
                     WipLimit = 1,
                     Performance = 100
@@ -119,7 +112,6 @@ public static class SimulationFactory
                 new()
                 {
                     Login = "qa1",
-                    Role = "QA Engineer",
                     Skills = ["qa"],
                     WipLimit = 1,
                     Performance = 100
@@ -136,7 +128,6 @@ public static class SimulationFactory
                     Key = "TASK-1",
                     Summary = "Реализовать API для пользователей",
                     ShirtType = TShirtType.S,
-                    Role = "Backend Developer",
                     RequiredSkills = ["backend"]
                 },
                 new()
@@ -144,7 +135,6 @@ public static class SimulationFactory
                     Key = "TASK-2",
                     Summary = "Написать тесты для сервиса",
                     ShirtType = TShirtType.M,
-                    Role = "Backend Developer",
                     RequiredSkills = ["backend"]
                 }
             }
@@ -235,7 +225,6 @@ public static class SimulationFactory
                     IsStart = stage.IsStart,
                     IsLeadTimeStart = stage.IsLeadTimeStart,
                     WipLimit = stage.WipLimit,
-                    AllowedRoles = stage.AllowedRoles,
                     RequiredSkills = stage.RequiredSkills,
                     RequiresDifferentResource = stage.RequiresDifferentResource,
                     RequiresDifferentResourceFromStage = stage.RequiresDifferentResourceFromStage,

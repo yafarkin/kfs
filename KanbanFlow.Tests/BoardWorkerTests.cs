@@ -17,7 +17,6 @@ public class BoardWorkerTests
             Worker = new Worker
             {
                 Login = "dev1",
-                Role = "Backend Developer",
                 Skills = ["backend"],
                 WipLimit = null,
                 Performance = 100
@@ -45,7 +44,6 @@ public class BoardWorkerTests
             Worker = new Worker
             {
                 Login = "dev1",
-                Role = "Backend Developer",
                 Skills = ["backend"],
                 WipLimit = 2,
                 Performance = 100
@@ -73,7 +71,6 @@ public class BoardWorkerTests
             Worker = new Worker
             {
                 Login = "dev1",
-                Role = "Backend Developer",
                 Skills = ["backend"],
                 WipLimit = 2,
                 Performance = 100
@@ -106,7 +103,6 @@ public class BoardWorkerTests
             Worker = new Worker
             {
                 Login = "dev1",
-                Role = "Backend Developer",
                 Skills = ["backend"],
                 WipLimit = 1,
                 Performance = 100
@@ -131,7 +127,7 @@ public class BoardWorkerTests
         // Arrange
         var worker = new BoardWorker
         {
-            Worker = new Worker { Login = "dev1", Role = "Backend Developer", Skills = ["backend"], Performance = 100 },
+            Worker = new Worker { Login = "dev1", Skills = ["backend"], Performance = 100 },
             Assignments = new List<BoardTaskAssignment>
             {
                 new()
@@ -165,7 +161,6 @@ public class BoardWorkerTests
             Worker = new Worker
             {
                 Login = "dev1",
-                Role = "Backend Developer",
                 Skills = ["backend"],
                 WipLimit = 2,
                 Performance = 100

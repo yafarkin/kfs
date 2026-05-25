@@ -25,20 +25,12 @@ public sealed record Task
     public TShirtType? ShirtType { get; set; }
 
     /// <summary>
-    /// Роль, необходимая для выполнения задачи (например, "Backend Developer").
-    /// Устаревшее поле, используется для обратной совместимости.
-    /// Рекомендуется использовать RequiredSkills.
-    /// </summary>
-    [Obsolete("Используйте RequiredSkills вместо Role")]
-    public string? Role { get; set; }
-
-    /// <summary>
     /// Навыки, необходимые для выполнения задачи.
     /// Например: ["backend"], ["frontend", "react"], ["qa-manual"].
     /// Задача может быть взята воркером, у которого есть хотя бы один из требуемых навыков.
     /// Для разных стадий можно комбинировать навыки: например, ["frontend", "qa"] для задачи с тестированием.
     /// </summary>
-    public List<string> RequiredSkills { get; set; } = new();
+    public List<string> RequiredSkills { get; set; } = [];
 
     /// <summary>
     /// Дочерние задачи для иерархической структуры.

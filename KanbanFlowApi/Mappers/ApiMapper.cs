@@ -51,7 +51,6 @@ public static class ApiMapper
                 IsStart = stageDto.IsStart,
                 IsLeadTimeStart = stageDto.IsLeadTimeStart,
                 WipLimit = stageDto.WipLimit,
-                AllowedRoles = stageDto.AllowedRoles.ToArray(),
                 RequiredSkills = stageDto.RequiredSkills,
                 RequiresDifferentResource = stageDto.RequiresDifferentResource,
                 RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
@@ -163,7 +162,7 @@ public static class ApiMapper
         return new ApiBoardWorkerDto
         {
             Login = worker.Worker.Login,
-            Role = worker.Worker.Role,
+            Skills = worker.Worker.Skills,
             WipLimit = worker.WipLimit,
             WipCount = worker.WipCount,
             IsAvailable = worker.IsAvailable,
@@ -178,7 +177,7 @@ public static class ApiMapper
             Key = task.Task.Key,
             Summary = task.Task.Summary,
             ShirtType = task.Task.ShirtType,
-            Role = task.Task.Role,
+            RequiredSkills = task.Task.RequiredSkills,
             Progress = task.Progress,
             WorkerLogin = task.Worker?.Worker.Login,
             CurrentStageName = task.CurrentStage?.Stage.Name
@@ -347,7 +346,6 @@ public static class ApiMapper
             IsStart = stage.IsStart,
             IsLeadTimeStart = stage.IsLeadTimeStart,
             WipLimit = stage.WipLimit,
-            AllowedRoles = stage.AllowedRoles.ToList(),
             RequiredSkills = stage.RequiredSkills,
             RequiresDifferentResource = stage.RequiresDifferentResource,
             RequiresDifferentResourceFromStage = stage.RequiresDifferentResourceFromStage,
@@ -365,7 +363,6 @@ public static class ApiMapper
         return new ApiWorkerDto
         {
             Login = worker.Login,
-            Role = worker.Role,
             Skills = worker.Skills,
             WipLimit = worker.WipLimit,
             Performance = worker.Performance
@@ -379,7 +376,6 @@ public static class ApiMapper
             Key = task.Key,
             Summary = task.Summary,
             ShirtType = task.ShirtType,
-            Role = task.Role,
             RequiredSkills = task.RequiredSkills,
             Children = task.Children?.Select(ToApiDto).ToList(),
             AcceptableWorkers = task.AcceptableWorkers
@@ -391,7 +387,6 @@ public static class ApiMapper
         return new Worker
         {
             Login = dto.Login,
-            Role = dto.Role ?? string.Empty,
             Skills = dto.Skills,
             WipLimit = dto.WipLimit,
             Performance = dto.Performance
@@ -405,7 +400,6 @@ public static class ApiMapper
             Key = dto.Key,
             Summary = dto.Summary,
             ShirtType = dto.ShirtType,
-            Role = dto.Role,
             RequiredSkills = dto.RequiredSkills,
             Children = dto.Children?.Select(ToDomainTask).ToList(),
             AcceptableWorkers = dto.AcceptableWorkers

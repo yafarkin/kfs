@@ -9,15 +9,7 @@ public sealed record Stage
     public bool IsStart { get; set; }
     public bool IsLeadTimeStart { get; set; }
     public int? WipLimit { get; set; }
-
-    /// <summary>
-    /// Роли, которым разрешено работать на стадии.
-    /// Устаревшее поле, используется для обратной совместимости.
-    /// Рекомендуется использовать RequiredSkills.
-    /// </summary>
-    [Obsolete("Используйте RequiredSkills вместо AllowedRoles")]
-    public string[] AllowedRoles { get; set; } = [];
-
+    
     /// <summary>
     /// Навыки, требуемые для работы на стадии.
     /// Например: ["backend"], ["qa-manual"], ["qa-auto"].

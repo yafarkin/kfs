@@ -112,7 +112,7 @@ public class SimulationFactoryTests
             Type = StageType.Buffer,
             IsStart = true,
             IsLeadTimeStart = true,
-            AllowedRoles = [],
+            
             Transitions = new List<StageTransition>()
         };
 
@@ -122,7 +122,6 @@ public class SimulationFactoryTests
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["Developer"],
             StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
         };
@@ -133,7 +132,7 @@ public class SimulationFactoryTests
             Type = StageType.Buffer,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = [],
+            
             Transitions = new List<StageTransition>()
         };
 
@@ -145,8 +144,8 @@ public class SimulationFactoryTests
             Seed = 42,
             Workers = new List<Worker>
             {
-                new() { Login = "dev1", Role = "Developer", Performance = 100 },
-                new() { Login = "dev2", Role = "Developer", Performance = 100 }
+                new() { Login = "dev1", Skills = ["dev"], Performance = 100 },
+                new() { Login = "dev2", Skills = ["dev"], Performance = 100 }
             },
             Workflow = new Workflow
             {
@@ -154,9 +153,9 @@ public class SimulationFactoryTests
             },
             Tasks = new List<Task>
             {
-                new() { Key = "TASK-1", Summary = "Task 1", ShirtType = TShirtType.M, Role = "Developer" },
-                new() { Key = "TASK-2", Summary = "Task 2", ShirtType = TShirtType.L, Role = "Developer" },
-                new() { Key = "TASK-3", Summary = "Task 3", ShirtType = TShirtType.S, Role = "Developer" }
+                new() { Key = "TASK-1", Summary = "Task 1", RequiredSkills = ["dev"] },
+                new() { Key = "TASK-2", Summary = "Task 2", RequiredSkills = ["dev"] },
+                new() { Key = "TASK-3", Summary = "Task 3", RequiredSkills = ["dev"] }
             }
         };
     }

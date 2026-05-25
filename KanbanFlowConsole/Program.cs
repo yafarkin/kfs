@@ -55,7 +55,6 @@ static SimulationConfig CreateSampleConfig()
         Type = StageType.Buffer,
         IsStart = true,
         IsLeadTimeStart = true,
-        AllowedRoles = [],
         Transitions = new List<StageTransition>()
     };
 
@@ -65,8 +64,8 @@ static SimulationConfig CreateSampleConfig()
         Type = StageType.Work,
         IsStart = false,
         IsLeadTimeStart = false,
-        AllowedRoles = ["Developer"],
         StageProgressPercent = 100,
+        RequiredSkills = new List<string> { "Developer" },
         Transitions = new List<StageTransition>()
     };
 
@@ -76,7 +75,6 @@ static SimulationConfig CreateSampleConfig()
         Type = StageType.Buffer,
         IsStart = false,
         IsLeadTimeStart = false,
-        AllowedRoles = [],
         Transitions = new List<StageTransition>()
     };
 
@@ -86,8 +84,8 @@ static SimulationConfig CreateSampleConfig()
         Type = StageType.Work,
         IsStart = false,
         IsLeadTimeStart = false,
-        AllowedRoles = ["QA"],
         StageProgressPercent = 30,
+        RequiredSkills = new List<string> { "QA" },
         Transitions = new List<StageTransition>()
     };
 
@@ -97,7 +95,6 @@ static SimulationConfig CreateSampleConfig()
         Type = StageType.Buffer,
         IsStart = false,
         IsLeadTimeStart = false,
-        AllowedRoles = [],
         Transitions = new List<StageTransition>()
     };
 
@@ -111,8 +108,8 @@ static SimulationConfig CreateSampleConfig()
         Seed = 42,
         Workers = new List<Worker>
         {
-            new() { Login = "dev1", Role = "Developer", Performance = 100 },
-            new() { Login = "qa1", Role = "QA", Performance = 100 }
+            new() { Login = "dev1", Skills = ["dev"], Performance = 100 },
+            new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
         },
         Workflow = new Workflow
         {
@@ -120,9 +117,9 @@ static SimulationConfig CreateSampleConfig()
         },
         Tasks = new List<BoardTask>
         {
-            new() { Key = "TASK-1", Summary = "Большая задача", ShirtType = TShirtType.L, Role = "Developer" },
-            new() { Key = "TASK-2", Summary = "Средняя задача", ShirtType = TShirtType.M, Role = "Developer" },
-            new() { Key = "TASK-3", Summary = "Маленькая задача", ShirtType = TShirtType.S, Role = "Developer" }
+            new() { Key = "TASK-1", Summary = "Большая задача", ShirtType = TShirtType.L, RequiredSkills = ["dev", "qa"]},
+            new() { Key = "TASK-2", Summary = "Средняя задача", ShirtType = TShirtType.M, RequiredSkills = ["dev", "qa"] },
+            new() { Key = "TASK-3", Summary = "Маленькая задача", ShirtType = TShirtType.S, RequiredSkills = ["dev", "qa"] }
         }
     };
 }

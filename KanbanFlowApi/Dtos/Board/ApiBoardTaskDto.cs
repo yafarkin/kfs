@@ -23,9 +23,9 @@ public sealed record ApiBoardTaskDto
     public TShirtType? ShirtType { get; set; }
 
     /// <summary>
-    /// Роль, необходимая для выполнения задачи.
+    /// Навыки, необходимые для выполнения задачи.
     /// </summary>
-    public string? Role { get; set; }
+    public List<string> RequiredSkills { get; set; } = new();
 
     /// <summary>
     /// Прогресс выполнения (0-100).

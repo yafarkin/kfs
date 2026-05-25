@@ -13,14 +13,6 @@ public sealed record Worker
     public string Login { get; set; } = null!;
 
     /// <summary>
-    /// Роль воркера (например, "Backend Developer", "QA Engineer").
-    /// Устаревшее поле, используется для обратной совместимости.
-    /// Рекомендуется использовать Skills.
-    /// </summary>
-    [Obsolete("Используйте Skills вместо Role")]
-    public string Role { get; set; } = null!;
-
-    /// <summary>
     /// Навыки воркера. Например: ["backend", "api"], ["frontend", "react"], ["qa-manual", "qa-auto"].
     /// Воркер может брать задачи, требующие эти навыки.
     /// </summary>

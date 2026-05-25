@@ -47,7 +47,7 @@ public class HistoryTests
     {
         // Arrange
         var task = new BoardTask { Task = new Task { Key = "TASK-1" } };
-        var worker = new BoardWorker { Worker = new Worker { Login = "dev1", Role = "Backend Developer", Skills = ["backend"], Performance = 100 } };
+        var worker = new BoardWorker { Worker = new Worker { Login = "dev1", Skills = ["backend"], Performance = 100 } };
         var stage = new BoardStage { Stage = new Stage { Name = "Developing", Type = StageType.Work } };
 
         var activity = new HistoryActivity

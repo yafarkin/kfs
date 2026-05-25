@@ -177,13 +177,7 @@ public sealed class TaskMovementService
         {
             return task.Task.RequiredSkills;
         }
-
-        // Fallback на Role для обратной совместимости
-        if (!string.IsNullOrEmpty(task.Task.Role))
-        {
-            return [task.Task.Role];
-        }
-
+        
         // Нет требований
         return [];
     }
@@ -199,15 +193,8 @@ public sealed class TaskMovementService
             return true; // Нет требований к навыкам
         }
 
-        // Собираем все навыки воркера (из Skills и Role для обратной совместимости)
-        var workerSkills = new HashSet<string>(worker.Worker.Skills);
-        if (!string.IsNullOrEmpty(worker.Worker.Role))
-        {
-            workerSkills.Add(worker.Worker.Role);
-        }
-
         // Проверяем пересечение: есть ли у воркера хотя бы один требуемый навык
-        return requiredSkills.Any(skill => workerSkills.Contains(skill));
+        return requiredSkills.Any(skill => worker.Worker.Skills.Contains(skill));
     }
 
     /// <summary>
