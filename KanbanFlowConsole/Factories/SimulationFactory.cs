@@ -106,12 +106,14 @@ public static class SimulationFactory
                 {
                     Login = "dev1",
                     Role = "Backend Developer",
+                    WipLimit = 1,
                     Performance = 100
                 },
                 new()
                 {
                     Login = "qa1",
                     Role = "QA Engineer",
+                    WipLimit = 1,
                     Performance = 100
                 }
             },
