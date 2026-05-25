@@ -12,28 +12,17 @@ namespace KanbanFlowApi.Controllers;
 public class SimulationController : ControllerBase
 {
     /// <summary>
-    /// Получить конфигурацию симуляции по умолчанию
+    /// Получить начальное состояние симуляции по умолчанию.
+    /// Возвращает готовое состояние для передачи в simulate-day (день 0, задачи ещё не двигались).
     /// </summary>
     [HttpGet("default-config")]
-    public ActionResult<ApiSimulationConfigDto> GetDefaultConfig()
+    public ActionResult<ApiSimulationStateDto> GetDefaultConfig()
     {
         var config = SimulationFactory.CreateDefaultConfig();
-        return Ok(ApiMapper.ToApiDto(config));
-    }
-
-    /// <summary>
-    /// Инициализировать новую симуляцию из конфигурации.
-    /// Возвращает начальное состояние для передачи в simulate-day.
-    /// </summary>
-    [HttpPost("init")]
-    public ActionResult<ApiSimulationStateDto> InitSimulation([FromBody] ApiSimulationConfigDto config)
-    {
-        // Создаём доменную симуляцию
-        var domainConfig = ApiMapper.ToDomainConfig(config);
         var simulation = new Simulation();
-        simulation.InitFromConfig(domainConfig);
+        simulation.InitFromConfig(config);
 
-        // Возвращаем начальное состояние
+        // Возвращаем начальное состояние (день 0, задачи ещё не распределены по стадиям)
         return Ok(ApiMapper.ToApiDto(simulation));
     }
 
