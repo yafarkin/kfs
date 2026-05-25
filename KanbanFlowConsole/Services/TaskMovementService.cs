@@ -110,9 +110,6 @@ public sealed class TaskMovementService
     /// </summary>
     private BoardWorker? FindAvailableWorker(BoardTask task, BoardStage toStage)
     {
-        // Определяем требуемую роль из задачи
-        var requiredRole = task.Task.Role;
-
         // Проверяем есть ли требование к конкретному worker'у для этой стадии
         var requiredWorkerLogin = GetRequiredWorkerForStage(task, toStage);
 
@@ -124,10 +121,31 @@ public sealed class TaskMovementService
                 continue;
             }
 
-            // Проверяем роль воркера
-            if (!string.IsNullOrEmpty(requiredRole) && worker.Worker.Role != requiredRole)
+            // Проверяем allowedRoles стадии
+            var allowedRoles = toStage.Stage.AllowedRoles;
+            var taskRole = task.Task.Role;
+
+            if (allowedRoles.Length > 0)
             {
-                continue;
+                // Стадия имеет ограничения по ролям
+                if (string.IsNullOrEmpty(worker.Worker.Role) || !allowedRoles.Contains(worker.Worker.Role))
+                {
+                    continue;
+                }
+
+                // Если allowedRoles содержит несколько ролей, проверяем task.Role для уточнения
+                if (allowedRoles.Length > 1 && !string.IsNullOrEmpty(taskRole) && worker.Worker.Role != taskRole)
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                // Стадия без ограничений по ролям — используем роль из задачи
+                if (!string.IsNullOrEmpty(taskRole) && worker.Worker.Role != taskRole)
+                {
+                    continue;
+                }
             }
 
             // Проверяем WIP лимит воркера
@@ -152,8 +170,34 @@ public sealed class TaskMovementService
         // Специальная проверка: если только один воркер в роли и стадия требует другого - пропускаем
         if (toStage.RequiresDifferentResource)
         {
+            var allowedRoles = toStage.Stage.AllowedRoles;
+            var taskRole = task.Task.Role;
+
             var workersInRole = _simulation.Board.Workers
-                .Where(w => string.IsNullOrEmpty(requiredRole) || w.Worker.Role == requiredRole)
+                .Where(w =>
+                {
+                    if (allowedRoles.Length > 0)
+                    {
+                        // Стадия имеет ограничения по ролям
+                        if (string.IsNullOrEmpty(w.Worker.Role) || !allowedRoles.Contains(w.Worker.Role))
+                        {
+                            return false;
+                        }
+
+                        // Если allowedRoles содержит несколько ролей, проверяем task.Role для уточнения
+                        if (allowedRoles.Length > 1 && !string.IsNullOrEmpty(taskRole) && w.Worker.Role != taskRole)
+                        {
+                            return false;
+                        }
+
+                        return true;
+                    }
+                    else
+                    {
+                        // Стадия без ограничений по ролям — используем роль из задачи
+                        return string.IsNullOrEmpty(taskRole) || w.Worker.Role == taskRole;
+                    }
+                })
                 .ToList();
 
             if (workersInRole.Count == 1)
