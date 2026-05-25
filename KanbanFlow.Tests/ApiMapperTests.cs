@@ -54,12 +54,16 @@ public class ApiMapperTests
         var todoStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Todo");
         Assert.Equal(StageType.Buffer, todoStage.Type);
         Assert.True(todoStage.IsStart);
-        Assert.Single(todoStage.TransitionStageNames, n => n == "Developing");
+        var todoTransition = Assert.Single(todoStage.Transitions);
+        Assert.Equal("Developing", todoTransition.TargetStageName);
+        Assert.Equal(1.0, todoTransition.Probability);
 
         var developingStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Developing");
         Assert.Equal(StageType.Work, developingStage.Type);
         Assert.False(developingStage.IsStart);
-        Assert.Single(developingStage.TransitionStageNames, n => n == "Done");
+        var devTransition = Assert.Single(developingStage.Transitions);
+        Assert.Equal("Done", devTransition.TargetStageName);
+        Assert.Equal(1.0, devTransition.Probability);
     }
 
     [Fact]
@@ -239,23 +243,23 @@ public class ApiMapperTests
         Assert.Equal(originalApi.Tasks.Count, roundTripApi.Tasks.Count);
         Assert.Equal(originalApi.Workflow.Stages.Count, roundTripApi.Workflow.Stages.Count);
 
-        // Проверяем стадии и transitionStageNames
+        // Проверяем стадии и Transitions
         foreach (var originalStage in originalApi.Workflow.Stages)
         {
             var roundTripStage = Assert.Single(
                 roundTripApi.Workflow.Stages,
                 s => s.Name == originalStage.Name);
             Assert.Equal(originalStage.Type, roundTripStage.Type);
-            Assert.Equal(originalStage.TransitionStageNames.Count, roundTripStage.TransitionStageNames.Count);
+            Assert.Equal(originalStage.Transitions.Count, roundTripStage.Transitions.Count);
 
-            var originalNames = originalStage.TransitionStageNames.OrderBy(n => n);
-            var roundTripNames = roundTripStage.TransitionStageNames.OrderBy(n => n);
+            var originalNames = originalStage.Transitions.Select(t => t.TargetStageName).OrderBy(n => n);
+            var roundTripNames = roundTripStage.Transitions.Select(t => t.TargetStageName).OrderBy(n => n);
             Assert.Equal(originalNames, roundTripNames);
         }
     }
 
     [Fact]
-    public void ToDomainConfig_EmptyTransitionStageNames_CreatesEmptyTransitions()
+    public void ToDomainConfig_EmptyTransitions_CreatesEmptyTransitions()
     {
         // Arrange
         var apiDto = new ApiSimulationConfigDto
@@ -271,7 +275,7 @@ public class ApiMapperTests
                         Name = "Done",
                         Type = StageType.Buffer,
                         IsStart = false,
-                        TransitionStageNames = new List<string>() // Пустой список
+                        Transitions = new List<ApiStageTransitionDto>() // Пустой список
                     }
                 }
             },
@@ -379,7 +383,10 @@ public class ApiMapperTests
                         IsStart = true,
                         IsLeadTimeStart = true,
                         AllowedRoles = new List<string>(),
-                        TransitionStageNames = new List<string> { "Developing" }
+                        Transitions = new List<ApiStageTransitionDto>
+                        {
+                            new() { TargetStageName = "Developing", Probability = 1.0 }
+                        }
                     },
                     new()
                     {
@@ -389,7 +396,10 @@ public class ApiMapperTests
                         IsLeadTimeStart = false,
                         AllowedRoles = new List<string> { "Backend Developer" },
                         StageProgressPercent = 100,
-                        TransitionStageNames = new List<string> { "Done" }
+                        Transitions = new List<ApiStageTransitionDto>
+                        {
+                            new() { TargetStageName = "Done", Probability = 1.0 }
+                        }
                     },
                     new()
                     {
@@ -398,7 +408,7 @@ public class ApiMapperTests
                         IsStart = false,
                         IsLeadTimeStart = false,
                         AllowedRoles = new List<string>(),
-                        TransitionStageNames = new List<string>()
+                        Transitions = new List<ApiStageTransitionDto>()
                     }
                 }
             },

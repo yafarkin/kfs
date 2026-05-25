@@ -56,18 +56,18 @@ public static class ApiMapper
             };
         }
 
-        // Затем устанавливаем переходы
+        // Затем устанавливаем переходы с вероятностями
         foreach (var stageDto in dto.Workflow.Stages)
         {
             var stage = stagesMap[stageDto.Name];
-            foreach (var transitionName in stageDto.TransitionStageNames)
+            foreach (var transition in stageDto.Transitions)
             {
-                if (stagesMap.TryGetValue(transitionName, out var targetStage))
+                if (stagesMap.TryGetValue(transition.TargetStageName, out var targetStage))
                 {
                     stage.Transitions.Add(new StageTransition
                     {
                         Stage = targetStage,
-                        Probability = 1.0
+                        Probability = transition.Probability
                     });
                 }
             }
@@ -341,7 +341,11 @@ public static class ApiMapper
             RequiresDifferentResource = stage.RequiresDifferentResource,
             RequiresDifferentResourceFromStage = stage.RequiresDifferentResourceFromStage,
             StageProgressPercent = stage.StageProgressPercent,
-            TransitionStageNames = stage.Transitions.Select(t => t.Stage.Name).ToList()
+            Transitions = stage.Transitions.Select(t => new ApiStageTransitionDto
+            {
+                TargetStageName = t.Stage.Name,
+                Probability = t.Probability
+            }).ToList()
         };
     }
 
