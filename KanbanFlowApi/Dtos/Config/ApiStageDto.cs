@@ -34,8 +34,16 @@ public sealed record ApiStageDto
 
     /// <summary>
     /// Роли, которым разрешено работать на стадии (пусто = всем разрешено).
+    /// Устаревшее поле, используется для обратной совместимости.
     /// </summary>
+    [Obsolete("Используйте RequiredSkills вместо AllowedRoles")]
     public List<string> AllowedRoles { get; set; } = new();
+
+    /// <summary>
+    /// Навыки, требуемые для работы на стадии.
+    /// Например: ["backend"], ["qa-manual"], ["qa-auto"].
+    /// </summary>
+    public List<string> RequiredSkills { get; set; } = new();
 
     /// <summary>
     /// Требует ли стадия отдельного ресурса (например, Code Review).

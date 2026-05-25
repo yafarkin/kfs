@@ -12,8 +12,15 @@ public sealed record ApiWorkerDto
 
     /// <summary>
     /// Роль исполнителя (например, Backend Developer).
+    /// Устаревшее поле, используется для обратной совместимости.
     /// </summary>
+    [Obsolete("Используйте Skills вместо Role")]
     public string? Role { get; set; }
+
+    /// <summary>
+    /// Навыки исполнителя. Например: ["backend", "api"], ["frontend", "react"], ["qa-manual", "qa-auto"].
+    /// </summary>
+    public List<string> Skills { get; set; } = new();
 
     /// <summary>
     /// Персональный WIP-лимит (максимум задач одновременно). Null = без лимита.
@@ -28,5 +35,5 @@ public sealed record ApiWorkerDto
     /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
-    public override string ToString() => $"{Login} ({Role ?? "no role"})";
+    public override string ToString() => $"{Login} ({string.Join(", ", Skills.Any() ? Skills : [Role ?? "no skills"])})";
 }

@@ -209,8 +209,8 @@ public class SimulationSmokeTests
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
-        var devWorker = simulation.Board.Workers.First(w => w.Worker.Role == "Backend Developer");
-        var qaWorker = simulation.Board.Workers.First(w => w.Worker.Role == "QA Engineer");
+        var devWorker = simulation.Board.Workers.First(w => w.Worker.Skills.Contains("backend"));
+        var qaWorker = simulation.Board.Workers.First(w => w.Worker.Skills.Contains("qa"));
 
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
         var testingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Testing");

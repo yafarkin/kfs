@@ -14,8 +14,17 @@ public sealed record Worker
 
     /// <summary>
     /// Роль воркера (например, "Backend Developer", "QA Engineer").
+    /// Устаревшее поле, используется для обратной совместимости.
+    /// Рекомендуется использовать Skills.
     /// </summary>
+    [Obsolete("Используйте Skills вместо Role")]
     public string Role { get; set; } = null!;
+
+    /// <summary>
+    /// Навыки воркера. Например: ["backend", "api"], ["frontend", "react"], ["qa-manual", "qa-auto"].
+    /// Воркер может брать задачи, требующие эти навыки.
+    /// </summary>
+    public List<string> Skills { get; set; } = new();
 
     /// <summary>
     /// Персональный WIP-лимит (максимум задач одновременно).

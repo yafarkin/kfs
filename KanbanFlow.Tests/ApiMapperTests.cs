@@ -350,8 +350,8 @@ public class ApiMapperTests
             Seed = 42,
             Workers = new List<Worker>
             {
-                new() { Login = "dev1", Role = "Backend Developer", Performance = 100 },
-                new() { Login = "qa1", Role = "QA Engineer", Performance = 100 }
+                new() { Login = "dev1", Role = "Backend Developer", Skills = ["backend"], Performance = 100 },
+                new() { Login = "qa1", Role = "QA Engineer", Skills = ["qa"], Performance = 100 }
             },
             Workflow = new Workflow
             {
@@ -359,8 +359,8 @@ public class ApiMapperTests
             },
             Tasks = new List<Task>
             {
-                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer" },
-                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer" }
+                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer", RequiredSkills = ["backend"] },
+                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer", RequiredSkills = ["backend"] }
             }
         };
     }
@@ -372,8 +372,8 @@ public class ApiMapperTests
             Seed = 42,
             Workers = new List<ApiWorkerDto>
             {
-                new() { Login = "dev1", Role = "Backend Developer", Performance = 100 },
-                new() { Login = "qa1", Role = "QA Engineer", Performance = 100 }
+                new() { Login = "dev1", Role = "Backend Developer", Skills = ["backend"], Performance = 100 },
+                new() { Login = "qa1", Role = "QA Engineer", Skills = ["qa"], Performance = 100 }
             },
             Workflow = new ApiWorkflowDto
             {
@@ -386,6 +386,7 @@ public class ApiMapperTests
                         IsStart = true,
                         IsLeadTimeStart = true,
                         AllowedRoles = new List<string>(),
+                        RequiredSkills = new List<string>(),
                         Transitions = new List<ApiStageTransitionDto>
                         {
                             new() { TargetStageName = "Developing", Probability = 1.0 }
@@ -397,7 +398,8 @@ public class ApiMapperTests
                         Type = StageType.Work,
                         IsStart = false,
                         IsLeadTimeStart = false,
-                        AllowedRoles = new List<string> { "Backend Developer" },
+                        AllowedRoles = new List<string>(),
+                        RequiredSkills = new List<string> { "backend" },
                         StageProgressPercent = 100,
                         Transitions = new List<ApiStageTransitionDto>
                         {
@@ -411,14 +413,15 @@ public class ApiMapperTests
                         IsStart = false,
                         IsLeadTimeStart = false,
                         AllowedRoles = new List<string>(),
+                        RequiredSkills = new List<string>(),
                         Transitions = new List<ApiStageTransitionDto>()
                     }
                 }
             },
             Tasks = new List<ApiTaskDto>
             {
-                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer" },
-                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer" }
+                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, Role = "Backend Developer", RequiredSkills = new List<string> { "backend" } },
+                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, Role = "Backend Developer", RequiredSkills = new List<string> { "backend" } }
             }
         };
     }

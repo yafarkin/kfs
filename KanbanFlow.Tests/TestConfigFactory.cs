@@ -17,6 +17,7 @@ public static class TestConfigFactory
             IsStart = true,
             IsLeadTimeStart = true,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -26,7 +27,8 @@ public static class TestConfigFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["Backend Developer"],
+            AllowedRoles = [],
+            RequiredSkills = ["backend"],
             StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
         };
@@ -38,6 +40,7 @@ public static class TestConfigFactory
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -47,7 +50,8 @@ public static class TestConfigFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["QA Engineer"],
+            AllowedRoles = [],
+            RequiredSkills = ["qa"],
             StageProgressPercent = 30,
             Transitions = new List<StageTransition>()
         };
@@ -58,7 +62,8 @@ public static class TestConfigFactory
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["Backend Developer"],
+            AllowedRoles = [],
+            RequiredSkills = ["backend"],
             StageProgressPercent = 20,
             Transitions = new List<StageTransition>()
         };
@@ -70,6 +75,7 @@ public static class TestConfigFactory
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -89,12 +95,14 @@ public static class TestConfigFactory
                 {
                     Login = "dev1",
                     Role = "Backend Developer",
+                    Skills = ["backend"],
                     Performance = 100
                 },
                 new()
                 {
                     Login = "qa1",
                     Role = "QA Engineer",
+                    Skills = ["qa"],
                     Performance = 100
                 }
             },
@@ -109,14 +117,16 @@ public static class TestConfigFactory
                     Key = "TASK-1",
                     Summary = "Реализовать API для пользователей",
                     ShirtType = TShirtType.L,
-                    Role = "Backend Developer"
+                    Role = "Backend Developer",
+                    RequiredSkills = ["backend"]
                 },
                 new()
                 {
                     Key = "TASK-2",
                     Summary = "Написать тесты для сервиса",
                     ShirtType = TShirtType.M,
-                    Role = "Backend Developer"
+                    Role = "Backend Developer",
+                    RequiredSkills = ["backend"]
                 }
             }
         };

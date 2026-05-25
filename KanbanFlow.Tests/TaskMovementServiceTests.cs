@@ -439,6 +439,7 @@ public class TaskMovementServiceTests
             IsStart = true,
             IsLeadTimeStart = true,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -448,7 +449,8 @@ public class TaskMovementServiceTests
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["Developer"],
+            AllowedRoles = [],
+            RequiredSkills = ["dev"],
             Transitions = new List<StageTransition>()
         };
 
@@ -459,6 +461,7 @@ public class TaskMovementServiceTests
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -468,7 +471,8 @@ public class TaskMovementServiceTests
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["QA"],
+            AllowedRoles = [],
+            RequiredSkills = ["qa"],
             Transitions = new List<StageTransition>()
         };
 
@@ -479,6 +483,7 @@ public class TaskMovementServiceTests
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -492,10 +497,10 @@ public class TaskMovementServiceTests
             Seed = 42,
             Workers = new List<Worker>
             {
-                new() { Login = "dev1", Role = "Developer", Performance = 100, WipLimit = 1 },
-                new() { Login = "dev2", Role = "Developer", Performance = 100, WipLimit = 1 },
-                new() { Login = "qa1", Role = "QA", Performance = 100, WipLimit = 1 },
-                new() { Login = "qa2", Role = "QA", Performance = 100, WipLimit = 1 }
+                new() { Login = "dev1", Role = "Developer", Skills = ["dev"], Performance = 100, WipLimit = 1 },
+                new() { Login = "dev2", Role = "Developer", Skills = ["dev"], Performance = 100, WipLimit = 1 },
+                new() { Login = "qa1", Role = "QA", Skills = ["qa"], Performance = 100, WipLimit = 1 },
+                new() { Login = "qa2", Role = "QA", Skills = ["qa"], Performance = 100, WipLimit = 1 }
             },
             Workflow = new Workflow
             {
@@ -504,14 +509,15 @@ public class TaskMovementServiceTests
             Tasks = new List<TaskDto>
             {
                 // Задача 1: в работе у dev1 (50% прогресс - ещё не готова)
-                new() { Key = "TASK-1", Role = "Developer" },
+                new() { Key = "TASK-1", Role = "Developer", RequiredSkills = ["dev"] },
                 // Задача 2: в работе у qa1 (50% прогресс - ещё не готова)
-                new() { Key = "TASK-2", Role = "QA" },
+                new() { Key = "TASK-2", Role = "QA", RequiredSkills = ["qa"] },
                 // Задача 3: требует именно dev1 для разработки и qa1 для тестирования
                 new()
                 {
                     Key = "TASK-3",
                     Role = "Developer",
+                    RequiredSkills = ["dev"],
                     AcceptableWorkers = new Dictionary<string, string>
                     {
                         { "Developing", "dev1" },
@@ -626,6 +632,7 @@ public class TaskMovementServiceTests
             IsStart = true,
             IsLeadTimeStart = true,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -635,7 +642,8 @@ public class TaskMovementServiceTests
             Type = StageType.Work,
             IsStart = false,
             IsLeadTimeStart = false,
-            AllowedRoles = ["dev-be", "dev-fe"],
+            AllowedRoles = [],
+            RequiredSkills = ["dev-be", "dev-fe"],
             Transitions = new List<StageTransition>()
         };
 
@@ -646,6 +654,7 @@ public class TaskMovementServiceTests
             IsStart = false,
             IsLeadTimeStart = false,
             AllowedRoles = [],
+            RequiredSkills = [],
             Transitions = new List<StageTransition>()
         };
 
@@ -657,8 +666,8 @@ public class TaskMovementServiceTests
             Seed = 42,
             Workers = new List<Worker>
             {
-                new() { Login = "dev-be-worker", Role = "dev-be", Performance = 100 },
-                new() { Login = "dev-fe-worker", Role = "dev-fe", Performance = 100 }
+                new() { Login = "dev-be-worker", Role = "dev-be", Skills = ["dev-be"], Performance = 100 },
+                new() { Login = "dev-fe-worker", Role = "dev-fe", Skills = ["dev-fe"], Performance = 100 }
             },
             Workflow = new Workflow
             {
@@ -666,8 +675,8 @@ public class TaskMovementServiceTests
             },
             Tasks = new List<TaskDto>
             {
-                new() { Key = "TASK-1-FE", Role = "dev-fe" },
-                new() { Key = "TASK-2-BE", Role = "dev-be" }
+                new() { Key = "TASK-1-FE", Role = "dev-fe", RequiredSkills = ["dev-fe"] },
+                new() { Key = "TASK-2-BE", Role = "dev-be", RequiredSkills = ["dev-be"] }
             }
         };
 
@@ -686,8 +695,8 @@ public class TaskMovementServiceTests
 
         var task1Fe = simulation.Board.Tasks.First(t => t.Task.Key == "TASK-1-FE");
         var task2Be = simulation.Board.Tasks.First(t => t.Task.Key == "TASK-2-BE");
-        var devBeWorker = simulation.Board.Workers.First(w => w.Worker.Role == "dev-be");
-        var devFeWorker = simulation.Board.Workers.First(w => w.Worker.Role == "dev-fe");
+        var devBeWorker = simulation.Board.Workers.First(w => w.Worker.Skills.Contains("dev-be"));
+        var devFeWorker = simulation.Board.Workers.First(w => w.Worker.Skills.Contains("dev-fe"));
 
         // Обе задачи должны покинуть Todo
         Assert.DoesNotContain(task1Fe, todoStage.Tasks);
@@ -699,11 +708,11 @@ public class TaskMovementServiceTests
 
         // TASK-1-FE должна быть у worker'а с ролью dev-fe
         Assert.Equal("dev-fe-worker", task1Fe.Worker?.Worker.Login);
-        Assert.Equal("dev-fe", task1Fe.Worker?.Worker.Role);
+        Assert.Contains("dev-fe", task1Fe.Worker?.Worker.Skills ?? new List<string>());
 
         // TASK-2-BE должна быть у worker'а с ролью dev-be
         Assert.Equal("dev-be-worker", task2Be.Worker?.Worker.Login);
-        Assert.Equal("dev-be", task2Be.Worker?.Worker.Role);
+        Assert.Contains("dev-be", task2Be.Worker?.Worker.Skills ?? new List<string>());
 
         // Act - Шаг 2: завершаем обе задачи
         task1Fe.Progress = 100;
@@ -724,7 +733,7 @@ public class TaskMovementServiceTests
     public void WorkerExtensions_GetDaysForTask_CalculatesCorrectly()
     {
         // Arrange
-        var worker = new Worker { Login = "dev1", Role = "dev-be", Performance = 100 };
+        var worker = new Worker { Login = "dev1", Role = "dev-be", Skills = ["dev-be"], Performance = 100 };
         
         var developingStage = new Stage
         {
