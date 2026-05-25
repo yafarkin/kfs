@@ -37,11 +37,8 @@ public class SimulationController : ControllerBase
         // Восстанавливаем доменную симуляцию из DTO
         var simulation = ApiMapper.ToDomainSimulation(state);
 
-        // Восстанавливаем CurrentDay и CurrentTick через reflection (private setter)
-        var currentDayProperty = typeof(Simulation).GetProperty(nameof(Simulation.CurrentDay))!;
-        var currentTickProperty = typeof(Simulation).GetProperty(nameof(Simulation.CurrentTick))!;
-        currentDayProperty.SetValue(simulation, state.CurrentDay);
-        currentTickProperty.SetValue(simulation, state.CurrentTick);
+        // Восстанавливаем состояние (день и тик)
+        simulation.RestoreState(state.CurrentDay, state.CurrentTick);
 
         // Проверяем, можно ли продолжить симуляцию
         var validationResult = ValidateSimulationCanContinue(simulation);

@@ -63,4 +63,14 @@ public sealed record Simulation
     {
         CurrentTick += ticks;
     }
+
+    /// <summary>
+    ///     Восстановить состояние симуляции (день и тик) из сериализованных данных.
+    ///     Используется при загрузке состояния для продолжения симуляции.
+    /// </summary>
+    public void RestoreState(int currentDay, int currentTick)
+    {
+        CurrentDay = currentDay;
+        CurrentTick = currentTick;
+    }
 }
