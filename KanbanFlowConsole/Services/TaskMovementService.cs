@@ -168,67 +168,29 @@ public sealed class TaskMovementService
 
     /// <summary>
     ///     Получает требуемые навыки для задачи на данной стадии
-    ///     Логика:
-    ///     1. Если для стадии указан RequiredSkillsPerStage — используем его (наибольший приоритет)
-    ///     2. Если у стадии есть RequiredSkills И у задачи есть RequiredSkills — используем пересечение
-    ///     3. Если у стадии есть RequiredSkills — используем их (для downstream-стадий типа Testing, Review)
-    ///     4. Иначе используем RequiredSkills задачи (для production-стадии)
+    ///     Упрощённая логика: используем навыки задачи, стадия сама решит подходит ли она
     /// </summary>
     private List<string> GetRequiredSkillsForStage(BoardTask task, BoardStage toStage)
     {
-        // 1. Проверяем RequiredSkillsPerStage для конкретной стадии (наибольший приоритет)
-        if (task.Task.RequiredSkillsPerStage.TryGetValue(toStage.Stage.Name, out var stageSkills))
+        // Используем навыки задачи
+        if (task.Task.RequiredSkills.Count > 0)
         {
-            return stageSkills;
+            return task.Task.RequiredSkills;
         }
 
-        var stageRequiredSkills = toStage.Stage.RequiredSkills;
-        var taskRequiredSkills = task.Task.RequiredSkills;
-
-        // 2. Если у стадии и задачи есть RequiredSkills — используем пересечение
-        if (stageRequiredSkills.Count > 0 && taskRequiredSkills.Count > 0)
-        {
-            var intersection = stageRequiredSkills.Intersect(taskRequiredSkills).ToList();
-            if (intersection.Count > 0)
-            {
-                return intersection;
-            }
-            // Если пересечения нет, используем навыки задачи (предполагаем, что задача специфична)
-            return taskRequiredSkills;
-        }
-
-        // 3. Если у стадии есть RequiredSkills — используем их (для downstream-стадий типа Testing, Review)
-        if (stageRequiredSkills.Count > 0)
-        {
-            return stageRequiredSkills;
-        }
-
-        // 4. Если у стадии нет RequiredSkills, пробуем AllowedRoles (для обратной совместимости)
-        if (toStage.Stage.AllowedRoles.Length > 0)
-        {
-            return toStage.Stage.AllowedRoles.ToList();
-        }
-
-        // 5. Используем RequiredSkills задачи (для production-стадии)
-        if (taskRequiredSkills.Count > 0)
-        {
-            return taskRequiredSkills;
-        }
-
-        // 6. Если у задачи нет RequiredSkills, пробуем унаследовать от Role (для обратной совместимости)
+        // Fallback на Role для обратной совместимости
         if (!string.IsNullOrEmpty(task.Task.Role))
         {
             return [task.Task.Role];
         }
 
-        // Нет требований к навыкам
+        // Нет требований
         return [];
     }
 
     /// <summary>
-    ///     Проверяет, есть ли у воркера все требуемые навыки
-    ///     Если requiredSkills.Count > 1, проверяем наличие ХОТЯ БЫ ОДНОГО (ИЛИ)
-    ///     Если requiredSkills.Count == 1, проверяем наличие этого навыка
+    ///     Проверяет, есть ли у воркера хотя бы один требуемый навык (пересечение)
+    ///     Логика: если у воркера есть ХОТЯ БЫ ОДИН навык из requiredSkills — он подходит
     /// </summary>
     private bool HasAllRequiredSkills(BoardWorker worker, List<string> requiredSkills)
     {
@@ -244,8 +206,7 @@ public sealed class TaskMovementService
             workerSkills.Add(worker.Worker.Role);
         }
 
-        // Если требуется несколько навыков — это "ИЛИ" (любой подходит)
-        // Если один навык — это строгое требование
+        // Проверяем пересечение: есть ли у воркера хотя бы один требуемый навык
         return requiredSkills.Any(skill => workerSkills.Contains(skill));
     }
 

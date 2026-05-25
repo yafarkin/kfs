@@ -381,7 +381,6 @@ public static class ApiMapper
             ShirtType = task.ShirtType,
             Role = task.Role,
             RequiredSkills = task.RequiredSkills,
-            RequiredSkillsPerStage = task.RequiredSkillsPerStage,
             Children = task.Children?.Select(ToApiDto).ToList(),
             AcceptableWorkers = task.AcceptableWorkers
         };
@@ -408,7 +407,6 @@ public static class ApiMapper
             ShirtType = dto.ShirtType,
             Role = dto.Role,
             RequiredSkills = dto.RequiredSkills,
-            RequiredSkillsPerStage = dto.RequiredSkillsPerStage,
             Children = dto.Children?.Select(ToDomainTask).ToList(),
             AcceptableWorkers = dto.AcceptableWorkers
         };

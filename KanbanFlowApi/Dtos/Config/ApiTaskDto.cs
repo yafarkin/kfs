@@ -30,17 +30,11 @@ public sealed record ApiTaskDto
     public string? Role { get; set; }
 
     /// <summary>
-    /// Навыки, необходимые для выполнения задачи на стадии производства.
-    /// Например: ["backend", "api"], ["frontend", "react"], ["qa-manual"].
+    /// Навыки, необходимые для выполнения задачи.
+    /// Например: ["backend"], ["frontend", "react"], ["qa-manual"].
+    /// Задача подходит стадии, если есть хотя бы один общий навык.
     /// </summary>
     public List<string> RequiredSkills { get; set; } = new();
-
-    /// <summary>
-    /// Навыки, необходимые для выполнения задачи на конкретных стадиях.
-    /// Ключ: имя стадии, Значение: список требуемых навыков.
-    /// Например: { ["Testing"] = ["qa-manual"], ["Automation"] = ["qa-auto"] }.
-    /// </summary>
-    public Dictionary<string, List<string>> RequiredSkillsPerStage { get; set; } = new();
 
     /// <summary>
     /// Дочерние задачи (для иерархических структур).
