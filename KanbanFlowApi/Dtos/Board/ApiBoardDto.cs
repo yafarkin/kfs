@@ -1,4 +1,4 @@
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Board;
 
 /// <summary>
 /// DTO для доски (полное состояние всех задач, стадий и исполнителей).

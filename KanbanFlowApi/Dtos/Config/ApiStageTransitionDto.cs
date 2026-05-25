@@ -1,4 +1,4 @@
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Config;
 
 /// <summary>
 /// Переход из стадии в другую стадию.

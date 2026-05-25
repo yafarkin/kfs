@@ -1,6 +1,6 @@
 using KanbanFlowConsole.Dtos.History;
 
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.History;
 
 /// <summary>
 /// DTO для события истории симуляции.

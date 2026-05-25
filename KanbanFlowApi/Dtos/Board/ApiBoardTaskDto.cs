@@ -1,11 +1,11 @@
 using KanbanFlowConsole.Enums;
 
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Board;
 
 /// <summary>
-/// DTO для задачи (тип, описание).
+/// DTO для задачи на доске (состояние задачи в симуляции).
 /// </summary>
-public sealed record ApiTaskDto
+public sealed record ApiBoardTaskDto
 {
     /// <summary>
     /// Уникальный ключ задачи (например, TASK-1).
@@ -28,17 +28,22 @@ public sealed record ApiTaskDto
     public string? Role { get; set; }
 
     /// <summary>
-    /// Дочерние задачи (для иерархических структур).
+    /// Прогресс выполнения (0-100).
     /// </summary>
-    public List<ApiTaskDto>? Children { get; set; }
+    public decimal Progress { get; set; }
 
     /// <summary>
-    /// Предпочтительные исполнители для стадий (ключ: имя стадии, значение: логин воркера).
+    /// Логин исполнителя, работающего над задачей.
     /// </summary>
-    public Dictionary<string, string>? AcceptableWorkers { get; set; }
+    public string? WorkerLogin { get; set; }
+
+    /// <summary>
+    /// Имя текущей стадии, где находится задача.
+    /// </summary>
+    public string? CurrentStageName { get; set; }
 
     /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
-    public override string ToString() => $"{Key}: {Summary ?? "no summary"}";
+    public override string ToString() => $"{Key}: {CurrentStageName ?? "unassigned"} ({Progress}%)";
 }

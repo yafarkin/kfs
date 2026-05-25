@@ -1,6 +1,6 @@
 using KanbanFlowConsole.Enums;
 
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Board;
 
 /// <summary>
 /// DTO для стадии на доске (состояние стадии в симуляции).

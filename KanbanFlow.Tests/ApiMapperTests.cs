@@ -1,4 +1,7 @@
 using KanbanFlowApi.Dtos;
+using KanbanFlowApi.Dtos.Board;
+using KanbanFlowApi.Dtos.Config;
+using KanbanFlowApi.Dtos.History;
 using KanbanFlowApi.Mappers;
 using KanbanFlowConsole.Dtos.Config;
 using KanbanFlowConsole.Enums;

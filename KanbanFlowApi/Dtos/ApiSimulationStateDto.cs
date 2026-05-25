@@ -1,3 +1,7 @@
+using KanbanFlowApi.Dtos.Board;
+using KanbanFlowApi.Dtos.Config;
+using KanbanFlowApi.Dtos.History;
+
 namespace KanbanFlowApi.Dtos;
 
 /// <summary>

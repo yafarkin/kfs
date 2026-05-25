@@ -1,4 +1,4 @@
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Config;
 
 /// <summary>
 /// DTO для исполнителя (воркера).

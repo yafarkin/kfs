@@ -1,4 +1,4 @@
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.History;
 
 /// <summary>
 /// DTO для дня истории симуляции (содержит все события за день).

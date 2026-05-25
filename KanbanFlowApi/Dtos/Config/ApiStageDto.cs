@@ -1,6 +1,6 @@
 using KanbanFlowConsole.Enums;
 
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Config;
 
 /// <summary>
 /// DTO для стадии workflow (без циклических ссылок).

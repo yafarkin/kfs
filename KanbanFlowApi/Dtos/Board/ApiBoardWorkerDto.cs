@@ -1,4 +1,4 @@
-namespace KanbanFlowApi.Dtos;
+namespace KanbanFlowApi.Dtos.Board;
 
 /// <summary>
 /// DTO для воркера на доске (состояние исполнителя в симуляции).
