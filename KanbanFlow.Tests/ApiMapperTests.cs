@@ -3,10 +3,10 @@ using KanbanFlowApi.Dtos.Board;
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Dtos.History;
 using KanbanFlowApi.Mappers;
-using KanbanFlowConsole.Dtos.Config;
-using KanbanFlowConsole.Enums;
-using Stage = KanbanFlowConsole.Dtos.Config.Stage;
-using Task = KanbanFlowConsole.Dtos.Config.Task;
+using KanbanFlowSerivce.Dtos.Config;
+using KanbanFlowSerivce.Enums;
+using Stage = KanbanFlowSerivce.Dtos.Config.Stage;
+using Task = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -56,14 +56,12 @@ public class ApiMapperTests
         // Assert
         var todoStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Todo");
         Assert.Equal(StageType.Buffer, todoStage.Type);
-        Assert.True(todoStage.IsStart);
         var todoTransition = Assert.Single(todoStage.Transitions);
         Assert.Equal("Developing", todoTransition.TargetStageName);
         Assert.Equal(1.0, todoTransition.Probability);
 
         var developingStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Developing");
         Assert.Equal(StageType.Work, developingStage.Type);
-        Assert.False(developingStage.IsStart);
         var devTransition = Assert.Single(developingStage.Transitions);
         Assert.Equal("Done", devTransition.TargetStageName);
         Assert.Equal(1.0, devTransition.Probability);
@@ -128,12 +126,10 @@ public class ApiMapperTests
         // Assert
         var todoStage = Assert.Single(domainConfig.Workflow.Stages, s => s.Name == "Todo");
         Assert.Equal(StageType.Buffer, todoStage.Type);
-        Assert.True(todoStage.IsStart);
         Assert.Single(todoStage.Transitions, t => t.Stage.Name == "Developing");
 
         var developingStage = Assert.Single(domainConfig.Workflow.Stages, s => s.Name == "Developing");
         Assert.Equal(StageType.Work, developingStage.Type);
-        Assert.False(developingStage.IsStart);
         Assert.Single(developingStage.Transitions, t => t.Stage.Name == "Done");
     }
 
@@ -271,16 +267,15 @@ public class ApiMapperTests
             Workers = new List<ApiWorkerDto>(),
             Workflow = new ApiWorkflowDto
             {
-                Stages = new List<ApiStageDto>
-                {
+                Stages =
+                [
                     new()
                     {
                         Name = "Done",
                         Type = StageType.Buffer,
-                        IsStart = false,
                         Transitions = new List<ApiStageTransitionDto>() // Пустой список
                     }
-                }
+                ]
             },
             Tasks = new List<ApiTaskDto>()
         };
@@ -299,30 +294,25 @@ public class ApiMapperTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
-            
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var developing = new Stage
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             StageProgressPercent = 100,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var done = new Stage
         {
             Name = "Done",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
@@ -331,20 +321,20 @@ public class ApiMapperTests
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["backend"], Performance = 100 },
-                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
-            },
+            Workers =
+            [
+                new() {Login = "dev1", Skills = ["backend"], Performance = 100},
+                new() {Login = "qa1", Skills = ["qa"], Performance = 100}
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing, done }
+                Stages = [todo, developing, done]
             },
-            Tasks = new List<Task>
-            {
-                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, RequiredSkills = ["backend"] },
-                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, RequiredSkills = ["backend"] }
-            }
+            Tasks =
+            [
+                new() {Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, RequiredSkills = ["backend"]},
+                new() {Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, RequiredSkills = ["backend"]}
+            ]
         };
     }
 
@@ -353,56 +343,50 @@ public class ApiMapperTests
         return new ApiSimulationConfigDto
         {
             Seed = 42,
-            Workers = new List<ApiWorkerDto>
-            {
-                new() { Login = "dev1", Skills = ["backend"], Performance = 100 },
-                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
-            },
+            Workers =
+            [
+                new() {Login = "dev1", Skills = ["backend"], Performance = 100},
+                new() {Login = "qa1", Skills = ["qa"], Performance = 100}
+            ],
             Workflow = new ApiWorkflowDto
             {
-                Stages = new List<ApiStageDto>
-                {
+                Stages =
+                [
                     new()
                     {
                         Name = "Todo",
                         Type = StageType.Buffer,
-                        IsStart = true,
                         IsLeadTimeStart = true,
-                        RequiredSkills = new List<string>(),
-                        Transitions = new List<ApiStageTransitionDto>
-                        {
-                            new() { TargetStageName = "Developing", Probability = 1.0 }
-                        }
+                        RequiredSkills = [],
+                        Transitions = [new() {TargetStageName = "Developing", Probability = 1.0}]
                     },
                     new()
                     {
                         Name = "Developing",
                         Type = StageType.Work,
-                        IsStart = false,
                         IsLeadTimeStart = false,
-                        RequiredSkills = new List<string> { "backend" },
+                        RequiredSkills = ["backend"],
                         StageProgressPercent = 100,
-                        Transitions = new List<ApiStageTransitionDto>
-                        {
-                            new() { TargetStageName = "Done", Probability = 1.0 }
-                        }
+                        Transitions = [new() {TargetStageName = "Done", Probability = 1.0}]
                     },
                     new()
                     {
                         Name = "Done",
                         Type = StageType.Buffer,
-                        IsStart = false,
                         IsLeadTimeStart = false,
-                        RequiredSkills = new List<string>(),
-                        Transitions = new List<ApiStageTransitionDto>()
+                        RequiredSkills = [],
+                        Transitions = []
                     }
-                }
+                ]
             },
-            Tasks = new List<ApiTaskDto>
-            {
-                new() { Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, RequiredSkills = new List<string> { "backend" } },
-                new() { Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, RequiredSkills = new List<string> { "backend" } }
-            }
+            Tasks =
+            [
+                new()
+                {
+                    Key = "TASK-1", Summary = "Implement feature", ShirtType = TShirtType.L, RequiredSkills = ["backend"]
+                },
+                new() {Key = "TASK-2", Summary = "Write tests", ShirtType = TShirtType.M, RequiredSkills = ["backend"]}
+            ]
         };
     }
 
@@ -413,7 +397,7 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
         simulation.StartNewDay();
         simulation.AdvanceTick(24);
@@ -436,7 +420,7 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
 
         // Act
@@ -455,7 +439,7 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
 
         // Act
@@ -463,8 +447,7 @@ public class ApiMapperTests
         var todoStage = Assert.Single(apiState.Board.Stages, s => s.Name == "Todo");
 
         // Assert
-        Assert.Equal(KanbanFlowConsole.Enums.StageType.Buffer, todoStage.Type);
-        Assert.True(todoStage.IsStart);
+        Assert.Equal(KanbanFlowSerivce.Enums.StageType.Buffer, todoStage.Type);
         Assert.Single(todoStage.NextStageNames, n => n == "Developing");
         // Задачи находятся на стадии Todo после инициализации
         Assert.Equal(2, todoStage.TaskKeys.Count);
@@ -477,7 +460,7 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
 
         // Act
@@ -495,7 +478,7 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
 
         // Act
@@ -504,7 +487,7 @@ public class ApiMapperTests
 
         // Assert
         Assert.Equal("Implement feature", task1.Summary);
-        Assert.Equal(KanbanFlowConsole.Enums.TShirtType.L, task1.ShirtType);
+        Assert.Equal(KanbanFlowSerivce.Enums.TShirtType.L, task1.ShirtType);
         Assert.Null(task1.WorkerLogin); // Задача ещё не назначена
         Assert.Null(task1.CurrentStageName);
     }
@@ -514,7 +497,7 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
         var apiState = ApiMapper.ToApiDto(simulation);
 
@@ -533,12 +516,12 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
         simulation.StartNewDay();
-        simulation.LogActivity(new KanbanFlowConsole.Dtos.History.HistoryActivity
+        simulation.LogActivity(new KanbanFlowSerivce.Dtos.History.HistoryActivity
         {
-            Type = KanbanFlowConsole.Dtos.History.ActivityType.WorkerTookTask,
+            Type = KanbanFlowSerivce.Dtos.History.ActivityType.WorkerTookTask,
             Description = "Test activity",
             Tick = 5
         });
@@ -557,13 +540,13 @@ public class ApiMapperTests
     {
         // Arrange
         var config = CreateDomainConfig();
-        var simulation = new KanbanFlowConsole.Dtos.Simulation();
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
         simulation.StartNewDay();
         simulation.AdvanceTick(10); // Устанавливаем тик перед логированием
-        simulation.LogActivity(new KanbanFlowConsole.Dtos.History.HistoryActivity
+        simulation.LogActivity(new KanbanFlowSerivce.Dtos.History.HistoryActivity
         {
-            Type = KanbanFlowConsole.Dtos.History.ActivityType.TaskMoved,
+            Type = KanbanFlowSerivce.Dtos.History.ActivityType.TaskMoved,
             Description = "Task moved",
             Progress = 50
         });
@@ -575,7 +558,7 @@ public class ApiMapperTests
         var historyDay = Assert.Single(apiState.History);
         Assert.Equal(1, historyDay.DayNumber);
         var activity = Assert.Single(historyDay.Activities);
-        Assert.Equal(KanbanFlowConsole.Dtos.History.ActivityType.TaskMoved, activity.Type);
+        Assert.Equal(KanbanFlowSerivce.Dtos.History.ActivityType.TaskMoved, activity.Type);
         Assert.Equal(10, activity.Tick); // Tick устанавливается из CurrentTick симуляции
         Assert.Equal("Task moved", activity.Description);
         Assert.Equal(50, activity.Progress);

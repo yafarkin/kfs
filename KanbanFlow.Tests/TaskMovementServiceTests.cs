@@ -1,10 +1,10 @@
-using KanbanFlowConsole.Dtos;
-using KanbanFlowConsole.Dtos.Board;
-using KanbanFlowConsole.Dtos.History;
-using KanbanFlowConsole.Enums;
-using KanbanFlowConsole.Services;
-using KanbanFlowConsole.Dtos.Config;
-using TaskDto = KanbanFlowConsole.Dtos.Config.Task;
+using KanbanFlowSerivce.Dtos;
+using KanbanFlowSerivce.Dtos.Board;
+using KanbanFlowSerivce.Dtos.History;
+using KanbanFlowSerivce.Enums;
+using KanbanFlowSerivce.Services;
+using KanbanFlowSerivce.Dtos.Config;
+using TaskDto = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -247,7 +247,6 @@ public class TaskMovementServiceTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
             
             Transitions = new List<StageTransition>()
@@ -257,7 +256,6 @@ public class TaskMovementServiceTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             Transitions = new List<StageTransition>()
         };
@@ -267,18 +265,12 @@ public class TaskMovementServiceTests
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["dev"], Performance = 100 }
-            },
+            Workers = [new() {Login = "dev1", Skills = ["dev"], Performance = 100}],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing }
+                Stages = [todo, developing]
             },
-            Tasks = new List<TaskDto>
-            {
-                new() { Key = "TASK-1", RequiredSkills = ["dev"] }
-            }
+            Tasks = [new() {Key = "TASK-1", RequiredSkills = ["dev"]}]
         };
     }
 
@@ -288,7 +280,6 @@ public class TaskMovementServiceTests
         {
             Name = "Waiting",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
             
             Transitions = new List<StageTransition>()
@@ -298,7 +289,6 @@ public class TaskMovementServiceTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
             
             Transitions = new List<StageTransition>()
@@ -308,7 +298,6 @@ public class TaskMovementServiceTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             Transitions = new List<StageTransition>()
         };
@@ -319,18 +308,12 @@ public class TaskMovementServiceTests
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["dev"], Performance = 100 }
-            },
+            Workers = [new() {Login = "dev1", Skills = ["dev"], Performance = 100}],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { waiting, todo, developing }
+                Stages = [waiting, todo, developing]
             },
-            Tasks = new List<TaskDto>
-            {
-                new() { Key = "TASK-1", RequiredSkills = ["dev"] }
-            }
+            Tasks = [new() {Key = "TASK-1", RequiredSkills = ["dev"]}]
         };
     }
 
@@ -340,7 +323,6 @@ public class TaskMovementServiceTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = true,
             IsLeadTimeStart = true,
             Transitions = new List<StageTransition>()
         };
@@ -349,7 +331,6 @@ public class TaskMovementServiceTests
         {
             Name = "Code Review",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             Transitions = new List<StageTransition>()
         };
@@ -359,19 +340,16 @@ public class TaskMovementServiceTests
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["dev"], Performance = 100 },
-                new() { Login = "dev2", Skills = ["dev"], Performance = 100 }
-            },
+            Workers =
+            [
+                new() {Login = "dev1", Skills = ["dev"], Performance = 100},
+                new() {Login = "dev2", Skills = ["dev"], Performance = 100}
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { developing, review }
+                Stages = [developing, review]
             },
-            Tasks = new List<TaskDto>
-            {
-                new() { Key = "TASK-1", RequiredSkills = ["dev"] }
-            }
+            Tasks = [new() {Key = "TASK-1", RequiredSkills = ["dev"]}]
         };
     }
 
@@ -381,28 +359,24 @@ public class TaskMovementServiceTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = true,
             IsLeadTimeStart = true,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var review = new Stage
         {
             Name = "Code Review",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var done = new Stage
         {
             Name = "Done",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         developing.Transitions.Add(new StageTransition { Stage = review, Probability = 1.0 });
@@ -411,19 +385,16 @@ public class TaskMovementServiceTests
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["dev"], Performance = 100 },
-                new() { Login = "dev2", Skills = ["dev"], Performance = 100 }
-            },
+            Workers =
+            [
+                new() {Login = "dev1", Skills = ["dev"], Performance = 100},
+                new() {Login = "dev2", Skills = ["dev"], Performance = 100}
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { developing, review, done }
+                Stages = [developing, review, done]
             },
-            Tasks = new List<TaskDto>
-            {
-                new() { Key = "TASK-1", RequiredSkills = ["dev"] }
-            }
+            Tasks = [new() {Key = "TASK-1", RequiredSkills = ["dev"]}]
         };
     }
 
@@ -436,55 +407,45 @@ public class TaskMovementServiceTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
-            
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var developing = new Stage
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
             RequiredSkills = ["dev"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var readyForQa = new Stage
         {
             Name = "Ready for QA",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var qa = new Stage
         {
             Name = "QA",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
             RequiredSkills = ["qa"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var done = new Stage
         {
             Name = "Done",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
@@ -495,23 +456,22 @@ public class TaskMovementServiceTests
         var config = new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["dev"], Performance = 100, WipLimit = 1 },
-                new() { Login = "dev2", Skills = ["dev"], Performance = 100, WipLimit = 1 },
-                new() { Login = "qa1", Skills = ["qa"], Performance = 100, WipLimit = 1 },
-                new() { Login = "qa2", Skills = ["qa"], Performance = 100, WipLimit = 1 }
-            },
+            Workers =
+            [
+                new() {Login = "dev1", Skills = ["dev"], Performance = 100, WipLimit = 1},
+                new() {Login = "dev2", Skills = ["dev"], Performance = 100, WipLimit = 1},
+                new() {Login = "qa1", Skills = ["qa"], Performance = 100, WipLimit = 1},
+                new() {Login = "qa2", Skills = ["qa"], Performance = 100, WipLimit = 1}
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing, readyForQa, qa, done }
+                Stages = [todo, developing, readyForQa, qa, done]
             },
-            Tasks = new List<TaskDto>
-            {
-                // Задача 1: в работе у dev1 (50% прогресс - ещё не готова)
-                new() { Key = "TASK-1", RequiredSkills = ["dev"] },
+            Tasks =
+            [
+                new() {Key = "TASK-1", RequiredSkills = ["dev"]},
                 // Задача 2: в работе у qa1 (50% прогресс - ещё не готова)
-                new() { Key = "TASK-2", RequiredSkills = ["qa"] },
+                new() {Key = "TASK-2", RequiredSkills = ["qa"]},
                 // Задача 3: требует именно dev1 для разработки и qa1 для тестирования
                 new()
                 {
@@ -519,11 +479,11 @@ public class TaskMovementServiceTests
                     RequiredSkills = ["dev"],
                     AcceptableWorkers = new Dictionary<string, string>
                     {
-                        { "Developing", "dev1" },
-                        { "QA", "qa1" }
+                        {"Developing", "dev1"},
+                        {"QA", "qa1"}
                     }
                 }
-            }
+            ]
         };
 
         var simulation = new Simulation();
@@ -629,33 +589,27 @@ public class TaskMovementServiceTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
-            
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var developing = new Stage
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
             RequiredSkills = ["dev-be", "dev-fe"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var done = new Stage
         {
             Name = "Done",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
-            
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
@@ -664,20 +618,20 @@ public class TaskMovementServiceTests
         var config = new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev-be-worker", Skills = ["dev-be"], Performance = 100 },
-                new() { Login = "dev-fe-worker", Skills = ["dev-fe"], Performance = 100 }
-            },
+            Workers =
+            [
+                new() {Login = "dev-be-worker", Skills = ["dev-be"], Performance = 100},
+                new() {Login = "dev-fe-worker", Skills = ["dev-fe"], Performance = 100}
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing, done }
+                Stages = [todo, developing, done]
             },
-            Tasks = new List<TaskDto>
-            {
-                new() { Key = "TASK-1-FE", RequiredSkills = ["dev-fe"] },
-                new() { Key = "TASK-2-BE", RequiredSkills = ["dev-be"] }
-            }
+            Tasks =
+            [
+                new() {Key = "TASK-1-FE", RequiredSkills = ["dev-fe"]},
+                new() {Key = "TASK-2-BE", RequiredSkills = ["dev-be"]}
+            ]
         };
 
         var simulation = new Simulation();
@@ -790,10 +744,9 @@ public class TaskMovementServiceTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         // Стадия Developing требует навыки backend или frontend
@@ -801,10 +754,9 @@ public class TaskMovementServiceTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = ["backend", "frontend"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
@@ -812,19 +764,12 @@ public class TaskMovementServiceTests
         var config = new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
-            },
+            Workers = [new() {Login = "qa1", Skills = ["qa"], Performance = 100}],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing }
+                Stages = [todo, developing]
             },
-            Tasks = new List<TaskDto>
-            {
-                // Задача с навыками backend и qa
-                new() { Key = "TASK-1", RequiredSkills = ["backend", "qa"] }
-            }
+            Tasks = [new() {Key = "TASK-1", RequiredSkills = ["backend", "qa"]}]
         };
 
         var simulation = new Simulation();
@@ -853,10 +798,9 @@ public class TaskMovementServiceTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         // Стадия Developing требует навыки backend или frontend
@@ -864,10 +808,9 @@ public class TaskMovementServiceTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = ["backend", "frontend"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
@@ -875,19 +818,12 @@ public class TaskMovementServiceTests
         var config = new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["backend"], Performance = 100 }
-            },
+            Workers = [new() {Login = "dev1", Skills = ["backend"], Performance = 100}],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing }
+                Stages = [todo, developing]
             },
-            Tasks = new List<TaskDto>
-            {
-                // Задача с навыками backend и qa
-                new() { Key = "TASK-1", RequiredSkills = ["backend", "qa"] }
-            }
+            Tasks = [new() {Key = "TASK-1", RequiredSkills = ["backend", "qa"]}]
         };
 
         var simulation = new Simulation();

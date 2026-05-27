@@ -1,5 +1,5 @@
-using KanbanFlowConsole.Dtos;
-using KanbanFlowConsole.Enums;
+using KanbanFlowSerivce.Dtos;
+using KanbanFlowSerivce.Enums;
 
 namespace KanbanFlow.Tests;
 

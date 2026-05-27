@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DiceGameConsole\DiceGameConsole.csproj" />
-    <ProjectReference Include="..\KanbanFlowConsole\KanbanFlowConsole.csproj" />
+    <ProjectReference Include="..\KanbanFlowSerivce\KanbanFlowSerivce.csproj" />
   </ItemGroup>
 
 </Project>

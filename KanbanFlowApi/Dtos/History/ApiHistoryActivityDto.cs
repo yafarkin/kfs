@@ -1,4 +1,4 @@
-using KanbanFlowConsole.Dtos.History;
+using KanbanFlowSerivce.Dtos.History;
 
 namespace KanbanFlowApi.Dtos.History;
 

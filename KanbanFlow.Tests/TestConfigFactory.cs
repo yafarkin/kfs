@@ -1,7 +1,7 @@
-using KanbanFlowConsole.Dtos;
-using KanbanFlowConsole.Dtos.Config;
-using KanbanFlowConsole.Enums;
-using BoardTask = KanbanFlowConsole.Dtos.Config.Task;
+using KanbanFlowSerivce.Dtos;
+using KanbanFlowSerivce.Dtos.Config;
+using KanbanFlowSerivce.Enums;
+using BoardTask = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -14,63 +14,57 @@ public static class TestConfigFactory
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var developing = new Stage
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = ["backend"],
             StageProgressPercent = 100,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var readyForTesting = new Stage
         {
             Name = "Ready for Testing",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var testing = new Stage
         {
             Name = "Testing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = ["qa"],
             StageProgressPercent = 30,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var releasePreparation = new Stage
         {
             Name = "Release Preparation",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = ["backend"],
             StageProgressPercent = 20,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var done = new Stage
         {
             Name = "Done",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         // Устанавливаем DAG переходы (прямые ссылки)
@@ -83,27 +77,28 @@ public static class TestConfigFactory
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
+            Workers =
+            [
                 new()
                 {
                     Login = "dev1",
                     Skills = ["backend"],
                     Performance = 100
                 },
+
                 new()
                 {
                     Login = "qa1",
                     Skills = ["qa"],
                     Performance = 100
                 }
-            },
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing, readyForTesting, testing, releasePreparation, done }
+                Stages = [todo, developing, readyForTesting, testing, releasePreparation, done]
             },
-            Tasks = new List<BoardTask>
-            {
+            Tasks =
+            [
                 new()
                 {
                     Key = "TASK-1",
@@ -111,6 +106,7 @@ public static class TestConfigFactory
                     ShirtType = TShirtType.L,
                     RequiredSkills = ["backend", "qa"]
                 },
+
                 new()
                 {
                     Key = "TASK-2",
@@ -118,7 +114,7 @@ public static class TestConfigFactory
                     ShirtType = TShirtType.M,
                     RequiredSkills = ["backend", "qa"]
                 }
-            }
+            ]
         };
     }
 }

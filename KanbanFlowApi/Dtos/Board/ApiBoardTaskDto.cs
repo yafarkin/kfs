@@ -1,4 +1,4 @@
-using KanbanFlowConsole.Enums;
+using KanbanFlowSerivce.Enums;
 
 namespace KanbanFlowApi.Dtos.Board;
 

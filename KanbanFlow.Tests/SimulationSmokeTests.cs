@@ -1,8 +1,8 @@
-using KanbanFlowConsole.Dtos;
-using KanbanFlowConsole.Dtos.Config;
-using KanbanFlowConsole.Dtos.History;
-using KanbanFlowConsole.Enums;
-using KanbanFlowConsole.Services;
+using KanbanFlowSerivce.Dtos;
+using KanbanFlowSerivce.Dtos.Config;
+using KanbanFlowSerivce.Dtos.History;
+using KanbanFlowSerivce.Enums;
+using KanbanFlowSerivce.Services;
 
 namespace KanbanFlow.Tests;
 
@@ -61,7 +61,7 @@ public class SimulationSmokeTests
         // Assert - Проверяем, что каждая задача прошла через все стадии
         // Начальная стадия (Todo) не записывается в историю, т.к. это не перемещение
         var expectedStages = config.Workflow.Stages
-            .Where(s => !s.IsStart) // Исключаем стартовую стадию
+            .Where(s => s.Name != "Todo") // Исключаем стартовую стадию
             .Select(s => s.Name)
             .ToList();
         

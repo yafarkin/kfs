@@ -1,4 +1,4 @@
-using KanbanFlowConsole.Enums;
+using KanbanFlowSerivce.Enums;
 
 namespace KanbanFlowApi.Dtos.Board;
 
@@ -16,11 +16,6 @@ public sealed record ApiBoardStageDto
     /// Тип стадии: Work (требует исполнителя) или Buffer (буфер/очередь).
     /// </summary>
     public StageType Type { get; set; }
-
-    /// <summary>
-    /// Является ли стадия стартовой (в неё могут попадать новые задачи).
-    /// </summary>
-    public bool IsStart { get; set; }
 
     /// <summary>
     /// Является ли стадия началом для измерения Lead Time.

@@ -1,8 +1,8 @@
 using KanbanFlowApi.Dtos;
 using KanbanFlowApi.Mappers;
-using KanbanFlowConsole.Dtos;
-using KanbanFlowConsole.Factories;
-using KanbanFlowConsole.Services;
+using KanbanFlowSerivce.Dtos;
+using KanbanFlowSerivce.Factories;
+using KanbanFlowSerivce.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KanbanFlowApi.Controllers;
@@ -36,10 +36,7 @@ public class SimulationController : ControllerBase
     {
         // Восстанавливаем доменную симуляцию из DTO
         var simulation = ApiMapper.ToDomainSimulation(state);
-
-        // Восстанавливаем состояние (день и тик)
-        simulation.RestoreState(state.CurrentDay, state.CurrentTick);
-
+        
         // Проверяем, можно ли продолжить симуляцию
         var validationResult = ValidateSimulationCanContinue(simulation);
         if (!validationResult.IsValid)
@@ -81,19 +78,19 @@ public class SimulationController : ControllerBase
     {
         // Проверяем, есть ли задачи, которые ещё не в Done
         var tasksNotInDone = simulation.Board.Tasks
-            .Where(t => t.CurrentStage != null && t.CurrentStage.Stage.Name != "Done")
+            .Where(t => t.CurrentStage is not null && t.CurrentStage.NextStages.Count != 0)
             .ToList();
-
-        // Если все задачи без стадии (новая симуляция) — это нормально
-        var allTasksWithoutStage = simulation.Board.Tasks.All(t => t.CurrentStage == null);
-        if (allTasksWithoutStage)
-        {
-            return ValidationResult.Valid();
-        }
 
         if (!tasksNotInDone.Any())
         {
-            return ValidationResult.Invalid("Симуляция завершена: все задачи находятся в стадии Done");
+            return ValidationResult.Invalid("Симуляция завершена: все задачи находятся в финальных стадиях");
+        }
+
+        // Если все задачи без стадии (новая симуляция) — это нормально
+        var allTasksWithoutStage = simulation.Board.Tasks.All(t => t.CurrentStage is null);
+        if (allTasksWithoutStage)
+        {
+            return ValidationResult.Valid();
         }
 
         // Проверяем, есть ли воркеры для выполнения оставшихся задач
@@ -123,21 +120,21 @@ public class SimulationController : ControllerBase
             }
 
             // Если задача в Buffer и есть следующие стадии — можно двигаться
-            if (currentStage.Stage.Type == KanbanFlowConsole.Enums.StageType.Buffer &&
+            if (currentStage.Stage.Type == KanbanFlowSerivce.Enums.StageType.Buffer &&
                 currentStage.NextStages.Any())
             {
                 return ValidationResult.Valid();
             }
 
             // Если задача в Work и есть прогресс — можно продолжать работу
-            if (currentStage.Stage.Type == KanbanFlowConsole.Enums.StageType.Work &&
+            if (currentStage.Stage.Type == KanbanFlowSerivce.Enums.StageType.Work &&
                 task.Progress < currentStage.Stage.StageProgressPercent)
             {
                 return ValidationResult.Valid();
             }
 
             // Если задача в Work и прогресс 100% — можно двигаться дальше
-            if (currentStage.Stage.Type == KanbanFlowConsole.Enums.StageType.Work &&
+            if (currentStage.Stage.Type == KanbanFlowSerivce.Enums.StageType.Work &&
                 task.Progress >= currentStage.Stage.StageProgressPercent &&
                 currentStage.NextStages.Any())
             {
@@ -150,7 +147,7 @@ public class SimulationController : ControllerBase
         {
             var stage = t.CurrentStage;
             return stage != null &&
-                   (stage.Stage.Type == KanbanFlowConsole.Enums.StageType.Buffer ||
+                   (stage.Stage.Type == KanbanFlowSerivce.Enums.StageType.Buffer ||
                     t.Progress >= stage.Stage.StageProgressPercent) &&
                    stage.NextStages.Any();
         });

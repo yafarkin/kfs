@@ -1,4 +1,4 @@
-using KanbanFlowConsole.Enums;
+using KanbanFlowSerivce.Enums;
 
 namespace KanbanFlowApi.Dtos.Config;
 
@@ -20,7 +20,7 @@ public sealed record ApiTaskDto
     /// <summary>
     /// Размер задачи (TShirt: XS, S, M, L, XL).
     /// </summary>
-    public TShirtType? ShirtType { get; set; }
+    public TShirtType ShirtType { get; set; }
 
     /// <summary>
     /// Навыки, необходимые для выполнения задачи.

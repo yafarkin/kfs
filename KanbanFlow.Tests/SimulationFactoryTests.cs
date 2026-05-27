@@ -1,8 +1,8 @@
 using System.Text.Json;
-using KanbanFlowConsole.Dtos.Config;
-using KanbanFlowConsole.Enums;
-using KanbanFlowConsole.Factories;
-using Task = KanbanFlowConsole.Dtos.Config.Task;
+using KanbanFlowSerivce.Dtos.Config;
+using KanbanFlowSerivce.Enums;
+using KanbanFlowSerivce.Factories;
+using Task = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 
@@ -110,7 +110,6 @@ public class SimulationFactoryTests
         {
             Name = "Todo",
             Type = StageType.Buffer,
-            IsStart = true,
             IsLeadTimeStart = true,
             
             Transitions = new List<StageTransition>()
@@ -120,7 +119,6 @@ public class SimulationFactoryTests
         {
             Name = "Developing",
             Type = StageType.Work,
-            IsStart = false,
             IsLeadTimeStart = false,
             StageProgressPercent = 100,
             Transitions = new List<StageTransition>()
@@ -130,7 +128,6 @@ public class SimulationFactoryTests
         {
             Name = "Done",
             Type = StageType.Buffer,
-            IsStart = false,
             IsLeadTimeStart = false,
             
             Transitions = new List<StageTransition>()
@@ -142,21 +139,21 @@ public class SimulationFactoryTests
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
-                new() { Login = "dev1", Skills = ["dev"], Performance = 100 },
-                new() { Login = "dev2", Skills = ["dev"], Performance = 100 }
-            },
+            Workers =
+            [
+                new() {Login = "dev1", Skills = ["dev"], Performance = 100},
+                new() {Login = "dev2", Skills = ["dev"], Performance = 100}
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing, done }
+                Stages = [todo, developing, done]
             },
-            Tasks = new List<Task>
-            {
-                new() { Key = "TASK-1", Summary = "Task 1", RequiredSkills = ["dev"] },
-                new() { Key = "TASK-2", Summary = "Task 2", RequiredSkills = ["dev"] },
-                new() { Key = "TASK-3", Summary = "Task 3", RequiredSkills = ["dev"] }
-            }
+            Tasks =
+            [
+                new() {Key = "TASK-1", Summary = "Task 1", RequiredSkills = ["dev"]},
+                new() {Key = "TASK-2", Summary = "Task 2", RequiredSkills = ["dev"]},
+                new() {Key = "TASK-3", Summary = "Task 3", RequiredSkills = ["dev"]}
+            ]
         };
     }
 }

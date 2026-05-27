@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanbanFlowConsole", "KanbanFlowConsole\KanbanFlowConsole.csproj", "{9CA1D826-FAFB-4B21-83C5-49EA23EA8683}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanbanFlowSerivce", "KanbanFlowSerivce\KanbanFlowSerivce.csproj", "{9CA1D826-FAFB-4B21-83C5-49EA23EA8683}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiceGameConsole.Tests", "DiceGameConsole.Tests\DiceGameConsole.Tests.csproj", "{42A05954-AAA7-4D25-9E61-2C152FFA93E4}"
 EndProject

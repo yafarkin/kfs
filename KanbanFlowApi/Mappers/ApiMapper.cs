@@ -2,24 +2,23 @@ using KanbanFlowApi.Dtos;
 using KanbanFlowApi.Dtos.Board;
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Dtos.History;
-using KanbanFlowConsole.Dtos;
-using KanbanFlowConsole.Dtos.Board;
-using KanbanFlowConsole.Dtos.Config;
-using KanbanFlowConsole.Dtos.History;
-using DomainBoard = KanbanFlowConsole.Dtos.Board;
-using DomainTask = KanbanFlowConsole.Dtos.Config.Task;
+using KanbanFlowSerivce.Dtos;
+using KanbanFlowSerivce.Dtos.Board;
+using KanbanFlowSerivce.Dtos.Config;
+using KanbanFlowSerivce.Dtos.History;
+using DomainTask = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlowApi.Mappers;
 
 /// <summary>
-/// Маппер для конвертации между доменными моделями и API DTO
+///     Маппер для конвертации между доменными моделями и API DTO
 /// </summary>
 public static class ApiMapper
 {
     #region Config
 
     /// <summary>
-    /// Конвертирует доменную конфигурацию в API DTO (без циклических ссылок)
+    ///     Конвертирует доменную конфигурацию в API DTO (без циклических ссылок)
     /// </summary>
     public static ApiSimulationConfigDto ToApiDto(SimulationConfig config)
     {
@@ -36,7 +35,7 @@ public static class ApiMapper
     }
 
     /// <summary>
-    /// Конвертирует API DTO в доменную конфигурацию
+    ///     Конвертирует API DTO в доменную конфигурацию
     /// </summary>
     public static SimulationConfig ToDomainConfig(ApiSimulationConfigDto dto)
     {
@@ -48,14 +47,13 @@ public static class ApiMapper
             {
                 Name = stageDto.Name,
                 Type = stageDto.Type,
-                IsStart = stageDto.IsStart,
                 IsLeadTimeStart = stageDto.IsLeadTimeStart,
                 WipLimit = stageDto.WipLimit,
                 RequiredSkills = stageDto.RequiredSkills,
                 RequiresDifferentResource = stageDto.RequiresDifferentResource,
                 RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
                 StageProgressPercent = stageDto.StageProgressPercent,
-                Transitions = new List<StageTransition>()
+                Transitions = []
             };
         }
 
@@ -93,7 +91,7 @@ public static class ApiMapper
     #region Simulation State
 
     /// <summary>
-    /// Конвертирует доменную симуляцию в API DTO (полное состояние)
+    ///     Конвертирует доменную симуляцию в API DTO (полное состояние)
     /// </summary>
     public static ApiSimulationStateDto ToApiDto(Simulation simulation)
     {
@@ -108,21 +106,24 @@ public static class ApiMapper
     }
 
     /// <summary>
-    /// Конвертирует API DTO состояния в доменную симуляцию
+    ///     Конвертирует API DTO состояния в доменную симуляцию
     /// </summary>
     public static Simulation ToDomainSimulation(ApiSimulationStateDto dto)
     {
         var config = ToDomainConfig(dto.Config);
         var simulation = new Simulation();
-        
+
         // Инициализируем симуляцию (создаёт Config, Board, пустую History)
         simulation.InitFromConfig(config);
-        
+
         // Пересоздаём Board из DTO (с правильными связями)
         simulation.Board = ToDomainBoard(dto.Board, config);
-        
+
         // Восстанавливаем историю из DTO (перезаписываем пустую)
         simulation.History = dto.History.Select(ToDomainHistoryDay).ToList();
+        
+        // Восстанавливаем состояние (день и тик)
+        simulation.RestoreState(dto.CurrentDay, dto.CurrentTick);
 
         return simulation;
     }
@@ -131,7 +132,7 @@ public static class ApiMapper
 
     #region Board
 
-    private static ApiBoardDto ToApiDto(DomainBoard.Board board)
+    private static ApiBoardDto ToApiDto(Board board)
     {
         return new ApiBoardDto
         {
@@ -141,13 +142,12 @@ public static class ApiMapper
         };
     }
 
-    private static ApiBoardStageDto ToApiDto(DomainBoard.BoardStage stage)
+    private static ApiBoardStageDto ToApiDto(BoardStage stage)
     {
         return new ApiBoardStageDto
         {
             Name = stage.Stage.Name,
             Type = stage.Stage.Type,
-            IsStart = stage.Stage.IsStart,
             IsLeadTimeStart = stage.Stage.IsLeadTimeStart,
             WipLimit = stage.WipLimit,
             WipCount = stage.WipCount,
@@ -157,7 +157,7 @@ public static class ApiMapper
         };
     }
 
-    private static ApiBoardWorkerDto ToApiDto(DomainBoard.BoardWorker worker)
+    private static ApiBoardWorkerDto ToApiDto(BoardWorker worker)
     {
         return new ApiBoardWorkerDto
         {
@@ -170,7 +170,7 @@ public static class ApiMapper
         };
     }
 
-    private static ApiBoardTaskDto ToApiDto(DomainBoard.BoardTask task)
+    private static ApiBoardTaskDto ToApiDto(BoardTask task)
     {
         return new ApiBoardTaskDto
         {
@@ -184,61 +184,62 @@ public static class ApiMapper
         };
     }
 
-    private static DomainBoard.Board ToDomainBoard(ApiBoardDto dto, SimulationConfig config)
+    private static Board ToDomainBoard(ApiBoardDto dto, SimulationConfig config)
     {
         // Создаём маппинг стадий по имени
-        var stagesMap = new Dictionary<string, DomainBoard.BoardStage>();
+        var stagesMap = new Dictionary<string, BoardStage>();
         foreach (var stageDto in dto.Stages)
         {
-            var configStage = config.Workflow.Stages.First(s => s.Name == stageDto.Name);
-            stagesMap[stageDto.Name] = new DomainBoard.BoardStage
+            var configStage = config.Workflow.Stages.Single(s => s.Name == stageDto.Name);
+            stagesMap[stageDto.Name] = new BoardStage
             {
                 Stage = configStage,
-                Tasks = new List<DomainBoard.BoardTask>(),
-                NextStages = new List<DomainBoard.BoardStage>(),
-                PrevStages = new List<DomainBoard.BoardStage>()
+                Tasks = [],
+                NextStages = [],
+                PrevStages = []
             };
         }
 
         // Устанавливаем связи между стадиями
         foreach (var stageDto in dto.Stages)
         {
-            var boardStage = stagesMap[stageDto.Name];
-            var configStage = config.Workflow.Stages.First(s => s.Name == stageDto.Name);
+            var thisStage = stagesMap[stageDto.Name];
 
             foreach (var nextName in stageDto.NextStageNames)
             {
-                if (stagesMap.TryGetValue(nextName, out var nextStage))
+                if (!stagesMap.TryGetValue(nextName, out var nextStage))
                 {
-                    boardStage.NextStages.Add(nextStage);
-                    // Устанавливаем обратную связь: prevStage для nextStage
-                    nextStage.PrevStages.Add(boardStage);
+                    continue;
                 }
+
+                thisStage.NextStages.Add(nextStage);
+                // Устанавливаем обратную связь: prevStage для nextStage
+                nextStage.PrevStages.Add(thisStage);
             }
         }
 
         // Создаём воркеров
-        var workersMap = new Dictionary<string, DomainBoard.BoardWorker>();
+        var workersMap = new Dictionary<string, BoardWorker>();
         foreach (var workerDto in dto.Workers)
         {
-            var configWorker = config.Workers.First(w => w.Login == workerDto.Login);
-            workersMap[workerDto.Login] = new DomainBoard.BoardWorker
+            var configWorker = config.Workers.Single(w => w.Login == workerDto.Login);
+            workersMap[workerDto.Login] = new BoardWorker
             {
                 Worker = configWorker,
-                Assignments = new List<DomainBoard.BoardTaskAssignment>()
+                Assignments = []
             };
         }
 
         // Создаём задачи
-        var tasksMap = new Dictionary<string, DomainBoard.BoardTask>();
+        var tasksMap = new Dictionary<string, BoardTask>();
         foreach (var taskDto in dto.Tasks)
         {
-            var configTask = config.Tasks.First(t => t.Key == taskDto.Key);
-            var boardTask = new DomainBoard.BoardTask
+            var configTask = config.Tasks.Single(t => t.Key == taskDto.Key);
+            var boardTask = new BoardTask
             {
                 Task = configTask,
                 Progress = taskDto.Progress,
-                TransitionHistory = new List<TaskTransitionHistory>(),
+                TransitionHistory = [],
                 CurrentStage = taskDto.CurrentStageName != null
                     ? stagesMap[taskDto.CurrentStageName]
                     : null,
@@ -266,18 +267,18 @@ public static class ApiMapper
                 .Select(key =>
                 {
                     var task = tasksMap[key];
-                    return new DomainBoard.BoardTaskAssignment
+                    return new BoardTaskAssignment
                     {
                         Task = task,
                         Stage = task.CurrentStage ?? workersMap[workerDto.Login].Assignments
-                            .FirstOrDefault()?.Stage 
-                            ?? stagesMap.Values.First(s => s.Stage.IsStart)
+                                .FirstOrDefault()?.Stage
+                            ?? stagesMap.Values.Single(s => s.PrevStages.Count == 0)
                     };
                 })
                 .ToList();
         }
 
-        return new DomainBoard.Board
+        return new Board
         {
             Stages = stagesMap.Values.ToList(),
             Workers = workersMap.Values.ToList(),
@@ -343,7 +344,6 @@ public static class ApiMapper
         {
             Name = stage.Name,
             Type = stage.Type,
-            IsStart = stage.IsStart,
             IsLeadTimeStart = stage.IsLeadTimeStart,
             WipLimit = stage.WipLimit,
             RequiredSkills = stage.RequiredSkills,
