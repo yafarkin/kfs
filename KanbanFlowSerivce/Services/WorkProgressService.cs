@@ -40,6 +40,12 @@ public sealed class WorkProgressService
                 var task = assignment.Task;
                 var stage = assignment.Stage;
 
+                // Пропускаем уже завершённые задачи — они должны перемещаться дальше через ProcessMovements
+                if (task.IsCompleted)
+                {
+                    continue;
+                }
+
                 // Рассчитываем сколько дней требуется для выполнения задачи на этой стадии
                 var daysRequired = worker.Worker.GetDaysForTask(stage.Stage, task.Task.ShirtType);
 
