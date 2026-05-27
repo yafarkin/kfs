@@ -55,6 +55,9 @@ public class SimulationController : ControllerBase
         var workProgressService = new WorkProgressService(simulation);
         workProgressService.SimulateWorkDay();
 
+        // Обрабатываем перемещения завершённых задач (после работы)
+        movementService.ProcessMovements();
+
         // Увеличиваем тик на 24 часа (день)
         simulation.AdvanceTick(24);
 
