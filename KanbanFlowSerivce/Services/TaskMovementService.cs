@@ -516,21 +516,6 @@ public sealed class TaskMovementService
         // Обновляем текущую стадию задачи
         task.CurrentStage = toStage;
 
-        // Если задача была завершена на предыдущей стадии — записываем что worker завершил задачу
-        if (fromStage.Stage.Type == StageType.Work && task.IsCompleted)
-        {
-            var workerCompletedTaskActivity = new HistoryActivity
-            {
-                Type = ActivityType.WorkerCompletedTask,
-                Description = $"Worker {task.Worker?.Worker.Login} завершил задачу {task.Task.Key} на стадии {fromStage.Stage.Name}",
-                Task = task,
-                Worker = task.Worker,
-                Stage = fromStage,
-                CompletedAtTick = _simulation.CurrentTick
-            };
-            _simulation.LogActivity(workerCompletedTaskActivity);
-        }
-        
         // Добавляем запись в историю
         var workerInfo = worker is not null ? $" (worker: {worker.Worker.Login})" : string.Empty;
         var activity = new HistoryActivity
