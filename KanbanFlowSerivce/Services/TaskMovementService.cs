@@ -93,6 +93,12 @@ public sealed class TaskMovementService
                     continue;
                 }
 
+                // Если задача завершена — не назначаем воркера, она должна двигаться дальше
+                if (task.IsCompleted)
+                {
+                    continue;
+                }
+
                 // Пытаемся найти воркера
                 var worker = FindAvailableWorker(task, stage);
                 if (worker != null)
