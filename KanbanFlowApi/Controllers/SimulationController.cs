@@ -47,16 +47,19 @@ public class SimulationController : ControllerBase
         // Начинаем новый день (увеличиваем CurrentDay)
         simulation.StartNewDay();
 
-        // Обрабатываем перемещения задач
+        // Обрабатываем перемещения задач (перед работой)
         var movementService = new TaskMovementService(simulation);
         movementService.ProcessMovements();
 
-        // Симулируем выполнение работы
+        // Симулируем выполнение работы и получаем список завершённых задач
         var workProgressService = new WorkProgressService(simulation);
-        workProgressService.SimulateWorkDay();
+        var completedTasks = workProgressService.SimulateWorkDay();
 
         // Обрабатываем перемещения завершённых задач (после работы)
-        movementService.ProcessMovements();
+        if (completedTasks.Count > 0)
+        {
+            movementService.ProcessMovements(completedTasks);
+        }
 
         // Увеличиваем тик на 24 часа (день)
         simulation.AdvanceTick(24);

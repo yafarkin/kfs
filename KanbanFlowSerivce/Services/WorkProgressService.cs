@@ -23,8 +23,11 @@ public sealed class WorkProgressService
     ///     Симулирует один день работы
     ///     Увеличивает прогресс задач на основе производительности воркеров
     /// </summary>
-    public void SimulateWorkDay()
+    /// <returns>Список задач, которые завершили работу (достигли 100%) в этот день</returns>
+    public List<BoardTask> SimulateWorkDay()
     {
+        var completedTasks = new List<BoardTask>();
+
         foreach (var worker in _simulation.Board.Workers)
         {
             foreach (var assignment in worker.Assignments.ToList())
@@ -44,6 +47,7 @@ public sealed class WorkProgressService
                 if (daysRequired <= 0)
                 {
                     task.Progress = 100;
+                    completedTasks.Add(task);
                     continue;
                 }
 
@@ -72,7 +76,7 @@ public sealed class WorkProgressService
                     Progress = task.Progress
                 });
 
-                // Если задача завершена, записываем событие
+                // Если задача завершена, записываем событие и добавляем в список
                 if (wasCompleted)
                 {
                     _simulation.LogActivity(new HistoryActivity
@@ -84,8 +88,12 @@ public sealed class WorkProgressService
                         Stage = stage,
                         CompletedAtTick = _simulation.CurrentTick
                     });
+
+                    completedTasks.Add(task);
                 }
             }
         }
+
+        return completedTasks;
     }
 }

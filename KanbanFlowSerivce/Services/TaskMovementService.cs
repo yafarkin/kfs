@@ -23,7 +23,9 @@ public sealed class TaskMovementService
     ///     Обрабатывает все возможные перемещения задач по доске
     ///     Выполняется циклически, пока есть возможные действия
     /// </summary>
-    public void ProcessMovements()
+    /// <param name="completedTasks">Опционально: список задач, которые завершили работу в этот день. 
+    /// Если указан, обрабатываются только эти задачи (для оптимизации).</param>
+    public void ProcessMovements(List<BoardTask>? completedTasks = null)
     {
         // Сначала пытаемся назначить воркеров на задачи, которые уже в рабочих стадиях без воркера
         TryAssignWorkersToWaitingTasks();
@@ -54,7 +56,7 @@ public sealed class TaskMovementService
                         continue;
                     }
 
-                    var moved = TryMoveTask(prevStage, stage);
+                    var moved = TryMoveTask(prevStage, stage, completedTasks);
                     if (moved)
                     {
                         hasMovements = true;
@@ -194,7 +196,7 @@ public sealed class TaskMovementService
     /// <summary>
     ///     Пытается переместить задачу из одной стадии в другую
     /// </summary>
-    private bool TryMoveTask(BoardStage fromStage, BoardStage toStage)
+    private bool TryMoveTask(BoardStage fromStage, BoardStage toStage, List<BoardTask>? completedTasks = null)
     {
         // Проверяем, может ли стадия принять задачу (WIP лимит)
         if (!toStage.CanAcceptTasks)
@@ -205,6 +207,12 @@ public sealed class TaskMovementService
         // Находим подходящую задачу в предыдущей стадии
         foreach (var task in fromStage.Tasks)
         {
+            // Если указан список завершённых задач — обрабатываем только их
+            if (completedTasks != null && !completedTasks.Contains(task))
+            {
+                continue;
+            }
+
             // Проверяем, готова ли задача к перемещению
             if (!IsTaskReadyForMove(task, fromStage))
             {
