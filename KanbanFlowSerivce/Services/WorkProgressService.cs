@@ -57,7 +57,7 @@ public sealed class WorkProgressService
                 var newProgress = Math.Min(100, task.Progress + (int)actualProgress);
 
                 // Проверяем не завершилась ли задача
-                var wasCompleted = task.Progress < 100 && newProgress >= 100;
+                var wasCompleted = !task.IsCompleted && newProgress >= 99;
 
                 task.Progress = newProgress;
 
@@ -87,42 +87,5 @@ public sealed class WorkProgressService
                 }
             }
         }
-    }
-
-    /// <summary>
-    ///     Симулирует работу до завершения всех задач или достижения лимита дней
-    /// </summary>
-    /// <param name="maxDays">Максимальное количество дней для симуляции</param>
-    /// <returns>Количество дней симуляции</returns>
-    public int SimulateUntilCompletion(int maxDays = 100)
-    {
-        var day = 0;
-
-        while (day < maxDays)
-        {
-            day++;
-            _simulation.StartNewDay();
-
-            // Сначала обрабатываем перемещения задач
-            var movementService = new TaskMovementService(_simulation);
-            movementService.ProcessMovements();
-
-            // Проверяем, все ли задачи в Done
-            var doneStage = _simulation.Board.Stages
-                .SingleOrDefault(s => s.Stage.Name == "Done");
-            
-            if (doneStage != null && doneStage.Tasks.Count == _simulation.Board.Tasks.Count)
-            {
-                break;
-            }
-
-            // Симулируем выполнение работы
-            SimulateWorkDay();
-
-            // Увеличиваем тик
-            _simulation.AdvanceTick(24); // 24 часа в дне
-        }
-
-        return day;
     }
 }

@@ -11,10 +11,12 @@ namespace KanbanFlowSerivce.Services;
 public sealed class TaskMovementService
 {
     private readonly Simulation _simulation;
+    private readonly Random _random;
 
-    public TaskMovementService(Simulation simulation)
+    public TaskMovementService(Simulation simulation, Random? random = null)
     {
         _simulation = simulation;
+        _random = random ?? new Random();
     }
 
     /// <summary>
@@ -23,14 +25,20 @@ public sealed class TaskMovementService
     /// </summary>
     public void ProcessMovements()
     {
+        // Сначала пытаемся назначить воркеров на задачи, которые уже в рабочих стадиях без воркера
+        TryAssignWorkersToWaitingTasks();
+
         var hasMovements = true;
         while (hasMovements)
         {
             hasMovements = false;
 
-            // Проходим по всем стадиям от конца к началу (reverse order)
-            // Начинаем с тех, у которых есть предыдущие стадии
-            foreach (var stage in _simulation.Board.Stages.AsEnumerable().Reverse())
+            // Получаем стадии в топологическом порядке от стоков (конечных) к истокам (начальным)
+            // Это позволяет задачам двигаться каскадом за один проход цикла
+            // и корректно работает с DAG с несколькими ветками
+            var stagesInOrder = GetStagesInTopologicalOrder();
+
+            foreach (var stage in stagesInOrder)
             {
                 if (stage.PrevStages.Count == 0)
                 {
@@ -40,6 +48,12 @@ public sealed class TaskMovementService
                 // Пытаемся переместить задачу из предыдущих стадий
                 foreach (var prevStage in stage.PrevStages)
                 {
+                    // Проверяем вероятность перехода из prevStage в stage
+                    if (!IsTransitionAllowed(prevStage, stage))
+                    {
+                        continue;
+                    }
+
                     var moved = TryMoveTask(prevStage, stage);
                     if (moved)
                     {
@@ -49,6 +63,132 @@ public sealed class TaskMovementService
                 }
             }
         }
+    }
+
+    /// <summary>
+    ///     Пытается назначить воркеров на задачи, которые находятся в рабочих стадиях без воркера
+    /// </summary>
+    private void TryAssignWorkersToWaitingTasks()
+    {
+        foreach (var stage in _simulation.Board.Stages)
+        {
+            if (stage.Stage.Type != StageType.Work)
+            {
+                continue;
+            }
+
+            foreach (var task in stage.Tasks.ToList())
+            {
+                // Пропускаем задачи, которые уже в работе
+                if (task.Worker != null)
+                {
+                    continue;
+                }
+
+                // Если задача не требует эту стадию — пропускаем (она должна двигаться дальше)
+                if (!TaskRequiresStage(task, stage))
+                {
+                    continue;
+                }
+
+                // Пытаемся найти воркера
+                var worker = FindAvailableWorker(task, stage);
+                if (worker != null)
+                {
+                    // Назначаем воркера на задачу
+                    worker.RemoveTaskAssignment(task);
+                    worker.Assignments.Add(new BoardTaskAssignment
+                    {
+                        Task = task,
+                        Stage = stage
+                    });
+                    task.Worker = worker;
+
+                    _simulation.LogActivity(new HistoryActivity
+                    {
+                        Type = ActivityType.WorkerTookTask,
+                        Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {stage.Stage.Name}",
+                        Task = task,
+                        Worker = worker,
+                        Stage = stage,
+                        StartedAtTick = _simulation.CurrentTick
+                    });
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Возвращает стадии в топологическом порядке от стоков (конечных стадий) к истокам (начальным)
+    ///     Используется BFS от всех стоков для построения порядка обработки
+    /// </summary>
+    private List<BoardStage> GetStagesInTopologicalOrder()
+    {
+        // Находим все стоки (стадии без следующих стадий)
+        var sinks = _simulation.Board.Stages.Where(s => s.NextStages.Count == 0).ToList();
+
+        // BFS от стоков к истокам
+        var result = new List<BoardStage>();
+        var visited = new HashSet<BoardStage>();
+        var queue = new Queue<BoardStage>();
+
+        // Добавляем все стоки в очередь
+        foreach (var sink in sinks)
+        {
+            queue.Enqueue(sink);
+            visited.Add(sink);
+        }
+
+        while (queue.Count > 0)
+        {
+            var stage = queue.Dequeue();
+            result.Add(stage);
+
+            // Добавляем предыдущие стадии (обратное направление)
+            foreach (var prevStage in stage.PrevStages)
+            {
+                if (!visited.Contains(prevStage))
+                {
+                    visited.Add(prevStage);
+                    queue.Enqueue(prevStage);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Проверяет, разрешён ли переход из одной стадии в другую на основе вероятности
+    /// </summary>
+    private bool IsTransitionAllowed(BoardStage fromStage, BoardStage toStage)
+    {
+        // Находим переход из fromStage в toStage
+        var transition = fromStage.Stage.Transitions
+            .FirstOrDefault(t => t.Stage.Name == toStage.Stage.Name);
+
+        // Если перехода нет в конфигурации — запрещаем
+        if (transition == null)
+        {
+            return false;
+        }
+
+        // Если вероятность 1.0 — переход всегда разрешён
+        if (transition.Probability >= 1.0)
+        {
+            return true;
+        }
+
+        // Если вероятность 0.0 — переход запрещён
+        if (transition.Probability <= 0.0)
+        {
+            return false;
+        }
+
+        // Проверяем вероятность через случайное число
+        var roll = _random.NextDouble();
+        var result = roll < transition.Probability;
+        return result;
     }
 
     /// <summary>
@@ -71,15 +211,33 @@ public sealed class TaskMovementService
                 continue;
             }
 
-            // Для рабочих стадий пытаемся найти исполнителя
+            // Для рабочих стадий определяем, нужен ли воркер
             BoardWorker? worker = null;
             if (toStage.Stage.Type == StageType.Work)
             {
-                worker = FindAvailableWorker(task, toStage);
-                if (worker is null)
+                // Если задача не требует навыков для этой стадии — помещаем без воркера
+                // В следующем цикле while она автоматически продвинется дальше
+                if (!TaskRequiresStage(task, toStage))
                 {
-                    // Не смогли найти исполнителя для этой стадии и этой задачи
-                    continue;
+                    worker = null;
+                }
+                else
+                {
+                    // Задача требует эту стадию — ищем воркера
+                    worker = FindAvailableWorker(task, toStage);
+
+                    // Если задача требует конкретного воркера (AcceptableWorkers) — не перемещаем без него
+                    var requiredWorkerLogin = GetRequiredWorkerForStage(task, toStage);
+                    if (!string.IsNullOrEmpty(requiredWorkerLogin) && worker is null)
+                    {
+                        continue;
+                    }
+
+                    // Если воркера нет — задача НЕ перемещается, остаётся в предыдущей стадии
+                    if (worker is null)
+                    {
+                        continue;
+                    }
                 }
             }
 
@@ -92,13 +250,41 @@ public sealed class TaskMovementService
     }
 
     /// <summary>
+    ///     Проверяет, требует ли задача работы на данной стадии (есть ли пересечение навыков)
+    /// </summary>
+    private static bool TaskRequiresStage(BoardTask task, BoardStage stage)
+    {
+        // Если у стадии нет требуемых навыков — задача проходит всегда
+        if (stage.Stage.RequiredSkills.Count == 0)
+        {
+            return true;
+        }
+
+        // Если у задачи нет требуемых навыков — задача проходит все стадии
+        if (task.Task.RequiredSkills.Count == 0)
+        {
+            return true;
+        }
+
+        // Задача требует эту стадию, если есть пересечение навыков задачи и стадии
+        return task.Task.RequiredSkills.Any(skill => stage.Stage.RequiredSkills.Contains(skill));
+    }
+
+    /// <summary>
     ///     Проверяет, готова ли задача к перемещению из стадии
     /// </summary>
     private bool IsTaskReadyForMove(BoardTask task, BoardStage fromStage)
     {
-        // Если предыдущая стадия рабочая - задача должна быть завершена (100%)
+        // Если предыдущая стадия рабочая — задача должна быть завершена (100%)
+        // ИСКЛЮЧЕНИЕ: если задача не требует эту стадию (нет пересечения навыков) — она готова сразу
         if (fromStage.Stage.Type == StageType.Work)
         {
+            if (!TaskRequiresStage(task, fromStage))
+            {
+                // Задача не требует эту стадию — готова к перемещению без ожидания прогресса
+                return true;
+            }
+            
             return task.IsCompleted;
         }
 

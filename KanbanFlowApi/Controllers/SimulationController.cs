@@ -77,14 +77,17 @@ public class SimulationController : ControllerBase
     private static ValidationResult ValidateSimulationCanContinue(Simulation simulation)
     {
         // Проверяем, есть ли задачи, которые ещё не в Done
-        var tasksNotInDone = simulation.Board.Tasks
-            .Where(t => t.CurrentStage is not null && t.CurrentStage.NextStages.Count != 0)
+        var tasksInDone = simulation.Board.Tasks
+            .Where(t => t.CurrentStage is not null && t.CurrentStage.NextStages.Count == 0)
             .ToList();
-
-        if (!tasksNotInDone.Any())
+        if (tasksInDone.Count == simulation.Board.Tasks.Count)
         {
             return ValidationResult.Invalid("Симуляция завершена: все задачи находятся в финальных стадиях");
         }
+        
+        var tasksNotInDone = simulation.Board.Tasks
+            .Where(t => t.CurrentStage is null || t.CurrentStage.NextStages.Count != 0)
+            .ToList();
 
         // Если все задачи без стадии (новая симуляция) — это нормально
         var allTasksWithoutStage = simulation.Board.Tasks.All(t => t.CurrentStage is null);

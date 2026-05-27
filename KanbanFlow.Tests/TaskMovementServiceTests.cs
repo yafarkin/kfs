@@ -66,14 +66,14 @@ public class TaskMovementServiceTests
         service.ProcessMovements();
 
         // Assert
-        // Задача переместится в Developing, но останется без воркера (ждёт доступного)
+        // Задача НЕ переместится в Developing, потому что воркер занят
+        // Задача остаётся в Todo и ждёт доступного воркера
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
-        Assert.Contains(newTask, developingStage.Tasks);
-        Assert.DoesNotContain(newTask, todoStage.Tasks);
-        
-        // Новая задача должна быть без воркера
-        var newTaskInDeveloping = developingStage.Tasks.First(t => t.Task.Key == "TASK-2");
-        Assert.Null(newTaskInDeveloping.Worker);
+        Assert.DoesNotContain(newTask, developingStage.Tasks);
+        Assert.Contains(newTask, todoStage.Tasks);
+
+        // Задача должна быть без воркера (всё ещё в Todo)
+        Assert.Null(newTask.Worker);
     }
 
     [Fact]
@@ -566,18 +566,12 @@ public class TaskMovementServiceTests
         var doneStage = simulation.Board.Stages.First(s => s.Stage.Name == "Done");
         Assert.Contains(doneStage.Tasks, t => t.Task.Key == "TASK-1");
         Assert.Contains(doneStage.Tasks, t => t.Task.Key == "TASK-2");
-        
-        // TASK-3 перемещена в QA к qa1 (или всё ещё в Ready for QA, что тоже нормально)
-        // Главное что TASK-3 была взята именно qa1 когда он освободился
-        Assert.True(
-            task3.CurrentStage?.Stage.Name == "QA" || task3.CurrentStage?.Stage.Name == "Ready for QA",
-            $"TASK-3 должна быть в QA или Ready for QA, но находится в {task3.CurrentStage?.Stage.Name}");
-        
-        // Если TASK-3 в QA, проверяем что она у qa1
-        if (task3.CurrentStage?.Stage.Name == "QA")
-        {
-            Assert.Equal("qa1", task3.Worker?.Worker.Login);
-        }
+
+        // TASK-3 имеет навык "dev", а стадия QA требует "qa" — нет пересечения
+        // Поэтому TASK-3 пропускает QA и Ready for QA, уходит сразу в Done
+        // Это правильное поведение: задача не должна заходить на стадию, для которой у неё нет навыков
+        Assert.Contains(doneStage.Tasks, t => t.Task.Key == "TASK-3");
+        Assert.Equal("Done", task3.CurrentStage?.Stage.Name);
     }
 
     [Fact]
@@ -780,14 +774,14 @@ public class TaskMovementServiceTests
         service.ProcessMovements();
 
         // Assert
-        // Задача должна перейти в Developing, но не быть назначенной на qa1
-        // (у qa1 нет навыков backend или frontend для стадии Developing)
+        // Задача имеет requiredSkills ["backend", "qa"], Developing требует ["backend", "frontend"]
+        // Есть пересечение (backend) → задача требует эту стадию
+        // Но у qa1 нет backend → задача НЕ перемещается, остаётся в Todo
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
-        Assert.Single(developingStage.Tasks);
-        
-        // Задача не должна быть назначена на воркера
-        var task = developingStage.Tasks[0];
-        Assert.Null(task.Worker);
+        Assert.Empty(developingStage.Tasks);
+
+        var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");
+        Assert.Single(todoStage.Tasks);
     }
 
     [Fact]
