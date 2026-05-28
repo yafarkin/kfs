@@ -3,7 +3,6 @@
 let simulationState = null;
 let autoPlayInterval = null;
 let isAutoPlaying = false;
-let isAnimating = false;
 let isLoading = false;
 
 // Инициализация при загрузке страницы
@@ -16,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function updateLoadingIndicator() {
     const gear = document.getElementById('loadingGear');
     if (gear) {
-        gear.style.opacity = isLoading || isAnimating ? '1' : '0.3';
-        gear.style.animation = (isLoading || isAnimating) ? 'spin 1s linear infinite' : 'none';
+        gear.style.opacity = isLoading ? '1' : '0.3';
+        gear.style.animation = isLoading ? 'spin 1s linear infinite' : 'none';
     }
     
     // Блокировка кнопок
@@ -25,9 +24,9 @@ function updateLoadingIndicator() {
     const btnAutoPlay = document.getElementById('btnAutoPlay');
     const btnLoad = document.getElementById('btnLoadConfig');
     
-    if (btnSimulate) btnSimulate.disabled = isLoading || isAnimating || !simulationState;
-    if (btnAutoPlay) btnAutoPlay.disabled = isLoading || isAnimating;
-    if (btnLoad) btnLoad.disabled = isLoading || isAnimating;
+    if (btnSimulate) btnSimulate.disabled = isLoading || !simulationState;
+    if (btnAutoPlay) btnAutoPlay.disabled = isLoading;
+    if (btnLoad) btnLoad.disabled = isLoading;
 }
 
 // Загрузка конфигурации по умолчанию
@@ -79,17 +78,13 @@ async function simulateDay() {
             throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
         }
 
-        const previousState = simulationState;
         simulationState = await response.json();
         
         isLoading = false;
         updateLoadingIndicator();
 
-        // FLIP анимация изменений
-        await animateChangesFLIP(previousState, simulationState);
-
-        renderHistory();
-        updateControls();
+        // Просто обновляем доску без анимации
+        updateBoard(simulationState);
 
         // Проверка завершения симуляции
         if (simulationState.board.stages.every(s => 
@@ -112,111 +107,12 @@ async function simulateDay() {
     }
 }
 
-// FLIP анимация изменений (First, Last, Invert, Play)
-async function animateChangesFLIP(previousState, newState) {
-    isAnimating = true;
-    updateLoadingIndicator();
-    
-    // FIRST: Запоминаем позиции всех карточек ДО изменений
-    const cardPositionsBefore = new Map();
-    const cardStagesBefore = new Map();
-    document.querySelectorAll('.task-card').forEach(card => {
-        const taskKey = card.getAttribute('data-task-key');
-        const rect = card.getBoundingClientRect();
-        const stageName = card.closest('.stage-column')?.getAttribute('data-stage-name');
-        cardPositionsBefore.set(taskKey, {
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height
-        });
-        cardStagesBefore.set(taskKey, stageName);
-    });
-    
-    // Рендерим новое состояние (LAST)
+// Обновление состояния без анимации
+function updateBoard(newState) {
     renderBoard();
     renderWorkers();
-    
-    // Собираем карточки, которые реально переместились
-    const movedCards = [];
-    document.querySelectorAll('.task-card').forEach(card => {
-        const taskKey = card.getAttribute('data-task-key');
-        const before = cardPositionsBefore.get(taskKey);
-        const beforeStage = cardStagesBefore.get(taskKey);
-        const currentStage = card.closest('.stage-column')?.getAttribute('data-stage-name');
-        
-        if (before && beforeStage !== currentStage) {
-            movedCards.push({
-                card,
-                taskKey,
-                beforeRect: before,
-                fromStage: beforeStage,
-                toStage: currentStage
-            });
-        }
-    });
-    
-    // Анимация каждой перемещённой карточки с задержкой
-    for (const { card, beforeRect, toStage } of movedCards) {
-        await animateCardFlip(card, beforeRect, toStage);
-        await delay(100); // Небольшая задержка между карточками
-    }
-    
-    // Анимация прогресса (без блокировки)
-    const newActivities = newState.history[newState.history.length - 1]?.activities || [];
-    for (const activity of newActivities) {
-        if (activity.type === 'TaskProgressUpdated') {
-            const match = activity.description.match(/Задача (\S+) выполняется на (\d+)%/);
-            if (match) {
-                const [, taskKey, progress] = match;
-                animateTaskProgress(taskKey, parseInt(progress));
-            }
-        }
-    }
-    
-    isAnimating = false;
-    updateLoadingIndicator();
-}
-
-// FLIP анимация для одной карточки
-async function animateCardFlip(card, beforeRect, toStageName) {
-    if (!card || !beforeRect) return;
-    
-    // Получаем новую позицию
-    const afterRect = card.getBoundingClientRect();
-    
-    // Вычисляем дельту
-    const deltaX = beforeRect.left - afterRect.left;
-    const deltaY = beforeRect.top - afterRect.top;
-    
-    // Если карточка не переместилась (или перемещение минимально) — выходим
-    if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return;
-    
-    // INVERT: Устанавливаем transform чтобы карточка осталась на старом месте
-    card.style.transition = 'none';
-    card.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
-    card.style.zIndex = '100';
-    card.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
-    
-    // Форсируем перерисовку
-    card.offsetHeight; // eslint-disable-line no-unused-expressions
-    
-    // PLAY: Анимация к новой позиции
-    card.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s ease';
-    card.style.transform = 'translate(0, 0) scale(1)';
-    card.style.boxShadow = '';
-    card.style.zIndex = '';
-    
-    // Подсветка целевой колонки
-    const toColumn = document.querySelector(`.stage-column[data-stage-name="${toStageName}"]`);
-    if (toColumn) {
-        toColumn.style.transition = 'box-shadow 0.3s ease';
-        toColumn.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.5)';
-        setTimeout(() => { toColumn.style.boxShadow = ''; }, 500);
-    }
-    
-    // Ждём завершения анимации
-    await new Promise(resolve => setTimeout(resolve, 500));
+    renderHistory();
+    updateControls();
 }
 
 // Анимация прогресса задачи
@@ -327,11 +223,14 @@ function renderWorkers() {
     const workersGrid = document.getElementById('workersGrid');
     if (!workersGrid || !simulationState) return;
 
-    const { workers } = simulationState.board;
-    
+    const { workers, tasks } = simulationState.board;
+
     workersGrid.innerHTML = workers.map(worker => {
         const isAvailable = worker.isAvailable;
         const wipPercent = worker.wipLimit ? (worker.wipCount / worker.wipLimit) * 100 : 0;
+        
+        // Находим задачи, которые выполняет этот воркер
+        const workerTasks = tasks.filter(t => t.workerLogin === worker.login);
         
         return `
             <div class="worker-card ${isAvailable ? 'available' : 'busy'}">
@@ -345,7 +244,7 @@ function renderWorkers() {
                     </span>
                 </div>
                 <div class="worker-skills">
-                    ${(worker.skills || []).map(skill => 
+                    ${(worker.skills || []).map(skill =>
                         `<span class="skill-badge ${skill}">${skill}</span>`
                     ).join('')}
                 </div>
@@ -355,6 +254,20 @@ function renderWorkers() {
                         <div class="wip-fill" style="width: ${wipPercent}%"></div>
                     </div>
                 </div>
+                ${workerTasks.length > 0 ? `
+                    <div class="worker-tasks">
+                        <small class="text-muted">Активные задачи:</small>
+                        <ul class="task-list">
+                            ${workerTasks.map(task => {
+                                const stage = simulationState.board.stages.find(s => s.name === task.currentStageName);
+                                return `<li class="task-item">
+                                    <span class="task-key-small">${task.key}</span>
+                                    <span class="task-stage">${task.currentStageName}</span>
+                                </li>`;
+                            }).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');

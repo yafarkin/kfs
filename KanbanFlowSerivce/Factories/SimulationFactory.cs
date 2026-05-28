@@ -63,7 +63,14 @@ public static class SimulationFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["qa"],
             StageProgressPercent = 30,
-            Transitions = new List<StageTransition>()
+            Transitions = []
+        };
+
+        var readyToMerge = new Stage
+        {
+            Name = "Ready to Merge",
+            Type = StageType.Buffer,
+            Transitions = []
         };
 
         var releasePreparation = new Stage
@@ -71,9 +78,9 @@ public static class SimulationFactory
             Name = "Release Preparation",
             Type = StageType.Work,
             IsLeadTimeStart = false,
-            RequiredSkills = ["backend"],
-            StageProgressPercent = 20,
-            Transitions = new List<StageTransition>()
+            RequiredSkills = ["backend", "frontend"],
+            StageProgressPercent = 10,
+            Transitions = []
         };
 
         var done = new Stage
@@ -82,35 +89,38 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = false,
             RequiredSkills = [],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         // Устанавливаем DAG переходы (прямые ссылки)
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
         developing.Transitions.Add(new StageTransition { Stage = readyForTesting, Probability = 1.0 });
         readyForTesting.Transitions.Add(new StageTransition { Stage = testing, Probability = 1.0 });
-        testing.Transitions.Add(new StageTransition { Stage = releasePreparation, Probability = 1.0 });
+        testing.Transitions.Add(new StageTransition { Stage = readyToMerge, Probability = 1.0 });
+        readyToMerge.Transitions.Add(new StageTransition { Stage = releasePreparation, Probability = 1.0 });
         releasePreparation.Transitions.Add(new StageTransition { Stage = done, Probability = 1.0 });
 
         return new SimulationConfig
         {
             Seed = 42,
-            Workers = new List<Worker>
-            {
+            Workers =
+            [
                 new()
                 {
-                    Login = "dev1",
+                    Login = "dev1-be",
                     Skills = ["backend"],
                     WipLimit = 1,
                     Performance = 100
                 },
+
                 new()
                 {
-                    Login = "dev2",
+                    Login = "dev2-fe",
                     Skills = ["frontend"],
                     WipLimit = 1,
                     Performance = 100
                 },
+
                 new()
                 {
                     Login = "qa1",
@@ -118,35 +128,37 @@ public static class SimulationFactory
                     WipLimit = 1,
                     Performance = 100
                 }
-            },
+            ],
             Workflow = new Workflow
             {
-                Stages = new List<Stage> { todo, developing, readyForTesting, testing, releasePreparation, done }
+                Stages = [todo, developing, readyForTesting, testing, readyToMerge, releasePreparation, done]
             },
-            Tasks = new List<Task>
-            {
+            Tasks =
+            [
                 new()
                 {
                     Key = "TASK-1",
-                    Summary = "Реализовать API для пользователей",
+                    Summary = "[BE] Реализовать API для пользователей",
                     ShirtType = TShirtType.S,
                     RequiredSkills = ["backend", "qa"]
                 },
+
                 new()
                 {
                     Key = "TASK-2",
-                    Summary = "Написать тесты для сервиса",
+                    Summary = "[BE] Написать тесты для сервиса",
                     ShirtType = TShirtType.M,
                     RequiredSkills = ["backend", "qa"]
                 },
+
                 new()
                 {
                     Key = "TASK-3",
-                    Summary = "Создать UI компонент формы",
+                    Summary = "[FE] Создать UI компонент формы",
                     ShirtType = TShirtType.S,
                     RequiredSkills = ["frontend"]
                 }
-            }
+            ]
         };
     }
 
