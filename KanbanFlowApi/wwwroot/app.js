@@ -119,36 +119,51 @@ async function animateChangesFLIP(previousState, newState) {
     
     // FIRST: Запоминаем позиции всех карточек ДО изменений
     const cardPositionsBefore = new Map();
+    const cardStagesBefore = new Map();
     document.querySelectorAll('.task-card').forEach(card => {
         const taskKey = card.getAttribute('data-task-key');
         const rect = card.getBoundingClientRect();
+        const stageName = card.closest('.stage-column')?.getAttribute('data-stage-name');
         cardPositionsBefore.set(taskKey, {
             left: rect.left,
             top: rect.top,
             width: rect.width,
             height: rect.height
         });
+        cardStagesBefore.set(taskKey, stageName);
     });
     
     // Рендерим новое состояние (LAST)
     renderBoard();
     renderWorkers();
     
-    // PLAY: Анимация перемещения карточек
-    const newActivities = newState.history[newState.history.length - 1]?.activities || [];
-    
-    // Анимация перемещений задач
-    for (const activity of newActivities) {
-        if (activity.type === 'TaskMoved') {
-            const match = activity.description.match(/Задача (\S+) перемещена из (\S+) в (\S+)/);
-            if (match) {
-                const [, taskKey, fromStage, toStage] = match;
-                await animateCardFlip(taskKey, cardPositionsBefore.get(taskKey), toStage);
-            }
+    // Собираем карточки, которые реально переместились
+    const movedCards = [];
+    document.querySelectorAll('.task-card').forEach(card => {
+        const taskKey = card.getAttribute('data-task-key');
+        const before = cardPositionsBefore.get(taskKey);
+        const beforeStage = cardStagesBefore.get(taskKey);
+        const currentStage = card.closest('.stage-column')?.getAttribute('data-stage-name');
+        
+        if (before && beforeStage !== currentStage) {
+            movedCards.push({
+                card,
+                taskKey,
+                beforeRect: before,
+                fromStage: beforeStage,
+                toStage: currentStage
+            });
         }
+    });
+    
+    // Анимация каждой перемещённой карточки с задержкой
+    for (const { card, beforeRect, toStage } of movedCards) {
+        await animateCardFlip(card, beforeRect, toStage);
+        await delay(100); // Небольшая задержка между карточками
     }
     
-    // Анимация прогресса
+    // Анимация прогресса (без блокировки)
+    const newActivities = newState.history[newState.history.length - 1]?.activities || [];
     for (const activity of newActivities) {
         if (activity.type === 'TaskProgressUpdated') {
             const match = activity.description.match(/Задача (\S+) выполняется на (\d+)%/);
@@ -164,8 +179,7 @@ async function animateChangesFLIP(previousState, newState) {
 }
 
 // FLIP анимация для одной карточки
-async function animateCardFlip(taskKey, beforeRect, toStageName) {
-    const card = document.querySelector(`.task-card[data-task-key="${taskKey}"]`);
+async function animateCardFlip(card, beforeRect, toStageName) {
     if (!card || !beforeRect) return;
     
     // Получаем новую позицию
@@ -175,8 +189,8 @@ async function animateCardFlip(taskKey, beforeRect, toStageName) {
     const deltaX = beforeRect.left - afterRect.left;
     const deltaY = beforeRect.top - afterRect.top;
     
-    // Если карточка не переместилась — выходим
-    if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return;
+    // Если карточка не переместилась (или перемещение минимально) — выходим
+    if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return;
     
     // INVERT: Устанавливаем transform чтобы карточка осталась на старом месте
     card.style.transition = 'none';
@@ -188,7 +202,7 @@ async function animateCardFlip(taskKey, beforeRect, toStageName) {
     card.offsetHeight; // eslint-disable-line no-unused-expressions
     
     // PLAY: Анимация к новой позиции
-    card.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease';
+    card.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s ease';
     card.style.transform = 'translate(0, 0) scale(1)';
     card.style.boxShadow = '';
     card.style.zIndex = '';
@@ -198,11 +212,11 @@ async function animateCardFlip(taskKey, beforeRect, toStageName) {
     if (toColumn) {
         toColumn.style.transition = 'box-shadow 0.3s ease';
         toColumn.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.5)';
-        setTimeout(() => { toColumn.style.boxShadow = ''; }, 400);
+        setTimeout(() => { toColumn.style.boxShadow = ''; }, 500);
     }
     
     // Ждём завершения анимации
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise(resolve => setTimeout(resolve, 500));
 }
 
 // Анимация прогресса задачи
@@ -459,3 +473,96 @@ function removeToast(toastId) {
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// Модальное окно для импорта/экспорта
+let modalMode = 'export'; // 'export' или 'import'
+
+function openExportModal() {
+    if (!simulationState) {
+        showToast('Сначала загрузите конфигурацию', 'warning');
+        return;
+    }
+    
+    modalMode = 'export';
+    document.getElementById('modalTitle').textContent = 'Экспорт конфигурации';
+    document.getElementById('jsonTextarea').value = JSON.stringify(simulationState, null, 2);
+    document.getElementById('btnImportConfirm').style.display = 'none';
+    document.getElementById('btnPasteFromClipboard').style.display = 'none';
+    document.getElementById('btnCopyToClipboard').style.display = 'inline-block';
+    document.getElementById('jsonModal').classList.add('show');
+}
+
+function openImportModal() {
+    modalMode = 'import';
+    document.getElementById('modalTitle').textContent = 'Импорт конфигурации';
+    document.getElementById('jsonTextarea').value = '';
+    document.getElementById('btnImportConfirm').style.display = 'inline-block';
+    document.getElementById('btnPasteFromClipboard').style.display = 'inline-block';
+    document.getElementById('btnCopyToClipboard').style.display = 'none';
+    document.getElementById('jsonModal').classList.add('show');
+}
+
+function closeJsonModal() {
+    document.getElementById('jsonModal').classList.remove('show');
+}
+
+async function copyToClipboard() {
+    const textarea = document.getElementById('jsonTextarea');
+    try {
+        await navigator.clipboard.writeText(textarea.value);
+        showToast('JSON скопирован в буфер обмена', 'success');
+    } catch (err) {
+        // Fallback для старых браузеров
+        textarea.select();
+        document.execCommand('copy');
+        showToast('JSON скопирован в буфер обмена', 'success');
+    }
+}
+
+async function pasteFromClipboard() {
+    const textarea = document.getElementById('jsonTextarea');
+    try {
+        const text = await navigator.clipboard.readText();
+        textarea.value = text;
+        showToast('JSON вставлен из буфера обмена', 'success');
+    } catch (err) {
+        showToast('Не удалось вставить из буфера обмена', 'danger');
+    }
+}
+
+function importJson() {
+    const textarea = document.getElementById('jsonTextarea');
+    try {
+        const data = JSON.parse(textarea.value);
+        
+        // Простая валидация
+        if (!data.config || !data.board) {
+            throw new Error('Неверный формат: отсутствуют config или board');
+        }
+        
+        simulationState = data;
+        renderBoard();
+        renderWorkers();
+        renderHistory();
+        updateControls();
+        closeJsonModal();
+        showToast('Конфигурация импортирована', 'success');
+    } catch (err) {
+        showToast('Ошибка JSON: ' + err.message, 'danger');
+    }
+}
+
+// Закрытие модального окна по клику вне его
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('jsonModal');
+    if (e.target === modal) {
+        closeJsonModal();
+    }
+});
+
+// Закрытие по Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeJsonModal();
+    }
+});

@@ -460,6 +460,94 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .json-textarea {
+            width: 100%;
+            min-height: 400px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+
+        .btn-copy {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: none;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: linear-gradient(135deg, #0f8a7f 0%, #2ed874 100%);
+        }
     </style>
 </head>
 <body>
@@ -469,6 +557,31 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Модальное окно для импорта/экспорта -->
+    <div class="modal-overlay" id="jsonModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Экспорт конфигурации</h3>
+                <button class="modal-close" onclick="closeJsonModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea class="json-textarea" id="jsonTextarea" placeholder="Вставьте JSON конфигурации..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnPasteFromClipboard" onclick="pasteFromClipboard()">
+                    <i class="bi bi-clipboard me-2"></i>Вставить
+                </button>
+                <button class="btn btn-copy" id="btnCopyToClipboard" onclick="copyToClipboard()">
+                    <i class="bi bi-clipboard-check me-2"></i>Копировать
+                </button>
+                <button class="btn btn-secondary" onclick="closeJsonModal()">Отмена</button>
+                <button class="btn btn-primary" id="btnImportConfirm" onclick="importJson()">
+                    <i class="bi bi-upload me-2"></i>Импортировать
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="simulation-container">
         <div class="header">
@@ -487,6 +600,12 @@
             </button>
             <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
                 <i class="bi bi-play-circle me-2"></i>Авто-режим
+            </button>
+            <button class="btn btn-outline-secondary" onclick="openExportModal()">
+                <i class="bi bi-download me-2"></i>Экспорт
+            </button>
+            <button class="btn btn-outline-secondary" onclick="openImportModal()">
+                <i class="bi bi-upload me-2"></i>Импорт
             </button>
             <div class="ms-auto">
                 <span class="text-muted">Tick: <span id="currentTick">0</span></span>
