@@ -101,7 +101,8 @@ public static class ApiMapper
             Board = ToApiDto(simulation.Board),
             History = simulation.History.Select(ToApiDto).ToList(),
             CurrentDay = simulation.CurrentDay,
-            CurrentTick = simulation.CurrentTick
+            CurrentTick = simulation.CurrentTick,
+            UseVariability = simulation.UseVariability
         };
     }
 

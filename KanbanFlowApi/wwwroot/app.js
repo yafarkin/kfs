@@ -38,16 +38,17 @@ async function loadDefaultConfig() {
         // Получаем выбранную конфигурацию из селекта
         const configSelector = document.getElementById('configSelector');
         const configName = configSelector?.value || 'default';
-        
-        // Получаем состояние переключателя вариативности
-        const variabilityToggle = document.getElementById('variabilityToggle');
-        const useVariability = variabilityToggle?.checked ?? true;
 
-        const response = await fetch(`/api/simulation/default-config?configName=${configName}&useVariability=${useVariability}`);
+        const response = await fetch(`/api/simulation/default-config?configName=${configName}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         simulationState = await response.json();
+        
+        // Сохраняем текущее состояние переключателя вариативности
+        const variabilityToggle = document.getElementById('variabilityToggle');
+        simulationState.useVariability = variabilityToggle?.checked ?? true;
+        
         renderBoard();
         renderWorkers();
         renderHistory();
@@ -73,11 +74,11 @@ async function simulateDay() {
     updateLoadingIndicator();
 
     try {
-        // Получаем состояние переключателя вариативности
+        // Обновляем состояние вариативности в запросе
         const variabilityToggle = document.getElementById('variabilityToggle');
-        const useVariability = variabilityToggle?.checked ?? true;
+        simulationState.useVariability = variabilityToggle?.checked ?? true;
 
-        const response = await fetch(`/api/simulation/simulate-day?useVariability=${useVariability}`, {
+        const response = await fetch('/api/simulation/simulate-day', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

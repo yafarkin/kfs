@@ -16,9 +16,8 @@ public class SimulationController : ControllerBase
     /// Возвращает готовое состояние для передачи в simulate-day (день 0, задачи ещё не двигались).
     /// </summary>
     /// <param name="configName">Название конфигурации: "default" или "twork". По умолчанию "default".</param>
-    /// <param name="useVariability">Использовать ли вариативность при расчёте времени выполнения. По умолчанию true.</param>
     [HttpGet("default-config")]
-    public ActionResult<ApiSimulationStateDto> GetDefaultConfig([FromQuery] string configName = "default", [FromQuery] bool useVariability = true)
+    public ActionResult<ApiSimulationStateDto> GetDefaultConfig([FromQuery] string configName = "default")
     {
         var config = configName.ToLower() switch
         {
@@ -27,7 +26,7 @@ public class SimulationController : ControllerBase
         };
         
         var simulation = new Simulation();
-        simulation.InitFromConfig(config, useVariability);
+        simulation.InitFromConfig(config);
 
         // Возвращаем начальное состояние (день 0, задачи ещё не распределены по стадиям)
         return Ok(ApiMapper.ToApiDto(simulation));
@@ -39,15 +38,14 @@ public class SimulationController : ControllerBase
     /// Можно использовать результат предыдущего вызова для симуляции следующего дня.
     /// </summary>
     /// <param name="state">Состояние симуляции</param>
-    /// <param name="useVariability">Использовать ли вариативность при расчёте времени выполнения. По умолчанию true.</param>
     [HttpPost("simulate-day")]
-    public ActionResult<ApiSimulationStateDto> SimulateDay([FromBody] ApiSimulationStateDto state, [FromQuery] bool useVariability = true)
+    public ActionResult<ApiSimulationStateDto> SimulateDay([FromBody] ApiSimulationStateDto state)
     {
         // Восстанавливаем доменную симуляцию из DTO
         var simulation = ApiMapper.ToDomainSimulation(state);
         
-        // Сохраняем настройку вариативности
-        simulation.UseVariability = useVariability;
+        // Сохраняем настройку вариативности из состояния
+        simulation.UseVariability = state.UseVariability;
 
         // Проверяем, можно ли продолжить симуляцию
         var validationResult = ValidateSimulationCanContinue(simulation);

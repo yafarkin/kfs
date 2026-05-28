@@ -36,6 +36,11 @@ public sealed record ApiSimulationStateDto
     public int CurrentTick { get; set; }
 
     /// <summary>
+    /// Использовать ли вариативность при расчёте времени выполнения задач.
+    /// </summary>
+    public bool UseVariability { get; set; } = true;
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
     public override string ToString() => $"Simulation Day {CurrentDay}, Tick {CurrentTick}";
