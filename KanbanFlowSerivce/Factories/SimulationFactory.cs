@@ -163,6 +163,318 @@ public static class SimulationFactory
     }
 
     /// <summary>
+    ///     Создаёт конфигурацию TWork с полным workflow (Kanban + Shift-Left Testing)
+    ///     Воркеры: 1 FE, 2 QA, 4 BE
+    /// </summary>
+    public static SimulationConfig CreateTWorkConfig()
+    {
+        // === PLANNING (upstream, не учитывается в lead time) ===
+        var planning = new Stage
+        {
+            Name = "Planning",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        // === TO DO (точка принятия обязательств, начало lead time) ===
+        var toDo = new Stage
+        {
+            Name = "To Do",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = true,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        // === PREPARATION (подготовка к производству) ===
+        var technicalSpec = new Stage
+        {
+            Name = "Technical Specification",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["backend"],
+            StageProgressPercent = 50,
+            Transitions = new List<StageTransition>()
+        };
+
+        var waitingForApproval = new Stage
+        {
+            Name = "Waiting for Approval",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var technicalReview = new Stage
+        {
+            Name = "Technical Review",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["backend"],
+            StageProgressPercent = 30,
+            Transitions = new List<StageTransition>()
+        };
+
+        var waitingForTestSpec = new Stage
+        {
+            Name = "Waiting for Test Specification",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var testSpec = new Stage
+        {
+            Name = "Test Specification",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["qa"],
+            StageProgressPercent = 50,
+            Transitions = new List<StageTransition>()
+        };
+
+        // === DEVELOPING (стадия разработки) ===
+        var readyToDevelop = new Stage
+        {
+            Name = "Ready to Develop",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var developing = new Stage
+        {
+            Name = "Developing",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["backend", "frontend"],
+            StageProgressPercent = 100,
+            Transitions = new List<StageTransition>()
+        };
+
+        var readyForCodeReview = new Stage
+        {
+            Name = "Ready for Code Review",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var codeReview = new Stage
+        {
+            Name = "Code Review",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["backend"],
+            StageProgressPercent = 50,
+            Transitions = new List<StageTransition>()
+        };
+
+        // === TESTING (стадия тестирования) ===
+        var readyForTesting = new Stage
+        {
+            Name = "Ready for Testing",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var testing = new Stage
+        {
+            Name = "Testing",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["qa"],
+            StageProgressPercent = 50,
+            Transitions = new List<StageTransition>()
+        };
+
+        var designReview = new Stage
+        {
+            Name = "Design Review",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["frontend"],
+            StageProgressPercent = 30,
+            Transitions = new List<StageTransition>()
+        };
+
+        var waitingForAutomation = new Stage
+        {
+            Name = "Waiting for Automation",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var automation = new Stage
+        {
+            Name = "Automation",
+            Type = StageType.Work,
+            IsLeadTimeStart = false,
+            RequiredSkills = ["qa"],
+            StageProgressPercent = 50,
+            Transitions = new List<StageTransition>()
+        };
+
+        // === RELEASING (подготовка к релизу) ===
+        var readyToMerge = new Stage
+        {
+            Name = "Ready to Merge",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        var readyToRelease = new Stage
+        {
+            Name = "Ready to Release",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = new List<StageTransition>()
+        };
+
+        // === DONE ===
+        var done = new Stage
+        {
+            Name = "Done",
+            Type = StageType.Buffer,
+            IsLeadTimeStart = false,
+            RequiredSkills = [],
+            Transitions = []
+        };
+
+        // === Устанавливаем переходы (DAG) ===
+        // Planning -> To Do
+        planning.Transitions.Add(new StageTransition { Stage = toDo, Probability = 1.0 });
+
+        // To Do -> Technical Specification
+        toDo.Transitions.Add(new StageTransition { Stage = technicalSpec, Probability = 1.0 });
+
+        // Technical Specification -> Waiting for Approval -> Technical Review
+        technicalSpec.Transitions.Add(new StageTransition { Stage = waitingForApproval, Probability = 1.0 });
+        waitingForApproval.Transitions.Add(new StageTransition { Stage = technicalReview, Probability = 1.0 });
+
+        // Technical Review -> Waiting for Test Spec -> Test Specification
+        technicalReview.Transitions.Add(new StageTransition { Stage = waitingForTestSpec, Probability = 1.0 });
+        waitingForTestSpec.Transitions.Add(new StageTransition { Stage = testSpec, Probability = 1.0 });
+
+        // Test Specification -> Ready to Develop
+        testSpec.Transitions.Add(new StageTransition { Stage = readyToDevelop, Probability = 1.0 });
+
+        // Ready to Develop -> Developing
+        readyToDevelop.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
+
+        // Developing -> Ready for Code Review -> Code Review
+        developing.Transitions.Add(new StageTransition { Stage = readyForCodeReview, Probability = 1.0 });
+        readyForCodeReview.Transitions.Add(new StageTransition { Stage = codeReview, Probability = 1.0 });
+
+        // Code Review -> Ready for Testing
+        codeReview.Transitions.Add(new StageTransition { Stage = readyForTesting, Probability = 1.0 });
+
+        // Ready for Testing -> Testing
+        readyForTesting.Transitions.Add(new StageTransition { Stage = testing, Probability = 1.0 });
+
+        // Testing -> Design Review (опционально) -> Waiting for Automation
+        testing.Transitions.Add(new StageTransition { Stage = designReview, Probability = 0.3 });
+        testing.Transitions.Add(new StageTransition { Stage = waitingForAutomation, Probability = 1.0 });
+
+        // Design Review -> Waiting for Automation
+        designReview.Transitions.Add(new StageTransition { Stage = waitingForAutomation, Probability = 1.0 });
+
+        // Waiting for Automation -> Automation
+        waitingForAutomation.Transitions.Add(new StageTransition { Stage = automation, Probability = 1.0 });
+
+        // Automation -> Ready to Merge
+        automation.Transitions.Add(new StageTransition { Stage = readyToMerge, Probability = 1.0 });
+
+        // Ready to Merge -> Ready to Release
+        readyToMerge.Transitions.Add(new StageTransition { Stage = readyToRelease, Probability = 1.0 });
+
+        // Ready to Release -> Done
+        readyToRelease.Transitions.Add(new StageTransition { Stage = done, Probability = 1.0 });
+
+        return new SimulationConfig
+        {
+            Seed = 42,
+            Workers =
+            [
+                // 4 Backend разработчика
+                new() { Login = "be-dev-1", Skills = ["backend"], WipLimit = 1, Performance = 100 },
+                new() { Login = "be-dev-2", Skills = ["backend"], WipLimit = 1, Performance = 100 },
+                new() { Login = "be-dev-3", Skills = ["backend"], WipLimit = 1, Performance = 100 },
+                new() { Login = "be-dev-4", Skills = ["backend"], WipLimit = 1, Performance = 100 },
+
+                // 1 Frontend разработчик
+                new() { Login = "fe-dev-1", Skills = ["frontend"], WipLimit = 1, Performance = 100 },
+
+                // 2 QA инженера
+                new() { Login = "qa-eng-1", Skills = ["qa"], WipLimit = 1, Performance = 100 },
+                new() { Login = "qa-eng-2", Skills = ["qa"], WipLimit = 1, Performance = 100 }
+            ],
+            Workflow = new Workflow
+            {
+                Stages = [
+                    planning, toDo,
+                    technicalSpec, waitingForApproval, technicalReview, waitingForTestSpec, testSpec,
+                    readyToDevelop, developing, readyForCodeReview, codeReview,
+                    readyForTesting, testing, designReview, waitingForAutomation, automation,
+                    readyToMerge, readyToRelease,
+                    done
+                ]
+            },
+            Tasks =
+            [
+                new()
+                {
+                    Key = "FEAT-1",
+                    Summary = "[BE] Реализовать REST API для пользователей",
+                    ShirtType = TShirtType.L,
+                    RequiredSkills = ["backend"]
+                },
+                new()
+                {
+                    Key = "FEAT-2",
+                    Summary = "[FE] Создать форму регистрации",
+                    ShirtType = TShirtType.M,
+                    RequiredSkills = ["frontend"]
+                },
+                new()
+                {
+                    Key = "FEAT-3",
+                    Summary = "[BE] Интеграция с платежной системой",
+                    ShirtType = TShirtType.L,
+                    RequiredSkills = ["backend"]
+                },
+                new()
+                {
+                    Key = "FEAT-4",
+                    Summary = "[QA] Автотесты для API пользователей",
+                    ShirtType = TShirtType.M,
+                    RequiredSkills = ["qa"]
+                },
+                new()
+                {
+                    Key = "FEAT-5",
+                    Summary = "[BE] Микросервис уведомлений",
+                    ShirtType = TShirtType.L,
+                    RequiredSkills = ["backend"]
+                }
+            ]
+        };
+    }
+
+    /// <summary>
     ///     Создаёт объект Simulation из конфигурации
     /// </summary>
     public static Simulation CreateFromConfig(SimulationConfig config)

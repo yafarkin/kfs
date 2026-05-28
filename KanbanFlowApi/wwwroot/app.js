@@ -35,7 +35,11 @@ async function loadDefaultConfig() {
     updateLoadingIndicator();
     
     try {
-        const response = await fetch('/api/simulation/default-config');
+        // Получаем выбранную конфигурацию из селекта
+        const configSelector = document.getElementById('configSelector');
+        const configName = configSelector?.value || 'default';
+        
+        const response = await fetch(`/api/simulation/default-config?configName=${configName}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -44,7 +48,7 @@ async function loadDefaultConfig() {
         renderWorkers();
         renderHistory();
         updateControls();
-        showToast('Конфигурация загружена', 'success');
+        showToast(`Конфигурация "${configName}" загружена`, 'success');
     } catch (error) {
         console.error('Error loading config:', error);
         showToast('Ошибка загрузки конфигурации: ' + error.message, 'danger');

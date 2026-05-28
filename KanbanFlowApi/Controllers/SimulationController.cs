@@ -15,10 +15,16 @@ public class SimulationController : ControllerBase
     /// Получить начальное состояние симуляции по умолчанию.
     /// Возвращает готовое состояние для передачи в simulate-day (день 0, задачи ещё не двигались).
     /// </summary>
+    /// <param name="configName">Название конфигурации: "default" или "twork". По умолчанию "default".</param>
     [HttpGet("default-config")]
-    public ActionResult<ApiSimulationStateDto> GetDefaultConfig()
+    public ActionResult<ApiSimulationStateDto> GetDefaultConfig([FromQuery] string configName = "default")
     {
-        var config = SimulationFactory.CreateDefaultConfig();
+        var config = configName.ToLower() switch
+        {
+            "twork" => SimulationFactory.CreateTWorkConfig(),
+            _ => SimulationFactory.CreateDefaultConfig()
+        };
+        
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
