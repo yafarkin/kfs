@@ -4,6 +4,7 @@ let simulationState = null;
 let autoPlayInterval = null;
 let isAutoPlaying = false;
 let isLoading = false;
+let currentMetrics = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -156,6 +157,7 @@ function updateBoard(newState) {
     renderWorkers();
     renderHistory();
     updateControls();
+    calculateMetrics();
 }
 
 // Анимация прогресса задачи
@@ -522,3 +524,128 @@ document.addEventListener('keydown', (e) => {
         closeJsonModal();
     }
 });
+
+// Переключение панели метрик
+function toggleMetricsPanel() {
+    const panel = document.getElementById('metricsPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Расчёт метрик через API
+async function calculateMetrics() {
+    if (!simulationState) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/simulation/calculate-metrics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(simulationState)
+        });
+
+        if (!response.ok) {
+            console.error('Error calculating metrics:', response.status);
+            return;
+        }
+
+        currentMetrics = await response.json();
+        renderMetrics(currentMetrics);
+    } catch (error) {
+        console.error('Error calculating metrics:', error);
+    }
+}
+
+// Рендеринг метрик
+function renderMetrics(metrics) {
+    const metricsGrid = document.getElementById('metricsGrid');
+    if (!metricsGrid || !metrics) return;
+
+    metricsGrid.innerHTML = `
+        ${renderLeadTimeCard(metrics.leadTime)}
+        ${renderThroughputCard(metrics.throughput)}
+        ${renderFlowEfficiencyCard(metrics.flowEfficiency)}
+        ${renderFrequencyCard(metrics.frequency)}
+    `;
+}
+
+// Карточка Lead Time
+function renderLeadTimeCard(leadTime) {
+    return `
+        <div class="metric-card lead-time">
+            <div class="metric-title">
+                <i class="bi bi-clock"></i>
+                <span>Lead Time</span>
+            </div>
+            <div class="metric-value">${leadTime.p50.toFixed(1)} ч</div>
+            <div class="metric-subvalue">P50 (медиана)</div>
+            <div class="metric-subvalue">P85: ${leadTime.p85.toFixed(1)} ч</div>
+            <div class="metric-subvalue">Задач: ${leadTime.taskCount}</div>
+        </div>
+    `;
+}
+
+// Карточка Throughput
+function renderThroughputCard(throughput) {
+    return `
+        <div class="metric-card throughput">
+            <div class="metric-title">
+                <i class="bi bi-speedometer2"></i>
+                <span>Throughput</span>
+            </div>
+            <div class="metric-value">${throughput.overall.toFixed(2)}</div>
+            <div class="metric-subvalue">задач/день (среднее)</div>
+            <div class="metric-subvalue">Всего дней: ${throughput.dailyHistory?.length || 0}</div>
+        </div>
+    `;
+}
+
+// Карточка Flow Efficiency
+function renderFlowEfficiencyCard(flowEfficiency) {
+    return `
+        <div class="metric-card flow-efficiency">
+            <div class="metric-title">
+                <i class="bi bi-pie-chart"></i>
+                <span>Flow Efficiency</span>
+            </div>
+            <div class="metric-value">${flowEfficiency.efficiencyPercent.toFixed(1)}%</div>
+            <div class="metric-subvalue">Активное время: ${flowEfficiency.activeTime.toFixed(1)} ч</div>
+            <div class="metric-subvalue">Время ожидания: ${flowEfficiency.waitTime.toFixed(1)} ч</div>
+        </div>
+    `;
+}
+
+// Карточка Frequency
+function renderFrequencyCard(frequency) {
+    const maxCount = Math.max(...Object.values(frequency.distribution), 1);
+    
+    return `
+        <div class="metric-card frequency">
+            <div class="metric-title">
+                <i class="bi bi-bar-chart"></i>
+                <span>Распределение по времени</span>
+            </div>
+            <div class="metric-subvalue">Всего задач: ${frequency.taskCount}</div>
+            <div class="frequency-distribution">
+                ${Object.entries(frequency.distribution)
+                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                    .map(([bucket, count]) => {
+                        const barWidth = (count / maxCount) * 100;
+                        return `
+                            <div class="frequency-item">
+                                <span>${bucket} ч</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span>${count}</span>
+                                    <div class="frequency-bar" style="width: ${barWidth}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+            </div>
+        </div>
+    `;
+}

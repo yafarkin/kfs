@@ -1,5 +1,7 @@
 using KanbanFlowApi.Dtos;
+using KanbanFlowApi.Dtos.Metrics;
 using KanbanFlowApi.Mappers;
+using KanbanFlowApi.Services;
 using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Factories;
 using KanbanFlowSerivce.Services;
@@ -182,5 +184,29 @@ public class SimulationController : ControllerBase
     {
         public static ValidationResult Valid() => new(true, null);
         public static ValidationResult Invalid(string error) => new(false, error);
+    }
+
+    /// <summary>
+    /// Рассчитать метрики симуляции (Lead Time, Throughput, Flow Efficiency, Frequency).
+    /// Принимает полное состояние симуляции и возвращает рассчитанные метрики.
+    /// </summary>
+    /// <param name="state">Состояние симуляции</param>
+    [HttpPost("calculate-metrics")]
+    public ActionResult<ApiMetricsDto> CalculateMetrics([FromBody] ApiSimulationStateDto state)
+    {
+        // Восстанавливаем доменную симуляцию из DTO
+        var simulation = ApiMapper.ToDomainSimulation(state);
+
+        // Определяем стадию начала расчёта Lead Time (isLeadTimeStart = true)
+        var leadTimeStartStage = simulation.Config.Workflow.Stages
+            .FirstOrDefault(s => s.IsLeadTimeStart);
+
+        var leadTimeStartStageName = leadTimeStartStage?.Name ?? "Todo";
+
+        // Создаём сервис метрик и рассчитываем
+        var metricsService = new MetricsService(simulation, leadTimeStartStageName);
+        var metrics = metricsService.CalculateAllMetrics();
+
+        return Ok(metrics);
     }
 }

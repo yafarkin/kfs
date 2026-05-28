@@ -64,6 +64,16 @@ public sealed record HistoryActivity
     public BoardStage? Stage { get; set; }
 
     /// <summary>
+    ///     Имя стадии (для сериализации/десериализации)
+    /// </summary>
+    public string? StageName { get; set; }
+
+    /// <summary>
+    ///     Ключ задачи (для сериализации/десериализации)
+    /// </summary>
+    public string? TaskKey { get; set; }
+
+    /// <summary>
     ///     Дополнительные данные (например, процент прогресса)
     /// </summary>
     public decimal? Progress { get; set; }

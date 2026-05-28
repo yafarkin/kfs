@@ -310,9 +310,9 @@ public static class ApiMapper
             Type = activity.Type,
             Tick = activity.Tick,
             Description = activity.Description,
-            TaskKey = activity.Task?.Task.Key,
+            TaskKey = activity.Task?.Task.Key ?? activity.TaskKey,
             WorkerLogin = activity.Worker?.Worker.Login,
-            StageName = activity.Stage?.Stage.Name,
+            StageName = activity.Stage?.Stage.Name ?? activity.StageName,
             Progress = activity.Progress
         };
     }
@@ -333,7 +333,9 @@ public static class ApiMapper
             Type = dto.Type,
             Tick = dto.Tick,
             Description = dto.Description,
-            Progress = dto.Progress
+            Progress = dto.Progress,
+            StageName = dto.StageName,
+            TaskKey = dto.TaskKey
             // Task, Worker, Stage не восстанавливаются — это только для чтения
         };
     }
