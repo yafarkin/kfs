@@ -180,16 +180,16 @@ public class SimulationSmokeTests
 
         // Assert - Проверяем расчёт времени для стадий
         // Developing (100%): L = 15 дней, M = 6 дней
-        Assert.Equal(15, developingStage.Stage.GetDaysForTask(TShirtType.L));
-        Assert.Equal(6, developingStage.Stage.GetDaysForTask(TShirtType.M));
+        Assert.Equal(15, developingStage.Stage.GetDaysForTask(TShirtType.L).Item2);
+        Assert.Equal(6, developingStage.Stage.GetDaysForTask(TShirtType.M).Item2);
         
         // Testing (30%): L = 15 * 0.3 = 4.5 → 5 дней, M = 6 * 0.3 = 1.8 → 2 дня
-        Assert.Equal(5, testingStage.Stage.GetDaysForTask(TShirtType.L));
-        Assert.Equal(2, testingStage.Stage.GetDaysForTask(TShirtType.M));
+        Assert.Equal(5, testingStage.Stage.GetDaysForTask(TShirtType.L).Item2);
+        Assert.Equal(2, testingStage.Stage.GetDaysForTask(TShirtType.M).Item2);
         
         // Release Preparation (20%): L = 15 * 0.2 = 3 дня, M = 6 * 0.2 = 1.2 → 2 дня
-        Assert.Equal(3, releaseStage.Stage.GetDaysForTask(TShirtType.L));
-        Assert.Equal(2, releaseStage.Stage.GetDaysForTask(TShirtType.M));
+        Assert.Equal(3, releaseStage.Stage.GetDaysForTask(TShirtType.L).Item2);
+        Assert.Equal(2, releaseStage.Stage.GetDaysForTask(TShirtType.M).Item2);
 
         // Проверяем что буферные стадии не имеют расчёта (процент = 0 или не используется)
         var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");

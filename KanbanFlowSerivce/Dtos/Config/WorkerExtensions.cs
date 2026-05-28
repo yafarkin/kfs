@@ -23,24 +23,27 @@ public static class WorkerExtensions
             return 1; // Задачи без размера выполняются за 1 день
         }
 
-        // Базовое количество дней для стадии (без учёта performance и отклонений)
+        // 1. Получаем min/max из стадии и размера задачи
         var baseDays = stage.GetDaysForTask(shirtType.Value);
+        var minDays = baseDays.Item1;
+        var maxDays = baseDays.Item2;
 
-        // Применяем отклонения к базовому значению
-        var minDays = baseDays * (1.0 - worker.DeviationDownPercent / 100.0);
-        var maxDays = baseDays * (1.0 + worker.DeviationUpPercent / 100.0);
+        // 2. Применяем performance: 100% = min, 0% = max, 50% = середина
+        var performancePosition = 1.0 - (worker.Performance / 100.0);
+        var baseEstimate = minDays + (maxDays - minDays) * performancePosition;
 
-        // Выбираем случайное значение в диапазоне [minDays, maxDays]
-        var estimatedDays = useVariability && random != null
-            ? random.NextDouble() * (maxDays - minDays) + minDays
-            : (minDays + maxDays) / 2.0;
+        // 3-4. Если включена вариативность — применяем отклонения и выбираем случайное значение
+        if (useVariability && random != null)
+        {
+            // Отклонения от базовой оценки
+            var estimateWithDeviationDown = baseEstimate * (1.0 - worker.DeviationDownPercent / 100.0);
+            var estimateWithDeviationUp = baseEstimate * (1.0 + worker.DeviationUpPercent / 100.0);
 
-        // Применяем performance: 100% = min, 0% = max, 50% = середина
-        // Performance влияет на итоговую оценку: чем выше performance, тем меньше дней
-        var performanceFactor = 1.0 - (worker.Performance / 100.0);
-        var finalDays = minDays + (estimatedDays - minDays) * performanceFactor;
+            // Случайное значение в диапазоне [-deviation, +deviation]
+            baseEstimate = random.NextDouble() * (estimateWithDeviationUp - estimateWithDeviationDown) + estimateWithDeviationDown;
+        }
 
         // Округляем до целого (минимум 1 день)
-        return Math.Max(1, (int)Math.Ceiling(finalDays));
+        return Math.Max(1, (int)Math.Ceiling(baseEstimate));
     }
 }

@@ -12,10 +12,11 @@ public static class StageExtensions
     ///     Формула: (размер задачи в днях * процент стадии) / 100
     ///     Результат округляется вверх до целых дней
     /// </summary>  
-    public static int GetDaysForTask(this Stage stage, TShirtType shirtType)
+    public static (int, int) GetDaysForTask(this Stage stage, TShirtType shirtType)
     {
         var baseDays = shirtType.GetDaysToComplete();
-        var daysForStage = (baseDays * stage.StageProgressPercent) / 100.0;
-        return (int)Math.Ceiling(daysForStage);
+        var minDaysForStage = (int)Math.Ceiling((baseDays.Item1 * stage.StageProgressPercent) / 100.0);
+        var maxDaysForStage = (int)Math.Ceiling((baseDays.Item2 * stage.StageProgressPercent) / 100.0);
+        return (minDaysForStage, maxDaysForStage);
     }
 }

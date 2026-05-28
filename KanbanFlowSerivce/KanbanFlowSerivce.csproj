@@ -22,6 +22,9 @@
       <Compile Update="Dtos\Board\BoardTaskAssignment.cs">
         <DependentUpon>BoardWorker.cs</DependentUpon>
       </Compile>
+      <Compile Update="Enums\TShirtTypeExtensions.cs">
+        <DependentUpon>TShirtType.cs</DependentUpon>
+      </Compile>
     </ItemGroup>
 
 </Project>
