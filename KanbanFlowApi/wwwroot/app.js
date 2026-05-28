@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLoadingIndicator();
 });
 
+// Переключение панели настроек
+function toggleSettingsPanel() {
+    const panel = document.getElementById('settingsPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
 // Обновление индикатора загрузки
 function updateLoadingIndicator() {
     const gear = document.getElementById('loadingGear');

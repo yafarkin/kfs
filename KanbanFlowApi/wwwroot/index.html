@@ -56,6 +56,93 @@
             display: flex;
             gap: 10px;
             margin-bottom: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Раскрывающаяся панель настроек */
+        .settings-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            margin-bottom: 25px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .settings-panel.collapsed {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .settings-header:hover {
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+        }
+
+        .settings-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .settings-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .settings-panel.collapsed .settings-toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .settings-body {
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .settings-panel.collapsed .settings-body {
+            display: none;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .settings-section h4 {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .settings-row > * {
+            margin-bottom: 8px;
         }
 
         .kanban-board {
@@ -633,34 +720,69 @@
             </div>
         </div>
 
-        <div class="controls">
-            <select class="form-select" id="configSelector" style="width: auto; display: inline-block;">
-                <option value="default">Default (3 воркера)</option>
-                <option value="twork">TWork (7 воркеров, полный workflow)</option>
-            </select>
-            <button class="btn btn-primary" id="btnLoadConfig" onclick="loadDefaultConfig()">
-                <i class="bi bi-plus-circle me-2"></i>Новая конфигурация
-            </button>
-            <button class="btn btn-success" id="btnSimulateDay" onclick="simulateDay()" disabled>
-                <i class="bi bi-play-fill me-2"></i>Следующий день
-            </button>
-            <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
-                <i class="bi bi-play-circle me-2"></i>Авто-режим
-            </button>
-            <div class="form-check form-switch ms-3" style="display: inline-flex; align-items: center;">
-                <input class="form-check-input" type="checkbox" id="variabilityToggle" checked>
-                <label class="form-check-label ms-2" for="variabilityToggle">
-                    <i class="bi bi-shuffle me-1"></i>Вариативность
-                </label>
+        <!-- Раскрывающаяся панель настроек -->
+        <div class="settings-panel" id="settingsPanel">
+            <div class="settings-header" onclick="toggleSettingsPanel()">
+                <div class="settings-title">
+                    <i class="bi bi-gear"></i>
+                    <span>Настройки симуляции</span>
+                </div>
+                <i class="bi bi-chevron-down settings-toggle-icon"></i>
             </div>
-            <button class="btn btn-outline-secondary" onclick="openExportModal()">
-                <i class="bi bi-download me-2"></i>Экспорт
-            </button>
-            <button class="btn btn-outline-secondary" onclick="openImportModal()">
-                <i class="bi bi-upload me-2"></i>Импорт
-            </button>
-            <div class="ms-auto">
-                <span class="text-muted">Tick: <span id="currentTick">0</span></span>
+            <div class="settings-body">
+                <!-- Конфигурация -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-sliders me-2"></i>Конфигурация</h4>
+                    <div class="settings-row">
+                        <select class="form-select" id="configSelector" style="width: auto; display: inline-block;">
+                            <option value="default">Default (3 воркера)</option>
+                            <option value="twork">TWork (7 воркеров, полный workflow)</option>
+                        </select>
+                        <button class="btn btn-primary" id="btnLoadConfig" onclick="loadDefaultConfig()">
+                            <i class="bi bi-plus-circle me-2"></i>Загрузить
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Вариативность -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-shuffle me-2"></i>Параметры</h4>
+                    <div class="settings-row">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="variabilityToggle" checked>
+                            <label class="form-check-label" for="variabilityToggle">
+                                <i class="bi bi-shuffle me-1"></i>Вариативность
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Экспорт/Импорт -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-arrow-repeat me-2"></i>Экспорт/Импорт</h4>
+                    <div class="settings-row">
+                        <button class="btn btn-outline-secondary" onclick="openExportModal()">
+                            <i class="bi bi-download me-2"></i>Экспорт
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="openImportModal()">
+                            <i class="bi bi-upload me-2"></i>Импорт
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Управление симуляцией -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-play-circle me-2"></i>Управление</h4>
+                    <div class="settings-row">
+                        <button class="btn btn-success" id="btnSimulateDay" onclick="simulateDay()" disabled>
+                            <i class="bi bi-play-fill me-2"></i>Следующий день
+                        </button>
+                        <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
+                            <i class="bi bi-play-circle me-2"></i>Авто-режим
+                        </button>
+                        <span class="text-muted ms-auto">Tick: <span id="currentTick">0</span></span>
+                    </div>
+                </div>
             </div>
         </div>
 
