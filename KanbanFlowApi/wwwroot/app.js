@@ -33,13 +33,17 @@ function updateLoadingIndicator() {
 async function loadDefaultConfig() {
     isLoading = true;
     updateLoadingIndicator();
-    
+
     try {
         // Получаем выбранную конфигурацию из селекта
         const configSelector = document.getElementById('configSelector');
         const configName = configSelector?.value || 'default';
         
-        const response = await fetch(`/api/simulation/default-config?configName=${configName}`);
+        // Получаем состояние переключателя вариативности
+        const variabilityToggle = document.getElementById('variabilityToggle');
+        const useVariability = variabilityToggle?.checked ?? true;
+
+        const response = await fetch(`/api/simulation/default-config?configName=${configName}&useVariability=${useVariability}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -67,9 +71,13 @@ async function simulateDay() {
 
     isLoading = true;
     updateLoadingIndicator();
-    
+
     try {
-        const response = await fetch('/api/simulation/simulate-day', {
+        // Получаем состояние переключателя вариативности
+        const variabilityToggle = document.getElementById('variabilityToggle');
+        const useVariability = variabilityToggle?.checked ?? true;
+
+        const response = await fetch(`/api/simulation/simulate-day?useVariability=${useVariability}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
