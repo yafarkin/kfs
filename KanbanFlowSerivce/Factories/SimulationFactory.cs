@@ -1,11 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using KanbanFlowSerivce.Dtos.Board;
 using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.Config;
 using KanbanFlowSerivce.Enums;
-using BoardTask = KanbanFlowSerivce.Dtos.Config.Task;
-using Task = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlowSerivce.Factories;
 
@@ -435,41 +432,37 @@ public static class SimulationFactory
             },
             Tasks =
             [
-                new()
-                {
-                    Key = "FEAT-1",
-                    Summary = "[BE] Реализовать REST API для пользователей",
-                    ShirtType = TShirtType.L,
-                    RequiredSkills = ["backend"]
-                },
-                new()
-                {
-                    Key = "FEAT-2",
-                    Summary = "[FE] Создать форму регистрации",
-                    ShirtType = TShirtType.M,
-                    RequiredSkills = ["frontend"]
-                },
-                new()
-                {
-                    Key = "FEAT-3",
-                    Summary = "[BE] Интеграция с платежной системой",
-                    ShirtType = TShirtType.L,
-                    RequiredSkills = ["backend"]
-                },
-                new()
-                {
-                    Key = "FEAT-4",
-                    Summary = "[QA] Автотесты для API пользователей",
-                    ShirtType = TShirtType.M,
-                    RequiredSkills = ["qa"]
-                },
-                new()
-                {
-                    Key = "FEAT-5",
-                    Summary = "[BE] Микросервис уведомлений",
-                    ShirtType = TShirtType.L,
-                    RequiredSkills = ["backend"]
-                }
+                // Backend задачи (12 задач)
+                new() { Key = "BE-1", Summary = "[BE] Создать модель пользователя", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "BE-2", Summary = "[BE] API получения списка пользователей", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "BE-3", Summary = "[BE] API создания пользователя", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "BE-4", Summary = "[BE] API обновления пользователя", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "BE-5", Summary = "[BE] API удаления пользователя", ShirtType = TShirtType.XS, RequiredSkills = ["backend"] },
+                new() { Key = "BE-6", Summary = "[BE] Валидация email при регистрации", ShirtType = TShirtType.XS, RequiredSkills = ["backend"] },
+                new() { Key = "BE-7", Summary = "[BE] Хэширование паролей", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "BE-8", Summary = "[BE] JWT токены для аутентификации", ShirtType = TShirtType.M, RequiredSkills = ["backend"] },
+                new() { Key = "BE-9", Summary = "[BE] Refresh токены", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "BE-10", Summary = "[BE] Логирование запросов", ShirtType = TShirtType.XS, RequiredSkills = ["backend"] },
+                new() { Key = "BE-11", Summary = "[BE] Кэширование ответов API", ShirtType = TShirtType.M, RequiredSkills = ["backend"] },
+                new() { Key = "BE-12", Summary = "[BE] Rate limiting", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+
+                // Frontend задачи (6 задач)
+                new() { Key = "FE-1", Summary = "[FE] Верстка формы регистрации", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] },
+                new() { Key = "FE-2", Summary = "[FE] Верстка формы входа", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] },
+                new() { Key = "FE-3", Summary = "[FE] Компонент аватара пользователя", ShirtType = TShirtType.XS, RequiredSkills = ["frontend"] },
+                new() { Key = "FE-4", Summary = "[FE] Страница профиля", ShirtType = TShirtType.M, RequiredSkills = ["frontend"] },
+                new() { Key = "FE-5", Summary = "[FE] Валидация форм на клиенте", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] },
+                new() { Key = "FE-6", Summary = "[FE] Адаптивная верстка", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] },
+
+                // QA задачи (8 задач)
+                new() { Key = "QA-1", Summary = "[QA] Тест-кейсы для API пользователей", ShirtType = TShirtType.S, RequiredSkills = ["qa"] },
+                new() { Key = "QA-2", Summary = "[QA] Автотесты API (POST/PUT)", ShirtType = TShirtType.M, RequiredSkills = ["qa"] },
+                new() { Key = "QA-3", Summary = "[QA] Автотесты API (GET/DELETE)", ShirtType = TShirtType.S, RequiredSkills = ["qa"] },
+                new() { Key = "QA-4", Summary = "[QA] Тесты валидации email", ShirtType = TShirtType.XS, RequiredSkills = ["qa"] },
+                new() { Key = "QA-5", Summary = "[QA] Тесты аутентификации", ShirtType = TShirtType.S, RequiredSkills = ["qa"] },
+                new() { Key = "QA-6", Summary = "[QA] Тесты JWT токенов", ShirtType = TShirtType.S, RequiredSkills = ["qa"] },
+                new() { Key = "QA-7", Summary = "[QA] Нагрузочные тесты API", ShirtType = TShirtType.M, RequiredSkills = ["qa"] },
+                new() { Key = "QA-8", Summary = "[QA] Регрессионные тесты UI", ShirtType = TShirtType.S, RequiredSkills = ["qa"] }
             ]
         };
     }
