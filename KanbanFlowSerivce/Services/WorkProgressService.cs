@@ -50,7 +50,7 @@ public sealed class WorkProgressService
                 var daysRequired = worker.Worker.GetDaysForTask(
                     stage.Stage, 
                     task.Task.ShirtType, 
-                    _simulation.UseVariability,
+                    _simulation.Config.UseVariability,
                     _simulation.Random
                 );
 

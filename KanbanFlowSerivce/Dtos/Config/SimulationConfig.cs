@@ -9,6 +9,11 @@ public sealed record SimulationConfig
     /// Seed для генератора случайных чисел (обеспечивает воспроизводимость симуляции).
     /// </summary>
     public long Seed { get; set; }
+    
+    /// <summary>
+    ///     Использовать ли вариативность при расчёте времени выполнения задач
+    /// </summary>
+    public bool UseVariability { get; set; } = true;
 
     /// <summary>
     /// Список воркеров (исполнителей), участвующих в симуляции.

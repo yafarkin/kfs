@@ -25,6 +25,7 @@ public static class ApiMapper
         return new ApiSimulationConfigDto
         {
             Seed = config.Seed,
+            UseVariability = config.UseVariability,
             Workers = config.Workers.Select(ToApiDto).ToList(),
             Workflow = new ApiWorkflowDto
             {
@@ -77,6 +78,7 @@ public static class ApiMapper
         return new SimulationConfig
         {
             Seed = dto.Seed,
+            UseVariability = dto.UseVariability,
             Workers = dto.Workers.Select(ToDomainWorker).ToList(),
             Workflow = new Workflow
             {
@@ -96,7 +98,6 @@ public static class ApiMapper
     public static ApiSimulationStateDto ToApiDto(Simulation simulation)
     {
         var configDto = ToApiDto(simulation.Config);
-        configDto.UseVariability = simulation.UseVariability;
         
         return new ApiSimulationStateDto
         {
@@ -128,9 +129,6 @@ public static class ApiMapper
         // Восстанавливаем состояние (день и тик)
         simulation.RestoreState(dto.CurrentDay, dto.CurrentTick);
         
-        // Восстанавливаем настройку вариативности из конфига
-        simulation.UseVariability = dto.Config.UseVariability;
-
         return simulation;
     }
 
