@@ -95,14 +95,16 @@ public static class ApiMapper
     /// </summary>
     public static ApiSimulationStateDto ToApiDto(Simulation simulation)
     {
+        var configDto = ToApiDto(simulation.Config);
+        configDto.UseVariability = simulation.UseVariability;
+        
         return new ApiSimulationStateDto
         {
-            Config = ToApiDto(simulation.Config),
+            Config = configDto,
             Board = ToApiDto(simulation.Board),
             History = simulation.History.Select(ToApiDto).ToList(),
             CurrentDay = simulation.CurrentDay,
-            CurrentTick = simulation.CurrentTick,
-            UseVariability = simulation.UseVariability
+            CurrentTick = simulation.CurrentTick
         };
     }
 
@@ -122,9 +124,12 @@ public static class ApiMapper
 
         // Восстанавливаем историю из DTO (перезаписываем пустую)
         simulation.History = dto.History.Select(ToDomainHistoryDay).ToList();
-        
+
         // Восстанавливаем состояние (день и тик)
         simulation.RestoreState(dto.CurrentDay, dto.CurrentTick);
+        
+        // Восстанавливаем настройку вариативности из конфига
+        simulation.UseVariability = dto.Config.UseVariability;
 
         return simulation;
     }

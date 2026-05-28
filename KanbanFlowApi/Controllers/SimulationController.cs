@@ -44,8 +44,8 @@ public class SimulationController : ControllerBase
         // Восстанавливаем доменную симуляцию из DTO
         var simulation = ApiMapper.ToDomainSimulation(state);
         
-        // Сохраняем настройку вариативности из состояния
-        simulation.UseVariability = state.UseVariability;
+        // Сохраняем настройку вариативности из конфига
+        simulation.UseVariability = state.Config.UseVariability;
 
         // Проверяем, можно ли продолжить симуляцию
         var validationResult = ValidateSimulationCanContinue(simulation);

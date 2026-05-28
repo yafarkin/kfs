@@ -45,9 +45,9 @@ async function loadDefaultConfig() {
         }
         simulationState = await response.json();
         
-        // Сохраняем текущее состояние переключателя вариативности
+        // Сохраняем текущее состояние переключателя вариативности в конфиге
         const variabilityToggle = document.getElementById('variabilityToggle');
-        simulationState.useVariability = variabilityToggle?.checked ?? true;
+        simulationState.config.useVariability = variabilityToggle?.checked ?? true;
         
         renderBoard();
         renderWorkers();
@@ -74,9 +74,9 @@ async function simulateDay() {
     updateLoadingIndicator();
 
     try {
-        // Обновляем состояние вариативности в запросе
+        // Обновляем состояние вариативности в конфиге
         const variabilityToggle = document.getElementById('variabilityToggle');
-        simulationState.useVariability = variabilityToggle?.checked ?? true;
+        simulationState.config.useVariability = variabilityToggle?.checked ?? true;
 
         const response = await fetch('/api/simulation/simulate-day', {
             method: 'POST',
