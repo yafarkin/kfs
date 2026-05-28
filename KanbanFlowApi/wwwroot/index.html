@@ -60,6 +60,10 @@
             align-items: center;
         }
 
+        .controls .ms-auto {
+            margin-left: auto !important;
+        }
+
         /* Раскрывающаяся панель настроек */
         .settings-panel {
             background: white;
@@ -83,6 +87,10 @@
             color: white;
             cursor: pointer;
             user-select: none;
+        }
+
+        .settings-header * {
+            pointer-events: none;
         }
 
         .settings-header:hover {
@@ -769,21 +777,18 @@
                         </button>
                     </div>
                 </div>
-
-                <!-- Управление симуляцией -->
-                <div class="settings-section">
-                    <h4><i class="bi bi-play-circle me-2"></i>Управление</h4>
-                    <div class="settings-row">
-                        <button class="btn btn-success" id="btnSimulateDay" onclick="simulateDay()" disabled>
-                            <i class="bi bi-play-fill me-2"></i>Следующий день
-                        </button>
-                        <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
-                            <i class="bi bi-play-circle me-2"></i>Авто-режим
-                        </button>
-                        <span class="text-muted ms-auto">Tick: <span id="currentTick">0</span></span>
-                    </div>
-                </div>
             </div>
+        </div>
+
+        <!-- Кнопки управления симуляцией (всегда видны) -->
+        <div class="controls">
+            <button class="btn btn-success" id="btnSimulateDay" onclick="simulateDay()" disabled>
+                <i class="bi bi-play-fill me-2"></i>Следующий день
+            </button>
+            <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
+                <i class="bi bi-play-circle me-2"></i>Авто-режим
+            </button>
+            <span class="text-muted ms-auto">Tick: <span id="currentTick">0</span></span>
         </div>
 
         <div class="kanban-board" id="kanbanBoard">
