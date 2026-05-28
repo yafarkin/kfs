@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KanbanFlow Simulation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --stage-bg: #f8f9fa;
+            --stage-border: #dee2e6;
+            --card-bg: #ffffff;
+            --worker-badge-bg: #e9ecef;
+            --progress-bar-height: 6px;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .simulation-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 1.8rem;
+        }
+
+        .day-counter {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .kanban-board {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .stage-column {
+            min-width: 280px;
+            max-width: 280px;
+            background: var(--stage-bg);
+            border: 2px solid var(--stage-border);
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .stage-column:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stage-column.work-stage {
+            background: linear-gradient(180deg, #fff3cd 0%, #f8f9fa 100%);
+            border-color: #ffc107;
+        }
+
+        .stage-column.buffer-stage {
+            background: linear-gradient(180deg, #d1ecf1 0%, #f8f9fa 100%);
+            border-color: #17a2b8;
+        }
+
+        .stage-column.done-stage {
+            background: linear-gradient(180deg, #d4edda 0%, #f8f9fa 100%);
+            border-color: #28a745;
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .stage-name {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .stage-wip {
+            font-size: 0.75rem;
+            color: #666;
+            background: rgba(0,0,0,0.1);
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        .task-cards {
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .task-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .task-card.completed {
+            animation: cardMove 0.5s ease-in-out;
+        }
+
+        @keyframes cardMove {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px) scale(1.05); }
+        }
+
+        .task-card.completed {
+            opacity: 0.7;
+            background: #d4edda;
+        }
+
+        .task-key {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .task-summary {
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .task-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .skill-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .skill-badge.backend { background: #cce5ff; color: #004085; }
+        .skill-badge.frontend { background: #f8d7da; color: #721c24; }
+        .skill-badge.qa { background: #d4edda; color: #155724; }
+
+        .task-shirt {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #6c757d;
+            color: white;
+        }
+
+        .progress-container {
+            margin-top: 8px;
+        }
+
+        .progress-label {
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress {
+            height: var(--progress-bar-height);
+            border-radius: 3px;
+            background: #e9ecef;
+        }
+
+        .progress-bar {
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-bar.working {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            animation: progressPulse 1.5s infinite;
+        }
+
+        @keyframes progressPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .worker-assignment {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .worker-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.65rem;
+        }
+
+        .worker-icon.moving {
+            animation: workerMove 0.5s ease-in-out;
+        }
+
+        @keyframes workerMove {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .workers-panel {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .workers-panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .workers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .worker-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .worker-card.available {
+            border-color: #28a745;
+            background: linear-gradient(180deg, #d4edda 0%, #ffffff 100%);
+        }
+
+        .worker-card.busy {
+            border-color: #ffc107;
+            background: linear-gradient(180deg, #fff3cd 0%, #ffffff 100%);
+        }
+
+        .worker-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .worker-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .worker-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .worker-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .worker-status {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        .worker-status.available {
+            background: #28a745;
+            color: white;
+        }
+
+        .worker-status.busy {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .worker-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .worker-wip {
+            font-size: 0.75rem;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .wip-bar {
+            flex: 1;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin: 0 8px;
+            overflow: hidden;
+        }
+
+        .wip-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .history-panel {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .history-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 3px solid #667eea;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .history-item.TaskMoved { border-left-color: #17a2b8; }
+        .history-item.WorkerTookTask { border-left-color: #667eea; }
+        .history-item.TaskProgressUpdated { border-left-color: #ffc107; }
+        .history-item.WorkerCompletedTask { border-left-color: #28a745; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: none;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #0f8a7f 0%, #2ed874 100%);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        /* Индикатор загрузки (шестерёнка) */
+        .loading-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 999;
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-indicator i {
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Индикатор загрузки -->
+    <div class="loading-indicator" id="loadingGear">
+        <i class="bi bi-gear"></i>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="simulation-container">
+        <div class="header">
+            <h1><i class="bi bi-kanban me-2"></i>KanbanFlow Simulation</h1>
+            <div class="day-counter">
+                <i class="bi bi-calendar3 me-2"></i>День: <span id="currentDay">0</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="btnLoadConfig" onclick="loadDefaultConfig()">
+                <i class="bi bi-plus-circle me-2"></i>Новая конфигурация
+            </button>
+            <button class="btn btn-success" id="btnSimulateDay" onclick="simulateDay()" disabled>
+                <i class="bi bi-play-fill me-2"></i>Следующий день
+            </button>
+            <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
+                <i class="bi bi-play-circle me-2"></i>Авто-режим
+            </button>
+            <div class="ms-auto">
+                <span class="text-muted">Tick: <span id="currentTick">0</span></span>
+            </div>
+        </div>
+
+        <div class="kanban-board" id="kanbanBoard">
+            <!-- Стадии будут добавлены через JS -->
+        </div>
+
+        <div class="workers-panel">
+            <h3><i class="bi bi-people me-2"></i>Воркеры</h3>
+            <div class="workers-grid" id="workersGrid">
+                <!-- Воркеры будут добавлены через JS -->
+            </div>
+        </div>
+
+        <div class="history-panel">
+            <h3><i class="bi bi-clock-history me-2"></i>История событий</h3>
+            <ul class="history-list" id="historyList">
+                <!-- События будут добавлены через JS -->
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
