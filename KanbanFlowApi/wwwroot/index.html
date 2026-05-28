@@ -721,8 +721,8 @@
         </div>
 
         <!-- Раскрывающаяся панель настроек -->
-        <div class="settings-panel" id="settingsPanel">
-            <div class="settings-header" onclick="toggleSettingsPanel()">
+        <div class="settings-panel collapsed" id="settingsPanel">
+            <div class="settings-header">
                 <div class="settings-title">
                     <i class="bi bi-gear"></i>
                     <span>Настройки симуляции</span>
@@ -739,7 +739,7 @@
                             <option value="twork">TWork (7 воркеров, полный workflow)</option>
                         </select>
                         <button class="btn btn-primary" id="btnLoadConfig" onclick="loadDefaultConfig()">
-                            <i class="bi bi-plus-circle me-2"></i>Загрузить
+                            <i class="bi bi-plus-circle me-2"></i>Новая конфигурация
                         </button>
                     </div>
                 </div>

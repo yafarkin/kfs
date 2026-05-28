@@ -9,7 +9,16 @@ let isLoading = false;
 document.addEventListener('DOMContentLoaded', () => {
     loadDefaultConfig();
     updateLoadingIndicator();
+    initSettingsPanel();
 });
+
+// Инициализация панели настроек
+function initSettingsPanel() {
+    const header = document.querySelector('.settings-header');
+    if (header) {
+        header.addEventListener('click', toggleSettingsPanel);
+    }
+}
 
 // Переключение панели настроек
 function toggleSettingsPanel() {
