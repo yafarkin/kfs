@@ -7,7 +7,6 @@ let isLoading = false;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('[DEBUG] DOM loaded');
     loadDefaultConfig();
     updateLoadingIndicator();
     initSettingsPanel();
@@ -17,25 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
 function initSettingsPanel() {
     const header = document.querySelector('.settings-header');
     const panel = document.getElementById('settingsPanel');
-    console.log('[DEBUG] initSettingsPanel:', { header, panel, panelClass: panel?.className });
     
     if (header) {
         header.addEventListener('click', (e) => {
-            console.log('[DEBUG] Header clicked!', e.target);
             toggleSettingsPanel();
         });
-    } else {
-        console.error('[DEBUG] Header not found!');
     }
 }
 
 // Переключение панели настроек
 function toggleSettingsPanel() {
     const panel = document.getElementById('settingsPanel');
-    console.log('[DEBUG] toggleSettingsPanel called, panel:', panel);
     if (panel) {
-        const isCollapsed = panel.classList.toggle('collapsed');
-        console.log('[DEBUG] Panel collapsed:', isCollapsed, 'classList:', panel.classList);
+        panel.classList.toggle('collapsed');
     }
 }
 
@@ -93,7 +86,6 @@ async function loadDefaultConfig() {
 
 // Перезагрузка текущей конфигурации
 async function reloadConfig() {
-    console.log('[DEBUG] reloadConfig called');
     if (!simulationState) {
         showToast('Сначала загрузите конфигурацию', 'warning');
         return;
