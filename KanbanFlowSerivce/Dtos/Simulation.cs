@@ -24,13 +24,25 @@ public sealed record Simulation
     /// </summary>
     public int CurrentTick { get; private set; }
 
-    public void InitFromConfig(SimulationConfig config)
+    /// <summary>
+    ///     Использовать ли вариативность при расчёте времени выполнения задач
+    /// </summary>
+    public bool UseVariability { get; set; } = true;
+
+    /// <summary>
+    ///     Генератор случайных чисел для воспроизводимости (используется seed из конфига)
+    /// </summary>
+    public Random Random { get; private set; } = null!;
+
+    public void InitFromConfig(SimulationConfig config, bool useVariability = true)
     {
         Config = config;
         Board = BoardMapper.MapToBoard(config);
         History = new List<HistoryDay>();
         CurrentDay = 0;
         CurrentTick = 0;
+        UseVariability = useVariability;
+        Random = new Random((int)config.Seed);
     }
 
     /// <summary>

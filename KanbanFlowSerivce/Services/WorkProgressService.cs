@@ -47,7 +47,12 @@ public sealed class WorkProgressService
                 }
 
                 // Рассчитываем сколько дней требуется для выполнения задачи на этой стадии
-                var daysRequired = worker.Worker.GetDaysForTask(stage.Stage, task.Task.ShirtType);
+                var daysRequired = worker.Worker.GetDaysForTask(
+                    stage.Stage, 
+                    task.Task.ShirtType, 
+                    _simulation.UseVariability,
+                    _simulation.Random
+                );
 
                 // Защита от деления на ноль: если daysRequired = 0, задача выполняется мгновенно
                 if (daysRequired <= 0)
@@ -60,8 +65,8 @@ public sealed class WorkProgressService
                 // Прогресс за один день = 100% / количество дней
                 // С учётом производительности воркера
                 var progressPerDay = 100.0m / daysRequired;
-                var performanceMultiplier = worker.Worker.Performance / 100.0;
-                var actualProgress = progressPerDay * (decimal)performanceMultiplier;
+                var performanceMultiplier = (decimal)worker.Worker.Performance / 100.0m;
+                var actualProgress = progressPerDay * performanceMultiplier;
 
                 // Увеличиваем прогресс
                 var newProgress = Math.Min(100, task.Progress + (int)actualProgress);

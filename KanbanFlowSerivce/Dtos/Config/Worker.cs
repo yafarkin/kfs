@@ -21,10 +21,21 @@ public sealed record Worker
     /// Null = без лимита.
     /// </summary>
     public int? WipLimit { get; set; }
-
     /// <summary>
     ///     Производительность ресурса в процентах (100 = стандартная скорость).
     ///     Значения > 100 означают повышенную производительность.
     /// </summary>
     public double Performance { get; set; }
+
+    /// <summary>
+    ///     Отклонение вниз от оценки в процентах (0-100).
+    ///     Например, 30 означает что задача может быть выполнена на 30% быстрее базовой оценки.
+    /// </summary>
+    public double DeviationDownPercent { get; set; }
+
+    /// <summary>
+    ///     Отклонение вверх от оценки в процентах (0-100).
+    ///     Например, 50 означает что задача может выполняться на 50% дольше базовой оценки.
+    /// </summary>
+    public double DeviationUpPercent { get; set; }
 }
