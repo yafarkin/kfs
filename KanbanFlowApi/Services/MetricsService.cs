@@ -241,7 +241,10 @@ public sealed class MetricsService
             // Конвертируем тики в дни (1 день = 24 тика)
             var durationDays = (nextActivity.Tick - currentActivity.Tick) / 24m;
 
-            // Определяем тип стадии по имени
+            // Определяем тип стадии по имени (пропускаем если StageName = null)
+            if (currentActivity.StageName == null)
+                continue;
+
             var stageType = GetStageTypeByName(currentActivity.StageName);
 
             if (stageType == StageType.Work)
