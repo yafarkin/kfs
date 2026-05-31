@@ -216,18 +216,19 @@ public class SimulationSmokeTests
         var testingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Testing");
 
         // Act & Assert - Проверяем расчёт дней worker'ами
-        // Dev worker на Developing (100%): L = 15 дней
-        Assert.Equal(15, devWorker.Worker.GetDaysForTask(developingStage.Stage, TShirtType.L));
-        
-        // Dev worker на Release Preparation (20%): L = 3 дня
+        // Performance=100 означает нижнюю границу (быстрее)
+        // Dev worker на Developing (100%): L = 7 дней (нижняя граница L=7..15)
+        Assert.Equal(7, devWorker.Worker.GetDaysForTask(developingStage.Stage, TShirtType.L));
+
+        // Dev worker на Release Preparation (20%): L = Ceiling(7 * 0.2) = 2 дня
         var releaseStage = simulation.Board.Stages.First(s => s.Stage.Name == "Release Preparation");
-        Assert.Equal(3, devWorker.Worker.GetDaysForTask(releaseStage.Stage, TShirtType.L));
-        
-        // QA worker на Testing (30%): M = 2 дня
+        Assert.Equal(2, devWorker.Worker.GetDaysForTask(releaseStage.Stage, TShirtType.L));
+
+        // QA worker на Testing (30%): M = Ceiling(4 * 0.3) = 2 дня
         Assert.Equal(2, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.M));
-        
-        // QA worker на Testing (30%): L = 5 дней
-        Assert.Equal(5, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.L));
+
+        // QA worker на Testing (30%): L = Ceiling(7 * 0.3) = 3 дня
+        Assert.Equal(3, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.L));
     }
 
     /// <summary>

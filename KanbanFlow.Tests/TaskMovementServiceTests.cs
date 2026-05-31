@@ -682,7 +682,7 @@ public class TaskMovementServiceTests
     {
         // Arrange
         var worker = new Worker { Login = "dev1", Skills = ["dev-be"], Performance = 100 };
-        
+
         var developingStage = new Stage
         {
             Name = "Developing",
@@ -705,27 +705,28 @@ public class TaskMovementServiceTests
         };
 
         // Act & Assert
-        // Developing (100%): M = 6 дней
-        Assert.Equal(6, worker.GetDaysForTask(developingStage, TShirtType.M));
-        
-        // QA (30%): M = 6 * 0.3 = 1.8 -> округляем вверх = 2 дня
+        // Performance=100 означает нижнюю границу (быстрее)
+        // Developing (100%): M = 4 дня (нижняя граница M=4..6)
+        Assert.Equal(4, worker.GetDaysForTask(developingStage, TShirtType.M));
+
+        // QA (30%): M = Ceiling(4 * 0.3) = Ceiling(1.2) = 2 дня
         Assert.Equal(2, worker.GetDaysForTask(qaStage, TShirtType.M));
-        
-        // Code Review (20%): M = 6 * 0.2 = 1.2 -> округляем вверх = 2 дня
-        Assert.Equal(2, worker.GetDaysForTask(reviewStage, TShirtType.M));
-        
-        // Developing (100%): L = 15 дней
-        Assert.Equal(15, worker.GetDaysForTask(developingStage, TShirtType.L));
-        
-        // QA (30%): L = 15 * 0.3 = 4.5 -> округляем вверх = 5 дней
-        Assert.Equal(5, worker.GetDaysForTask(qaStage, TShirtType.L));
-        
+
+        // Code Review (20%): M = Ceiling(4 * 0.2) = Ceiling(0.8) = 1 день
+        Assert.Equal(1, worker.GetDaysForTask(reviewStage, TShirtType.M));
+
+        // Developing (100%): L = 7 дней (нижняя граница L=7..15)
+        Assert.Equal(7, worker.GetDaysForTask(developingStage, TShirtType.L));
+
+        // QA (30%): L = Ceiling(7 * 0.3) = Ceiling(2.1) = 3 дня
+        Assert.Equal(3, worker.GetDaysForTask(qaStage, TShirtType.L));
+
         // Developing (100%): XS = 1 день
         Assert.Equal(1, worker.GetDaysForTask(developingStage, TShirtType.XS));
-        
-        // QA (30%): XS = 1 * 0.3 = 0.3 -> округляем вверх = 1 день
+
+        // QA (30%): XS = Ceiling(1 * 0.3) = Ceiling(0.3) = 1 день
         Assert.Equal(1, worker.GetDaysForTask(qaStage, TShirtType.XS));
-        
+
         // Задача без размера = 1 день
         Assert.Equal(1, worker.GetDaysForTask(developingStage, null));
     }
