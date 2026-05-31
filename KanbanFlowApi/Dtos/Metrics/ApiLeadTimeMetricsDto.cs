@@ -6,12 +6,12 @@ namespace KanbanFlowApi.Dtos.Metrics;
 public sealed record ApiLeadTimeMetricsDto
 {
     /// <summary>
-    /// 50-й перцентиль Lead Time (медиана) в часах.
+    /// 50-й перцентиль Lead Time (медиана) в днях.
     /// </summary>
     public decimal P50 { get; set; }
 
     /// <summary>
-    /// 85-й перцентиль Lead Time в часах.
+    /// 85-й перцентиль Lead Time в днях.
     /// </summary>
     public decimal P85 { get; set; }
 

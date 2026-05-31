@@ -77,6 +77,7 @@ public sealed class MetricsService
     /// <summary>
     /// Рассчитать Lead Time для задачи по истории активностей.
     /// Lead Time считается от первого перехода задачи (из Todo) до перехода в Done.
+    /// Возвращает значение в днях (1 день = 24 тика).
     /// </summary>
     private decimal? CalculateTaskLeadTimeFromHistory(string taskKey)
     {
@@ -105,7 +106,8 @@ public sealed class MetricsService
             return null;
         }
 
-        return enterDoneActivity.Tick - startTick;
+        // Конвертируем тики в дни (1 день = 24 тика)
+        return (enterDoneActivity.Tick - startTick) / 24m;
     }
 
     /// <summary>
@@ -206,6 +208,7 @@ public sealed class MetricsService
 
     /// <summary>
     /// Рассчитать Active и Wait время для задачи по истории активностей.
+    /// Возвращает значения в днях (1 день = 24 тика).
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateTaskFlowEfficiencyFromHistory(string taskKey)
     {
@@ -215,8 +218,8 @@ public sealed class MetricsService
         // Получаем все активности TaskMoved для конкретной задачи
         var taskActivities = _simulation.History
             .SelectMany(d => d.Activities)
-            .Where(a => a.Type == ActivityType.TaskMoved && 
-                        GetTaskKeyFromActivity(a) == taskKey && 
+            .Where(a => a.Type == ActivityType.TaskMoved &&
+                        GetTaskKeyFromActivity(a) == taskKey &&
                         a.StageName != null)
             .OrderBy(a => a.Tick)
             .ToList();
@@ -235,18 +238,19 @@ public sealed class MetricsService
             var currentActivity = taskActivities[i];
             var nextActivity = taskActivities[i + 1];
 
-            var duration = nextActivity.Tick - currentActivity.Tick;
-            
+            // Конвертируем тики в дни (1 день = 24 тика)
+            var durationDays = (nextActivity.Tick - currentActivity.Tick) / 24m;
+
             // Определяем тип стадии по имени
             var stageType = GetStageTypeByName(currentActivity.StageName);
 
             if (stageType == StageType.Work)
             {
-                activeTime += duration;
+                activeTime += durationDays;
             }
             else if (stageType == StageType.Buffer)
             {
-                waitTime += duration;
+                waitTime += durationDays;
             }
         }
 
@@ -254,8 +258,8 @@ public sealed class MetricsService
         var lastActivity = taskActivities.LastOrDefault();
         if (lastActivity != null)
         {
-            var remainingTime = _simulation.CurrentTick - lastActivity.Tick;
-            if (remainingTime > 0)
+            var remainingDays = (_simulation.CurrentTick - lastActivity.Tick) / 24m;
+            if (remainingDays > 0)
             {
                 // Определяем текущую стадию задачи
                 var currentStageName = _simulation.Board.Tasks
@@ -267,11 +271,11 @@ public sealed class MetricsService
                     var currentStageType = GetStageTypeByName(currentStageName);
                     if (currentStageType == StageType.Work)
                     {
-                        activeTime += remainingTime;
+                        activeTime += remainingDays;
                     }
                     else if (currentStageType == StageType.Buffer)
                     {
-                        waitTime += remainingTime;
+                        waitTime += remainingDays;
                     }
                 }
             }
@@ -325,11 +329,12 @@ public sealed class MetricsService
 
     /// <summary>
     /// Получить диапазон времени (бакет) для значения.
+    /// Входное значение уже в днях.
     /// </summary>
-    private static string GetTimeBucket(decimal hours)
+    private static string GetTimeBucket(decimal days)
     {
-        var bucketSize = 24; // 24 часа
-        var lower = (int)(hours / bucketSize) * bucketSize;
+        var bucketSize = 7; // 7 дней
+        var lower = (int)(days / bucketSize) * bucketSize;
         var upper = lower + bucketSize;
         return $"{lower}-{upper}";
     }

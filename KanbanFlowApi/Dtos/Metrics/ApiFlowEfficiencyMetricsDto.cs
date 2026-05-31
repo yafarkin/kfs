@@ -6,12 +6,12 @@ namespace KanbanFlowApi.Dtos.Metrics;
 public sealed record ApiFlowEfficiencyMetricsDto
 {
     /// <summary>
-    /// Общее время в рабочих статусах (в часах).
+    /// Общее время в рабочих статусах (в днях).
     /// </summary>
     public decimal ActiveTime { get; set; }
 
     /// <summary>
-    /// Общее время в нерабочих статусах (ожидание, буферы) в часах.
+    /// Общее время в нерабочих статусах (ожидание, буферы) в днях.
     /// </summary>
     public decimal WaitTime { get; set; }
 

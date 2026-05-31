@@ -6,8 +6,8 @@ namespace KanbanFlowApi.Dtos.Metrics;
 public sealed record ApiFrequencyMetricsDto
 {
     /// <summary>
-    /// Распределение задач по диапазонам времени (в часах).
-    /// Ключ - диапазон времени (например, "0-24", "24-48"), значение - количество задач.
+    /// Распределение задач по диапазонам времени (в днях).
+    /// Ключ - диапазон времени (например, "0-7", "7-14"), значение - количество задач.
     /// </summary>
     public Dictionary<string, int> Distribution { get; set; } = new();
 

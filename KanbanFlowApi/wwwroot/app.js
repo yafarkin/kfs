@@ -581,9 +581,9 @@ function renderLeadTimeCard(leadTime) {
                 <i class="bi bi-clock"></i>
                 <span>Lead Time</span>
             </div>
-            <div class="metric-value">${leadTime.p50.toFixed(1)} ч</div>
+            <div class="metric-value">${leadTime.p50.toFixed(1)} д</div>
             <div class="metric-subvalue">P50 (медиана)</div>
-            <div class="metric-subvalue">P85: ${leadTime.p85.toFixed(1)} ч</div>
+            <div class="metric-subvalue">P85: ${leadTime.p85.toFixed(1)} д</div>
             <div class="metric-subvalue">Задач: ${leadTime.taskCount}</div>
         </div>
     `;
@@ -613,8 +613,8 @@ function renderFlowEfficiencyCard(flowEfficiency) {
                 <span>Flow Efficiency</span>
             </div>
             <div class="metric-value">${flowEfficiency.efficiencyPercent.toFixed(1)}%</div>
-            <div class="metric-subvalue">Активное время: ${flowEfficiency.activeTime.toFixed(1)} ч</div>
-            <div class="metric-subvalue">Время ожидания: ${flowEfficiency.waitTime.toFixed(1)} ч</div>
+            <div class="metric-subvalue">Активное время: ${flowEfficiency.activeTime.toFixed(1)} д</div>
+            <div class="metric-subvalue">Время ожидания: ${flowEfficiency.waitTime.toFixed(1)} д</div>
         </div>
     `;
 }
@@ -637,7 +637,7 @@ function renderFrequencyCard(frequency) {
                         const barWidth = (count / maxCount) * 100;
                         return `
                             <div class="frequency-item">
-                                <span>${bucket} ч</span>
+                                <span>${bucket} д</span>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span>${count}</span>
                                     <div class="frequency-bar" style="width: ${barWidth}%"></div>
