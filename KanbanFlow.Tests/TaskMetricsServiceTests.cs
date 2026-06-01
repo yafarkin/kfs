@@ -44,7 +44,7 @@ public class TaskMetricsServiceTests
     }
 
     [Fact]
-    public void CalculateTaskMetrics_CycleTime_LessThanOrEqualToLeadTime()
+    public void CalculateTaskMetrics_ActiveWaitTime_NonNegative()
     {
         // Arrange
         var config = CreateSimpleConfig();
@@ -68,8 +68,8 @@ public class TaskMetricsServiceTests
 
         // Assert
         var task = taskMetrics.First();
-        // Cycle Time обычно <= Lead Time (т.к. Lead Time включает время до начала работы)
-        Assert.True(task.CycleTimeDays >= 0);
+        Assert.True(task.ActiveTimeDays >= 0);
+        Assert.True(task.WaitTimeDays >= 0);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class TaskMetricsServiceTests
 
         // Assert
         var task = taskMetrics.First();
-        Assert.InRange(task.EfficiencyPercent, 0, 100);
+        Assert.InRange(task.FlowEfficiencyPercent, 0, 100);
     }
 
     [Fact]
@@ -135,13 +135,13 @@ public class TaskMetricsServiceTests
         {
             var expectedEfficiency = (task.ActiveTimeDays / totalTime) * 100;
             // Допускаем погрешность из-за округления
-            var diff = Math.Abs(expectedEfficiency - task.EfficiencyPercent);
+            var diff = Math.Abs(expectedEfficiency - task.FlowEfficiencyPercent);
             Assert.True(diff < 1);
         }
     }
 
     [Fact]
-    public void CalculateTaskMetrics_StagesCount_MatchesHistory()
+    public void CalculateTaskMetrics_Stages_HasStagesList()
     {
         // Arrange
         var config = CreateSimpleConfig();
@@ -165,12 +165,13 @@ public class TaskMetricsServiceTests
 
         // Assert
         var task = taskMetrics.First();
-        // Должно быть минимум 2 стадии (Todo -> Developing -> Done)
-        Assert.True(task.StagesCount >= 2);
+        // Должен быть список стадий
+        Assert.NotNull(task.Stages);
+        Assert.True(task.Stages.Count >= 2);
     }
 
     [Fact]
-    public void CalculateTaskMetrics_WorkersCount_AtLeastOne()
+    public void CalculateTaskMetrics_Status_IsValid()
     {
         // Arrange
         var config = CreateSimpleConfig();
@@ -194,7 +195,7 @@ public class TaskMetricsServiceTests
 
         // Assert
         var task = taskMetrics.First();
-        Assert.True(task.WorkersCount >= 1);
+        Assert.True(task.Status == "Done" || task.Status == "In Progress" || task.Status == "Todo");
     }
 
     [Fact]
@@ -221,9 +222,8 @@ public class TaskMetricsServiceTests
         var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
         // Assert
-        var completedTask = taskMetrics.First(t => t.IsCompleted);
+        var completedTask = taskMetrics.First(t => t.Status == "Done");
         Assert.Equal("Done", completedTask.Status);
-        Assert.True(completedTask.IsCompleted);
     }
 
     [Fact]
@@ -253,7 +253,6 @@ public class TaskMetricsServiceTests
         var task = taskMetrics.First();
         // Задача должна быть в процессе или на одной из стадий
         Assert.True(task.Status == "In Progress" || task.Status == "Developing" || task.Status == "Todo");
-        Assert.False(task.IsCompleted);
     }
 
     [Fact]
@@ -286,8 +285,7 @@ public class TaskMetricsServiceTests
         {
             Assert.NotNull(task.TaskKey);
             Assert.True(task.LeadTimeDays >= 0);
-            Assert.True(task.CycleTimeDays >= 0);
-            Assert.InRange(task.EfficiencyPercent, 0, 100);
+            Assert.True(task.FlowEfficiencyPercent >= 0 && task.FlowEfficiencyPercent <= 100);
         }
     }
 
@@ -351,7 +349,7 @@ public class TaskMetricsServiceTests
         {
             var calculatedEfficiency = (task.ActiveTimeDays / totalTime) * 100;
             // Допускаем небольшую погрешность из-за округления
-            Assert.Equal(Math.Round(calculatedEfficiency, 1), task.EfficiencyPercent, 1);
+            Assert.Equal(Math.Round(calculatedEfficiency, 1), task.FlowEfficiencyPercent, 1);
         }
     }
 

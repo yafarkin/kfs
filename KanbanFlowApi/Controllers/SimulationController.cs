@@ -1,6 +1,7 @@
 using KanbanFlowApi.Dtos;
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Dtos.Metrics;
+using KanbanFlowApi.Dtos.Task;
 using KanbanFlowApi.Mappers;
 using KanbanFlowApi.Services;
 using KanbanFlowSerivce.Dtos;
@@ -142,5 +143,20 @@ public class SimulationController : ControllerBase
         var workerMetrics = metricsService.CalculateAllWorkersMetrics();
 
         return Ok(workerMetrics);
+    }
+
+    /// <summary>
+    /// Рассчитать метрики по задачам (Lead Time, Flow Efficiency, время по стадиям, воркеры).
+    /// </summary>
+    [HttpPost("task-metrics")]
+    public ActionResult<List<TaskMetricsDto>> GetTaskMetrics([FromBody] ApiSimulationStateDto state)
+    {
+        // Восстанавливаем доменную симуляцию из DTO
+        var simulation = ApiMapper.ToDomainSimulation(state);
+
+        var taskMetricsService = new TaskMetricsService(simulation);
+        var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
+
+        return Ok(taskMetrics);
     }
 }

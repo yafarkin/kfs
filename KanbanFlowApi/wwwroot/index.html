@@ -844,6 +844,204 @@
             color: #dc3545 !important;
         }
 
+        /* Метрики задач */
+        .task-metric-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .task-metric-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .task-metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .task-key {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .task-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-todo {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .task-metric-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .task-summary-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .task-summary-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .task-summary-value {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .task-metric-body {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .task-metric-row {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .task-metric-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .task-metric-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .task-stages {
+            border-top: 1px solid #e9ecef;
+            padding-top: 10px;
+        }
+
+        .task-stages-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .task-stages-title i {
+            color: #667eea;
+        }
+
+        .task-stage-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .task-stage-row:last-child {
+            border-bottom: none;
+        }
+
+        .task-stage-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-stage-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.85rem;
+        }
+
+        .task-stage-type {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .task-stage-type.work {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .task-stage-type.buffer {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .task-stage-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .task-stage-time {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.85rem;
+        }
+
+        .task-stage-workers {
+            display: flex;
+            gap: 4px;
+        }
+
+        .worker-badge {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
         /* Раскрывающаяся панель метрик */
         .metrics-panel.collapsed .metrics-body {
             display: none;
@@ -1042,9 +1240,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- Раскрывающаяся панель метрик задач -->
+        <div class="metrics-panel" id="taskMetricsPanel">
+            <div class="metrics-header" onclick="toggleTaskMetricsPanel()">
+                <div class="metrics-title">
+                    <i class="bi bi-kanban"></i>
+                    <span>Метрики задач</span>
+                </div>
+                <i class="bi bi-chevron-down metrics-toggle-icon"></i>
+            </div>
+            <div class="metrics-body" id="taskMetricsBody">
+                <div id="taskMetricsGrid">
+                    <!-- Метрики задач будут добавлены через JS -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>

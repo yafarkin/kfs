@@ -388,9 +388,8 @@ public class WorkerMetricsServiceTests
             Assert.NotNull(metrics.TaskKey);
             Assert.StartsWith("TASK-", metrics.TaskKey);
             Assert.True(metrics.LeadTimeDays >= 0);
-            Assert.True(metrics.CycleTimeDays >= 0);
-            Assert.True(metrics.EfficiencyPercent >= 0);
-            Assert.True(metrics.EfficiencyPercent <= 100);
+            Assert.True(metrics.FlowEfficiencyPercent >= 0);
+            Assert.True(metrics.FlowEfficiencyPercent <= 100);
         }
     }
 
@@ -418,7 +417,7 @@ public class WorkerMetricsServiceTests
         var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
         // Assert - хотя бы одна задача должна быть завершена
-        var completedTasks = taskMetrics.Where(m => m.IsCompleted).ToList();
+        var completedTasks = taskMetrics.Where(m => m.Status == "Done").ToList();
         Assert.NotEmpty(completedTasks);
 
         foreach (var metrics in completedTasks)

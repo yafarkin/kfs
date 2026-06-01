@@ -132,7 +132,6 @@ public class EdgeCaseTests
 
         // Assert
         var task = taskMetrics.First();
-        Assert.False(task.IsCompleted);
         Assert.True(task.Status == "In Progress" || task.Status == "Developing" || task.Status == "Todo");
     }
 

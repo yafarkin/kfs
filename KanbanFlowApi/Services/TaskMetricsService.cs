@@ -1,4 +1,4 @@
-using KanbanFlowApi.Dtos.Metrics;
+using KanbanFlowApi.Dtos.Task;
 using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.Board;
 using KanbanFlowSerivce.Dtos.History;
@@ -21,7 +21,7 @@ public sealed class TaskMetricsService
     /// <summary>
     /// Рассчитать метрики для всех задач.
     /// </summary>
-    public List<ApiTaskMetricsDto> CalculateAllTasksMetrics()
+    public List<TaskMetricsDto> CalculateAllTasksMetrics()
     {
         return _simulation.Board.Tasks
             .Select(t => CalculateTaskMetrics(t))
@@ -31,7 +31,7 @@ public sealed class TaskMetricsService
     /// <summary>
     /// Рассчитать метрики для конкретной задачи.
     /// </summary>
-    public ApiTaskMetricsDto CalculateTaskMetrics(BoardTask boardTask)
+    public TaskMetricsDto CalculateTaskMetrics(BoardTask boardTask)
     {
         var taskKey = boardTask.Task.Key;
 
@@ -45,44 +45,94 @@ public sealed class TaskMetricsService
         // 1. Lead Time: от LeadTimeStarted/первого TaskMoved до Done/сейчас
         var leadTime = CalculateLeadTime(allActivities);
 
-        // 2. Cycle Time: от первого WorkerTookTask до последнего WorkerCompletedTask
-        var cycleTime = CalculateCycleTime(allActivities);
-
-        // 3. Flow Efficiency: Active Time / (Active Time + Wait Time)
+        // 2. Flow Efficiency: Active Time / (Active Time + Wait Time)
         var (activeTime, waitTime) = CalculateFlowEfficiencyTimes(allActivities);
         var totalTime = activeTime + waitTime;
         var efficiencyPercent = totalTime > 0 ? (activeTime / totalTime) * 100 : 0m;
 
-        // 4. Количество стадий через которые прошла задача
-        var stagesCount = allActivities
-            .Where(a => a.Type == ActivityType.TaskMoved)
-            .Select(a => a.StageName)
-            .Distinct()
-            .Count();
-
-        // 5. Количество воркеров которые работали над задачей
-        var workersCount = allActivities
-            .Where(a => a.Type == ActivityType.WorkerTookTask || a.Type == ActivityType.WorkerCompletedTask)
-            .Select(a => a.WorkerLogin)
-            .Distinct()
-            .Count();
-
-        // 6. Статус задачи
+        // 3. Статус задачи
         var status = GetTaskStatus(allActivities);
 
-        return new ApiTaskMetricsDto
+        // 4. Детальная информация по стадиям
+        var stages = CalculateStageMetrics(allActivities);
+
+        return new TaskMetricsDto
         {
             TaskKey = taskKey,
+            Summary = boardTask.Task.Summary ?? taskKey,
+            ShirtType = boardTask.Task.ShirtType.ToString(),
             LeadTimeDays = Math.Round(leadTime, 1),
-            CycleTimeDays = Math.Round(cycleTime, 1),
-            EfficiencyPercent = Math.Round(efficiencyPercent, 1),
+            FlowEfficiencyPercent = Math.Round(efficiencyPercent, 1),
             ActiveTimeDays = Math.Round(activeTime, 1),
             WaitTimeDays = Math.Round(waitTime, 1),
-            StagesCount = stagesCount,
-            WorkersCount = workersCount,
             Status = status,
-            IsCompleted = status == "Done"
+            Stages = stages
         };
+    }
+
+    /// <summary>
+    /// Рассчитать метрики по стадиям.
+    /// </summary>
+    private List<StageMetricsDto> CalculateStageMetrics(List<HistoryActivity> activities)
+    {
+        var stages = new List<StageMetricsDto>();
+        var stageGroups = activities
+            .Where(a => a.Type == ActivityType.TaskMoved)
+            .GroupBy(a => a.StageName)
+            .OrderBy(g => g.Min(a => a.DayNumber));
+
+        foreach (var stageGroup in stageGroups)
+        {
+            var stageName = stageGroup.Key;
+            if (string.IsNullOrEmpty(stageName))
+                continue;
+
+            // Определить тип стадии
+            var stageType = GetStageTypeByName(stageName);
+
+            // Найти время в стадии
+            var stageEntries = stageGroup.OrderBy(a => a.DayNumber).ToList();
+            var enterDay = stageEntries.First().DayNumber;
+
+            // Выход из стадии - следующий TaskMoved или текущий день
+            var nextMove = activities
+                .Where(a => a.Type == ActivityType.TaskMoved && a.DayNumber > enterDay)
+                .OrderBy(a => a.DayNumber)
+                .FirstOrDefault();
+
+            var exitDay = nextMove?.DayNumber ?? _simulation.CurrentDay;
+            var timeInStage = exitDay - enterDay;
+
+            // Найти воркеров на этой стадии
+            var workers = activities
+                .Where(a => a.StageName == stageName && 
+                           (a.Type == ActivityType.WorkerTookTask || a.Type == ActivityType.WorkerCompletedTask) &&
+                           !string.IsNullOrEmpty(a.WorkerLogin))
+                .Select(a => a.WorkerLogin!)
+                .Distinct()
+                .ToList();
+
+            stages.Add(new StageMetricsDto
+            {
+                StageName = stageName,
+                StageType = stageType.ToString(),
+                TimeInStageDays = timeInStage,
+                Workers = workers
+            });
+        }
+
+        return stages;
+    }
+
+    /// <summary>
+    /// Определить тип стадии по имени.
+    /// </summary>
+    private StageType GetStageTypeByName(string stageName)
+    {
+        var stage = _simulation.Board.Stages
+            .FirstOrDefault(s => s.Stage.Name == stageName);
+
+        return stage?.Stage.Type ?? StageType.Buffer;
     }
 
     /// <summary>
@@ -119,25 +169,6 @@ public sealed class TaskMetricsService
     }
 
     /// <summary>
-    /// Рассчитать Cycle Time задачи (от первого WorkerTookTask до последнего WorkerCompletedTask).
-    /// </summary>
-    private decimal CalculateCycleTime(List<HistoryActivity> activities)
-    {
-        var tookTask = activities
-            .FirstOrDefault(a => a.Type == ActivityType.WorkerTookTask);
-
-        if (tookTask == null)
-            return 0m;
-
-        var completedTask = activities
-            .LastOrDefault(a => a.Type == ActivityType.WorkerCompletedTask);
-
-        var endDay = completedTask?.DayNumber ?? _simulation.CurrentDay;
-
-        return (endDay - tookTask.DayNumber);
-    }
-
-    /// <summary>
     /// Рассчитать активное время и время ожидания для задачи.
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
@@ -154,8 +185,8 @@ public sealed class TaskMetricsService
         foreach (var tookTask in tookTasks)
         {
             var completedTask = activities
-                .FirstOrDefault(a => 
-                    a.Type == ActivityType.WorkerCompletedTask && 
+                .FirstOrDefault(a =>
+                    a.Type == ActivityType.WorkerCompletedTask &&
                     a.CorrelationId == tookTask.CorrelationId);
 
             if (completedTask != null)
@@ -187,25 +218,6 @@ public sealed class TaskMetricsService
             var endDay = resumedEvent?.DayNumber ?? _simulation.CurrentDay;
             var waitDuration = (endDay - waitingEvent.DayNumber);
             waitTime += waitDuration;
-        }
-
-        // Время ожидания между стадиями (между TaskMoved и следующим WorkerTookTask)
-        var movements = activities
-            .Where(a => a.Type == ActivityType.TaskMoved)
-            .OrderBy(a => a.DayNumber)
-            .ToList();
-
-        for (var i = 0; i < movements.Count - 1; i++)
-        {
-            var currentMove = movements[i];
-            var nextTookTask = activities
-                .FirstOrDefault(a => a.Type == ActivityType.WorkerTookTask && a.DayNumber > currentMove.DayNumber);
-
-            if (nextTookTask != null && nextTookTask.DayNumber > currentMove.DayNumber)
-            {
-                var waitDuration = (nextTookTask.DayNumber - currentMove.DayNumber);
-                waitTime += waitDuration;
-            }
         }
 
         return (activeTime, waitTime);
@@ -248,60 +260,4 @@ public sealed class TaskMetricsService
         var match = System.Text.RegularExpressions.Regex.Match(activity.Description, @"TASK-\d+");
         return match.Success ? match.Value : null;
     }
-}
-
-/// <summary>
-/// DTO для метрик задачи.
-/// </summary>
-public sealed record ApiTaskMetricsDto
-{
-    /// <summary>
-    /// Ключ задачи.
-    /// </summary>
-    public string TaskKey { get; set; } = null!;
-
-    /// <summary>
-    /// Lead Time в днях (от начала до завершения/сейчас).
-    /// </summary>
-    public decimal LeadTimeDays { get; set; }
-
-    /// <summary>
-    /// Cycle Time в днях (от первого WorkerTookTask до последнего WorkerCompletedTask).
-    /// </summary>
-    public decimal CycleTimeDays { get; set; }
-
-    /// <summary>
-    /// Flow Efficiency — процент активного времени.
-    /// </summary>
-    public decimal EfficiencyPercent { get; set; }
-
-    /// <summary>
-    /// Активное время работы в днях.
-    /// </summary>
-    public decimal ActiveTimeDays { get; set; }
-
-    /// <summary>
-    /// Время ожидания в днях.
-    /// </summary>
-    public decimal WaitTimeDays { get; set; }
-
-    /// <summary>
-    /// Количество стадий через которые прошла задача.
-    /// </summary>
-    public int StagesCount { get; set; }
-
-    /// <summary>
-    /// Количество воркеров которые работали над задачей.
-    /// </summary>
-    public int WorkersCount { get; set; }
-
-    /// <summary>
-    /// Текущий статус задачи.
-    /// </summary>
-    public string Status { get; set; } = null!;
-
-    /// <summary>
-    /// Завершена ли задача.
-    /// </summary>
-    public bool IsCompleted { get; set; }
 }

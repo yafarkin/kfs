@@ -551,6 +551,7 @@ function importJson() {
         // Расчёт метрик после импорта
         calculateMetrics();
         calculateWorkerMetrics();
+        calculateTaskMetrics();
         
         showToast('Конфигурация импортирована', 'success');
     } catch (err) {
@@ -769,6 +770,102 @@ function renderWorkerMetrics(workerMetrics) {
                     <span class="worker-metric-label">Ценных задач:</span>
                     <span class="worker-metric-value">${w.valuableTasksCount}</span>
                 </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Переключение панели метрик задач
+function toggleTaskMetricsPanel() {
+    const panel = document.getElementById('taskMetricsPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Расчёт метрик задач через API
+async function calculateTaskMetrics() {
+    if (!simulationState) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/simulation/task-metrics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(simulationState)
+        });
+
+        if (!response.ok) {
+            console.error('Error calculating task metrics:', response.status);
+            return;
+        }
+
+        const taskMetrics = await response.json();
+        renderTaskMetrics(taskMetrics);
+    } catch (error) {
+        console.error('Error calculating task metrics:', error);
+    }
+}
+
+// Рендеринг метрик задач
+function renderTaskMetrics(taskMetrics) {
+    const grid = document.getElementById('taskMetricsGrid');
+    if (!grid || !taskMetrics) return;
+
+    grid.innerHTML = taskMetrics.map(t => `
+        <div class="task-metric-card">
+            <div class="task-metric-header">
+                <span class="task-key">${t.taskKey}</span>
+                <span class="task-status status-${t.status.toLowerCase().replace(' ', '-')}">${t.status}</span>
+            </div>
+            <div class="task-metric-summary">
+                <div class="task-summary-row">
+                    <span class="task-summary-label">Размер:</span>
+                    <span class="task-summary-value">${t.shirtType || 'N/A'}</span>
+                </div>
+                <div class="task-summary-row">
+                    <span class="task-summary-label">Lead Time:</span>
+                    <span class="task-summary-value">${t.leadTimeDays.toFixed(1)} дн</span>
+                </div>
+                <div class="task-summary-row">
+                    <span class="task-summary-label">Flow Efficiency:</span>
+                    <span class="task-summary-value ${t.flowEfficiencyPercent < 50 ? 'low-efficiency' : ''}">${t.flowEfficiencyPercent.toFixed(1)}%</span>
+                </div>
+            </div>
+            <div class="task-metric-body">
+                <div class="task-metric-row">
+                    <span class="task-metric-label">Active:</span>
+                    <span class="task-metric-value">${t.activeTimeDays.toFixed(1)} дн</span>
+                </div>
+                <div class="task-metric-row">
+                    <span class="task-metric-label">Wait:</span>
+                    <span class="task-metric-value">${t.waitTimeDays.toFixed(1)} дн</span>
+                </div>
+            </div>
+            <div class="task-stages">
+                <div class="task-stages-title">
+                    <i class="bi bi-layers"></i>
+                    <span>Стадии</span>
+                </div>
+                ${t.stages.map(s => `
+                    <div class="task-stage-row">
+                        <div class="task-stage-info">
+                            <span class="task-stage-name">${s.stageName}</span>
+                            <span class="task-stage-type ${s.stageType.toLowerCase()}">${s.stageType}</span>
+                        </div>
+                        <div class="task-stage-details">
+                            <span class="task-stage-time">${s.timeInStageDays.toFixed(1)} дн</span>
+                            ${s.workers.length > 0 ? `
+                                <div class="task-stage-workers">
+                                    ${s.workers.map(w => `<span class="worker-badge">${w}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('')}
             </div>
         </div>
     `).join('');
