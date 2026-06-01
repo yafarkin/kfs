@@ -90,7 +90,7 @@ public sealed class TaskMetricsService
         for (var i = 0; i < movements.Count; i++)
         {
             var currentMove = movements[i];
-            var stageName = currentMove.StageName;
+            var stageName = currentMove.StageName!;
             var enterDay = currentMove.DayNumber;
 
             // Выход из стадии - следующий переход или текущий день
@@ -216,7 +216,7 @@ public sealed class TaskMetricsService
             var timeInStage = exitDay - enterDay;
 
             // Определяем тип стадии
-            var stageType = GetStageTypeByName(stageName);
+            var stageType = GetStageTypeByName(stageName!);
 
             if (stageType == StageType.Work)
             {
