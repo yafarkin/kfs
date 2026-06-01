@@ -123,6 +123,13 @@ async function loadDefaultConfig() {
         renderWorkers();
         renderHistory();
         updateControls();
+
+        // Расчёт метрик после загрузки конфигурации
+        calculateMetrics();
+        calculateWorkerMetrics();
+        calculateTaskMetrics();
+        calculateStageMetrics();
+
         showToast(`Конфигурация "${configName}" загружена`, 'success');
     } catch (error) {
         console.error('Error loading config:', error);
