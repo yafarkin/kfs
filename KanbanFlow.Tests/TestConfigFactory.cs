@@ -16,6 +16,7 @@ public static class TestConfigFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = true,
             RequiredSkills = [],
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -36,6 +37,7 @@ public static class TestConfigFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = false,
             RequiredSkills = [],
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -67,6 +69,7 @@ public static class TestConfigFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = false,
             RequiredSkills = [],
+            CreatesValue = false,
             Transitions = []
         };
 

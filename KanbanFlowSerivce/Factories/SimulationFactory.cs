@@ -31,6 +31,7 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = true,
             RequiredSkills = [],
+            CreatesValue = false,
             Transitions = new List<StageTransition>()
         };
 
@@ -51,6 +52,7 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = false,
             RequiredSkills = [],
+            CreatesValue = false,
             Transitions = new List<StageTransition>()
         };
 
@@ -69,6 +71,7 @@ public static class SimulationFactory
         {
             Name = "Ready to Merge",
             Type = StageType.Buffer,
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -89,6 +92,7 @@ public static class SimulationFactory
             Type = StageType.Buffer,
             IsLeadTimeStart = false,
             RequiredSkills = [],
+            CreatesValue = false,
             Transitions = []
         };
 
