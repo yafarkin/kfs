@@ -527,10 +527,13 @@ public sealed class TaskMovementService
             Description = $"Задача {task.Task.Key} перемещена из {fromStage.Stage.Name} в {toStage.Stage.Name}{workerInfo}",
             Task = task,
             Worker = worker,
-            Stage = toStage
+            Stage = toStage,
+            WorkerLogin = worker?.Worker.Login,
+            TaskKey = task.Task.Key,
+            StageName = toStage.Stage.Name
         };
         _simulation.LogActivity(activity);
-        
+
         // Если задача перемещена на рабочую стадию с worker'ом — записываем что worker взял задачу
         if (toStage.Stage.Type == StageType.Work && worker is not null)
         {
@@ -541,7 +544,10 @@ public sealed class TaskMovementService
                 Task = task,
                 Worker = worker,
                 Stage = toStage,
-                StartedAtTick = _simulation.CurrentTick
+                StartedAtTick = _simulation.CurrentTick,
+                WorkerLogin = worker.Worker.Login,
+                TaskKey = task.Task.Key,
+                StageName = toStage.Stage.Name
             };
             _simulation.LogActivity(workerTookTaskActivity);
         }
