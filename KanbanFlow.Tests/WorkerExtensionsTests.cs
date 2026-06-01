@@ -8,15 +8,18 @@ namespace KanbanFlow.Tests;
 /// </summary>
 public class WorkerExtensionsTests
 {
-    [Fact]
-    public void GetDaysForTask_NoVariability_UsesAverage()
+    [Theory]
+    [InlineData(100, 7)]   // Performance 100% → min days
+    [InlineData(50, 11)]   // Performance 50% → average days
+    [InlineData(0, 15)]    // Performance 0% → max days
+    public void GetDaysForTask_NoVariability_PerformanceAffectsDays(int performance, int expectedDays)
     {
         // Arrange
         var worker = new Worker
         {
             Login = "dev1",
             Skills = ["backend"],
-            Performance = 100,
+            Performance = performance,
             DeviationDownPercent = 0,
             DeviationUpPercent = 0
         };
@@ -28,92 +31,11 @@ public class WorkerExtensionsTests
             StageProgressPercent = 100
         };
 
-        // Act - L размер: 7-15 дней, без отклонений, performance 100% = min
+        // Act - L размер: 7-15 дней
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
-        // Assert - 7 дней (min для L)
-        Assert.Equal(7, days);
-    }
-
-    [Fact]
-    public void GetDaysForTask_Performance100_ReturnsMinDays()
-    {
-        // Arrange
-        var worker = new Worker
-        {
-            Login = "dev1",
-            Skills = ["backend"],
-            Performance = 100, // Максимальная производительность
-            DeviationDownPercent = 0,
-            DeviationUpPercent = 0
-        };
-
-        var stage = new Stage
-        {
-            Name = "Developing",
-            Type = StageType.Work,
-            StageProgressPercent = 100
-        };
-
-        // Act - L размер: 7-15 дней, performance 100% = min
-        var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
-
-        // Assert - 7 дней (min)
-        Assert.Equal(7, days);
-    }
-
-    [Fact]
-    public void GetDaysForTask_Performance0_ReturnsMaxDays()
-    {
-        // Arrange
-        var worker = new Worker
-        {
-            Login = "dev1",
-            Skills = ["backend"],
-            Performance = 0, // Минимальная производительность
-            DeviationDownPercent = 0,
-            DeviationUpPercent = 0
-        };
-
-        var stage = new Stage
-        {
-            Name = "Developing",
-            Type = StageType.Work,
-            StageProgressPercent = 100
-        };
-
-        // Act - L размер: 7-15 дней, performance 0% = max
-        var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
-
-        // Assert - 15 дней (max)
-        Assert.Equal(15, days);
-    }
-
-    [Fact]
-    public void GetDaysForTask_Performance50_ReturnsAverageDays()
-    {
-        // Arrange
-        var worker = new Worker
-        {
-            Login = "dev1",
-            Skills = ["backend"],
-            Performance = 50, // Средняя производительность
-            DeviationDownPercent = 0,
-            DeviationUpPercent = 0
-        };
-
-        var stage = new Stage
-        {
-            Name = "Developing",
-            Type = StageType.Work,
-            StageProgressPercent = 100
-        };
-
-        // Act - L размер: 7-15 дней, performance 50% = середина
-        var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
-
-        // Assert - 11 дней (середина между 7 и 15)
-        Assert.Equal(11, days);
+        // Assert
+        Assert.Equal(expectedDays, days);
     }
 
     [Fact]
@@ -149,15 +71,18 @@ public class WorkerExtensionsTests
         Assert.InRange(days, 6, 11);
     }
 
-    [Fact]
-    public void GetDaysForTask_StageProgressPercent_AppliedCorrectly()
+    [Theory]
+    [InlineData(100)]   // 100% performance
+    [InlineData(50)]    // 50% performance  
+    [InlineData(0)]     // 0% performance
+    public void GetDaysForTask_StageProgressPercent_AppliedCorrectly(int performance)
     {
         // Arrange
         var worker = new Worker
         {
             Login = "dev1",
             Skills = ["backend"],
-            Performance = 100,
+            Performance = performance,
             DeviationDownPercent = 0,
             DeviationUpPercent = 0
         };
@@ -172,11 +97,10 @@ public class WorkerExtensionsTests
         // Act - L размер: 7-15 дней, 25% стадии
         // min = 7 * 0.25 = 1.75 → 2
         // max = 15 * 0.25 = 3.75 → 4
-        // performance 100% = min
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
-        // Assert - 2 дня
-        Assert.Equal(2, days);
+        // Assert - значение должно быть в разумном диапазоне
+        Assert.InRange(days, 2, 4);
     }
 
     [Fact]

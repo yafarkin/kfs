@@ -13,11 +13,6 @@ public sealed record ApiHistoryActivityDto
     public ActivityType Type { get; set; }
 
     /// <summary>
-    /// Тик симуляции, когда произошло событие.
-    /// </summary>
-    public int Tick { get; set; }
-
-    /// <summary>
     /// Текстовое описание события.
     /// </summary>
     public string Description { get; set; } = null!;
@@ -43,7 +38,12 @@ public sealed record ApiHistoryActivityDto
     public decimal? Progress { get; set; }
 
     /// <summary>
+    /// Уникальный идентификатор для корреляции связанных событий.
+    /// </summary>
+    public Guid CorrelationId { get; set; }
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
-    public override string ToString() => $"{Type} @ tick {Tick}: {Description}";
+    public override string ToString() => $"{Type}: {Description}";
 }

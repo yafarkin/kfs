@@ -602,4 +602,17 @@ public static class SimulationFactory
             Tasks = tasks
         };
     }
+
+    /// <summary>
+    /// Возвращает список доступных конфигураций (пресетов).
+    /// </summary>
+    public static List<(string Name, string DisplayName, string Description, bool IsDefault)> GetAvailablePresets()
+    {
+        return new List<(string, string, string, bool)>
+        {
+            ("default", "Default", "3 воркера, полный workflow (Todo → Developing → Testing → Release → Done)", true),
+            ("twork", "TWork", "7 воркеров, расширенный workflow с Code Review и Ready to Merge", false),
+            ("simple", "Simple", "1 разработчик, упрощённый процесс (Todo → Developing → Done), 2 задачи", false)
+        };
+    }
 }

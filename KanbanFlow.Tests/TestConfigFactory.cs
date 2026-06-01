@@ -1,7 +1,5 @@
-using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.Config;
 using KanbanFlowSerivce.Enums;
-using BoardTask = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlow.Tests;
 

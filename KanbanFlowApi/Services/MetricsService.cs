@@ -85,7 +85,7 @@ public sealed class MetricsService
         var taskActivities = _simulation.History
             .SelectMany(d => d.Activities)
             .Where(a => a.Type == ActivityType.TaskMoved && GetTaskKeyFromActivity(a) == taskKey)
-            .OrderBy(a => a.Tick)
+            .OrderBy(a => a.DayNumber)
             .ToList();
 
         if (taskActivities.Count == 0)
@@ -94,7 +94,7 @@ public sealed class MetricsService
         }
 
         // Первый переход задачи - это начало Lead Time (выход из Todo)
-        var startTick = taskActivities.First().Tick;
+        var startDay = taskActivities.First().DayNumber;
 
         // Находим переход в Done
         var enterDoneActivity = taskActivities
@@ -106,8 +106,8 @@ public sealed class MetricsService
             return null;
         }
 
-        // Конвертируем тики в дни (1 день = 24 тика)
-        return (enterDoneActivity.Tick - startTick) / 24m;
+        // Возвращаем разницу в днях
+        return (enterDoneActivity.DayNumber - startDay);
     }
 
     /// <summary>
@@ -209,6 +209,8 @@ public sealed class MetricsService
     /// <summary>
     /// Рассчитать Active и Wait время для задачи по истории активностей.
     /// Возвращает значения в днях (1 день = 24 тика).
+    /// Время считается только до перехода в финальную стадию (Done).
+    /// После Done время не накапливается — задача завершена.
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateTaskFlowEfficiencyFromHistory(string taskKey)
     {
@@ -221,7 +223,7 @@ public sealed class MetricsService
             .Where(a => a.Type == ActivityType.TaskMoved &&
                         GetTaskKeyFromActivity(a) == taskKey &&
                         a.StageName != null)
-            .OrderBy(a => a.Tick)
+            .OrderBy(a => a.DayNumber)
             .ToList();
 
         if (taskActivities.Count == 0)
@@ -229,19 +231,28 @@ public sealed class MetricsService
             return (0, 0);
         }
 
-        // Первый переход - начало расчёта
-        var startTick = taskActivities.First().Tick;
+        // Проверяем, достигла ли задача стадии Done
+        var doneActivity = taskActivities.FirstOrDefault(a => a.StageName == "Done");
+        var isCompleted = doneActivity != null;
 
-        // Проходим по всем переходам задачи
-        for (var i = 0; i < taskActivities.Count - 1; i++)
+        // Если задача завершена, берём все переходы включая переход в Done (как границу)
+        // Но считаем время только до перехода в Done
+        var activitiesToProcess = isCompleted
+            ? taskActivities.TakeWhile(a => a.StageName != "Done")
+                .Concat(taskActivities.Where(a => a.StageName == "Done").Take(1))
+                .ToList()
+            : taskActivities;
+
+        // Проходим по всем переходам задачи (до Done включительно как границы)
+        for (var i = 0; i < activitiesToProcess.Count - 1; i++)
         {
-            var currentActivity = taskActivities[i];
-            var nextActivity = taskActivities[i + 1];
+            var currentActivity = activitiesToProcess[i];
+            var nextActivity = activitiesToProcess[i + 1];
 
-            // Конвертируем тики в дни (1 день = 24 тика)
-            var durationDays = (nextActivity.Tick - currentActivity.Tick) / 24m;
+            // Разница в днях
+            var durationDays = (nextActivity.DayNumber - currentActivity.DayNumber);
 
-            // Определяем тип стадии по имени (пропускаем если StageName = null)
+            // Определяем тип стадии по имени
             if (currentActivity.StageName == null)
                 continue;
 
@@ -257,28 +268,31 @@ public sealed class MetricsService
             }
         }
 
-        // Если задача ещё в процессе, добавляем время до текущего тика
-        var lastActivity = taskActivities.LastOrDefault();
-        if (lastActivity != null)
+        // Если задача ещё в процессе (не в Done), добавляем время до текущего дня
+        if (!isCompleted && activitiesToProcess.Count > 0)
         {
-            var remainingDays = (_simulation.CurrentTick - lastActivity.Tick) / 24m;
-            if (remainingDays > 0)
+            var lastActivity = activitiesToProcess.LastOrDefault();
+            if (lastActivity != null)
             {
-                // Определяем текущую стадию задачи
-                var currentStageName = _simulation.Board.Tasks
-                    .FirstOrDefault(t => t.Task.Key == taskKey)?
-                    .CurrentStage?.Stage.Name;
-
-                if (currentStageName != null)
+                var remainingDays = (_simulation.CurrentDay - lastActivity.DayNumber);
+                if (remainingDays > 0)
                 {
-                    var currentStageType = GetStageTypeByName(currentStageName);
-                    if (currentStageType == StageType.Work)
+                    // Определяем текущую стадию задачи
+                    var currentStageName = _simulation.Board.Tasks
+                        .FirstOrDefault(t => t.Task.Key == taskKey)?
+                        .CurrentStage?.Stage.Name;
+
+                    if (currentStageName != null)
                     {
-                        activeTime += remainingDays;
-                    }
-                    else if (currentStageType == StageType.Buffer)
-                    {
-                        waitTime += remainingDays;
+                        var currentStageType = GetStageTypeByName(currentStageName);
+                        if (currentStageType == StageType.Work)
+                        {
+                            activeTime += remainingDays;
+                        }
+                        else if (currentStageType == StageType.Buffer)
+                        {
+                            waitTime += remainingDays;
+                        }
                     }
                 }
             }

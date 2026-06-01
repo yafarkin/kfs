@@ -8,7 +8,7 @@ namespace KanbanFlowApi.Services;
 
 /// <summary>
 /// Сервис для расчёта метрик работников.
-/// Использует stage-based подход: стадии делятся на ценные (создают ценность) и вспомогательные.
+/// Использует event-based подход: метрики рассчитываются на основе событий истории.
 /// </summary>
 public sealed class WorkerMetricsService
 {
@@ -37,7 +37,6 @@ public sealed class WorkerMetricsService
         var workerLogin = boardWorker.Worker.Login;
 
         // 1. Найти все ценные стадии (Work-тип + создаёт ценность)
-        // Буферные стадии всегда игнорируются, независимо от CreatesValue
         var valuableStageNames = _simulation.Board.Stages
             .Where(s => s.Stage.Type == StageType.Work && s.Stage.CreatesValue)
             .Select(s => s.Stage.Name)
@@ -47,7 +46,7 @@ public sealed class WorkerMetricsService
         var allActivities = _simulation.History
             .SelectMany(d => d.Activities)
             .Where(a => IsWorkerActivity(a, workerLogin))
-            .OrderBy(a => a.Tick)
+            .OrderBy(a => a.DayNumber)
             .ToList();
 
         // 3. Throughput: задачи, где работник работал на ценной стадии И задача дошла до Done
@@ -59,7 +58,7 @@ public sealed class WorkerMetricsService
         var totalDays = _simulation.History.Count > 0 ? _simulation.History.Count : 1;
         var throughput = completedValuableTaskKeys.Count / (decimal)totalDays;
 
-        // 4. Lead Time: среднее время задач (от isLeadTimeStart до Done/сейчас), где работник участвовал в ценной стадии
+        // 4. Lead Time: среднее время задач (от LeadTimeStarted/первого TaskMoved до Done/сейчас)
         var leadTimes = new List<decimal>();
         foreach (var taskKey in valuableTaskKeys)
         {
@@ -71,10 +70,12 @@ public sealed class WorkerMetricsService
         }
         var avgLeadTime = leadTimes.Count > 0 ? leadTimes.Average() : 0m;
 
-        // 5. Flow Efficiency: (Work Time) / (Work + Buffer Time) — все стадии
-        var (workTime, bufferTime) = CalculateWorkerTime(allActivities, workerLogin);
-        var totalTime = workTime + bufferTime;
-        var efficiencyPercent = totalTime > 0 ? (workTime / totalTime) * 100 : 0m;
+        // 5. Flow Efficiency: (Active Work Time) / (Active Work Time + Wait Time)
+        // Active Work Time = время между WorkerTookTask и WorkerCompletedTask
+        // Wait Time = время между WorkerCompletedTask и следующим WorkerTookTask или TaskWaiting
+        var (activeTime, waitTime) = CalculateFlowEfficiencyTimes(allActivities, workerLogin);
+        var totalTime = activeTime + waitTime;
+        var efficiencyPercent = totalTime > 0 ? (activeTime / totalTime) * 100 : 0m;
 
         return new ApiWorkerMetricsDto
         {
@@ -83,8 +84,8 @@ public sealed class WorkerMetricsService
             LeadTime = Math.Round(avgLeadTime, 1),
             ValuableTasksCount = valuableTaskKeys.Count,
             EfficiencyPercent = Math.Round(efficiencyPercent, 1),
-            WorkTimeDays = Math.Round(workTime, 1),
-            BufferTimeDays = Math.Round(bufferTime, 1)
+            WorkTimeDays = Math.Round(activeTime, 1),
+            BufferTimeDays = Math.Round(waitTime, 1)
         };
     }
 
@@ -93,13 +94,12 @@ public sealed class WorkerMetricsService
     /// </summary>
     private static bool IsWorkerActivity(HistoryActivity activity, string workerLogin)
     {
-        if (activity.Type != ActivityType.WorkerTookTask && 
+        if (activity.Type != ActivityType.WorkerTookTask &&
             activity.Type != ActivityType.WorkerCompletedTask)
         {
             return false;
         }
 
-        // workerLogin берётся напрямую из поля активности
         return activity.WorkerLogin == workerLogin;
     }
 
@@ -107,16 +107,15 @@ public sealed class WorkerMetricsService
     /// Получить задачи, где работник завершил ценную стадию.
     /// </summary>
     private HashSet<string> GetTasksWhereWorkerWorkedOnValuableStage(
-        List<HistoryActivity> activities, 
+        List<HistoryActivity> activities,
         HashSet<string> valuableStageNames)
     {
         var taskKeys = new HashSet<string>();
 
-        // Ищем только WorkerCompletedTask на ценных стадиях
         foreach (var activity in activities)
         {
-            if (activity.Type == ActivityType.WorkerCompletedTask && 
-                activity.StageName != null && 
+            if (activity.Type == ActivityType.WorkerCompletedTask &&
+                activity.StageName != null &&
                 valuableStageNames.Contains(activity.StageName))
             {
                 var taskKey = GetTaskKeyFromActivity(activity);
@@ -138,112 +137,126 @@ public sealed class WorkerMetricsService
         var activities = _simulation.History
             .SelectMany(d => d.Activities)
             .Where(a => a.Type == ActivityType.TaskMoved && GetTaskKeyFromActivity(a) == taskKey)
-            .OrderBy(a => a.Tick)
+            .OrderBy(a => a.DayNumber)
             .ToList();
 
         return activities.Any(a => a.StageName == "Done");
     }
 
     /// <summary>
-    /// Рассчитать Lead Time задачи (от isLeadTimeStart до Done/сейчас) в днях.
+    /// Рассчитать Lead Time задачи (от LeadTimeStarted или первого TaskMoved до Done/сейчас) в днях.
     /// </summary>
     private decimal? CalculateTaskLeadTime(string taskKey)
     {
-        var activities = _simulation.History
+        var allTaskActivities = _simulation.History
             .SelectMany(d => d.Activities)
-            .Where(a => a.Type == ActivityType.TaskMoved && GetTaskKeyFromActivity(a) == taskKey)
-            .OrderBy(a => a.Tick)
+            .Where(a => GetTaskKeyFromActivity(a) == taskKey)
+            .OrderBy(a => a.DayNumber)
             .ToList();
 
-        if (activities.Count == 0)
+        if (allTaskActivities.Count == 0)
             return null;
 
-        // Найти начало (isLeadTimeStart стадия)
-        var startStageName = _simulation.Board.Stages
-            .FirstOrDefault(s => s.Stage.IsLeadTimeStart)?
-            .Stage.Name;
+        // Найти начало Lead Time (событие LeadTimeStarted или первый TaskMoved)
+        var leadTimeStartEvent = allTaskActivities
+            .FirstOrDefault(a => a.Type == ActivityType.LeadTimeStarted);
 
-        var startActivity = activities.FirstOrDefault(a => a.StageName == startStageName);
-        if (startActivity == null)
-            startActivity = activities.First(); // Если не нашли, берём первый переход
+        if (leadTimeStartEvent == null)
+        {
+            // Если нет явного события, берём первый TaskMoved
+            leadTimeStartEvent = allTaskActivities
+                .FirstOrDefault(a => a.Type == ActivityType.TaskMoved);
+        }
 
-        var startTick = startActivity.Tick;
+        if (leadTimeStartEvent == null)
+            return null;
 
-        // Найти конец (Done или текущий тик)
-        var doneActivity = activities.FirstOrDefault(a => a.StageName == "Done");
-        var endTick = doneActivity?.Tick ?? _simulation.CurrentTick;
+        var startDay = leadTimeStartEvent.DayNumber;
 
-        // Конвертировать в дни
-        return (endTick - startTick) / 24m;
+        // Найти конец (Done или текущий день)
+        var doneActivity = allTaskActivities
+            .FirstOrDefault(a => a.Type == ActivityType.TaskMoved && a.StageName == "Done");
+
+        var endDay = doneActivity?.DayNumber ?? _simulation.CurrentDay;
+
+        return (endDay - startDay);
     }
 
     /// <summary>
-    /// Рассчитать время работы (Work) и ожидания (Buffer) для работника в днях.
+    /// Рассчитать активное время работы и время ожидания для работника (в днях).
+    /// Active Time = Σ(WorkerCompletedTask.DayNumber - WorkerTookTask.DayNumber) по всем парам
+    /// Wait Time = Σ(WorkerTookTask.DayNumber - предыдущего WorkerCompletedTask.DayNumber)
     /// </summary>
-    private (decimal WorkTime, decimal BufferTime) CalculateWorkerTime(
-        List<HistoryActivity> activities,
+    private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
+        List<HistoryActivity> allActivities,
         string workerLogin)
     {
-        var workTime = 0m;
-        var bufferTime = 0m;
+        var activeTime = 0m;
+        var waitTime = 0m;
 
-        // Получить все задачи, где работник завершал работу (WorkerCompletedTask)
-        var workerTaskKeys = _simulation.History
-            .SelectMany(d => d.Activities)
-            .Where(a => a.Type == ActivityType.WorkerCompletedTask && a.WorkerLogin == workerLogin)
-            .Select(a => GetTaskKeyFromActivity(a))
-            .Where(k => k != null)
-            .ToHashSet()!;
+        // Получить все события работника, отсортированные по дням
+        var workerEvents = allActivities
+            .Where(a => a.WorkerLogin == workerLogin &&
+                       (a.Type == ActivityType.WorkerTookTask || a.Type == ActivityType.WorkerCompletedTask))
+            .OrderBy(a => a.DayNumber)
+            .ToList();
 
-        
-        // Для каждой задачи считаем время на каждой стадии
-        foreach (var taskKey in workerTaskKeys)
+        // Рассчитать активное время по парам WorkerTookTask -> WorkerCompletedTask
+        var tookTasks = workerEvents
+            .Where(a => a.Type == ActivityType.WorkerTookTask)
+            .ToList();
+
+        foreach (var tookTask in tookTasks)
         {
-            var taskActivities = _simulation.History
-                .SelectMany(d => d.Activities)
-                .Where(a => GetTaskKeyFromActivity(a) == taskKey)
-                .OrderBy(a => a.Tick)
-                .ToList();
+            // Найти соответствующее WorkerCompletedTask по CorrelationId
+            var completedTask = workerEvents
+                .FirstOrDefault(a =>
+                    a.Type == ActivityType.WorkerCompletedTask &&
+                    a.CorrelationId == tookTask.CorrelationId);
 
-            // Найти все TaskMoved для этой задачи
-            var movements = taskActivities
-                .Where(a => a.Type == ActivityType.TaskMoved)
-                .ToList();
-
-            
-            for (var i = 0; i < movements.Count; i++)
+            if (completedTask != null)
             {
-                var currentMove = movements[i];
-                if (currentMove.StageName == null)
-                    continue;
-
-                // Определить тип стадии
-                var stage = _simulation.Board.Stages
-                    .FirstOrDefault(s => s.Stage.Name == currentMove.StageName);
-
-                if (stage == null)
-                    continue;
-
-                // Найти когда задача покинула эту стадию (следующее перемещение или конец симуляции)
-                var nextMove = i < movements.Count - 1 ? movements[i + 1] : null;
-                var endTick = nextMove?.Tick ?? _simulation.CurrentTick;
-                var startTick = currentMove.Tick;
-
-                var durationDays = (endTick - startTick) / 24m;
-
-                
-                if (stage.Stage.Type == StageType.Work)
-                {
-                    workTime += durationDays;
-                }
-                else if (stage.Stage.Type == StageType.Buffer)
-                {
-                    bufferTime += durationDays;
-                }
+                // Активное время = завершение - начало (в днях)
+                var duration = (completedTask.DayNumber - tookTask.DayNumber);
+                activeTime += duration;
+            }
+            else
+            {
+                // Задача ещё не завершена — считаем до текущего дня
+                var duration = (_simulation.CurrentDay - tookTask.DayNumber);
+                activeTime += duration;
             }
         }
 
-                return (workTime, bufferTime);
+        // Рассчитать время ожидания
+        // Время между WorkerCompletedTask и следующим WorkerTookTask
+        var completedTasks = workerEvents
+            .Where(a => a.Type == ActivityType.WorkerCompletedTask)
+            .OrderBy(a => a.DayNumber)
+            .ToList();
+
+        for (var i = 0; i < completedTasks.Count; i++)
+        {
+            var completedDay = completedTasks[i].DayNumber;
+
+            // Найти следующий WorkerTookTask
+            var nextTookTask = tookTasks
+                .FirstOrDefault(t => t.DayNumber > completedDay);
+
+            if (nextTookTask != null)
+            {
+                var waitDuration = (nextTookTask.DayNumber - completedDay);
+                waitTime += waitDuration;
+            }
+            else
+            {
+                // Если нет следующего WorkerTookTask — считаем до конца симуляции
+                var waitDuration = (_simulation.CurrentDay - completedDay);
+                waitTime += waitDuration;
+            }
+        }
+
+        return (activeTime, waitTime);
     }
 
     /// <summary>

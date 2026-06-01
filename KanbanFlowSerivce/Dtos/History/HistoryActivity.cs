@@ -26,6 +26,21 @@ public enum ActivityType
     ///     Задача выполняется (прогресс обновлён)
     /// </summary>
     TaskProgressUpdated,
+
+    /// <summary>
+    ///     Задача достигла стадии начала Lead Time
+    /// </summary>
+    LeadTimeStarted,
+
+    /// <summary>
+    ///     Задача ожидает доступного воркера (неактивное время)
+    /// </summary>
+    TaskWaiting,
+
+    /// <summary>
+    ///     Задача возобновлена после ожидания (воркер назначен)
+    /// </summary>
+    TaskResumed,
 }
 
 /// <summary>
@@ -37,11 +52,6 @@ public sealed record HistoryActivity
     ///     Тип события
     /// </summary>
     public ActivityType Type { get; set; }
-
-    /// <summary>
-    ///     Время события (в тиках симуляции)
-    /// </summary>
-    public int Tick { get; set; }
 
     /// <summary>
     ///     Описание события (например, "worker X взял задачу task 2")
@@ -89,12 +99,13 @@ public sealed record HistoryActivity
     public HistoryDay? Day { get; set; }
 
     /// <summary>
-    ///     Тик начала работы над задачей (для метрик flow efficiency)
+    ///     Номер дня, в котором произошло событие (для сериализации)
     /// </summary>
-    public int? StartedAtTick { get; set; }
+    public int DayNumber => Day?.DayNumber ?? 0;
 
     /// <summary>
-    ///     Тик завершения работы над задачей (для метрик throughput)
+    ///     Уникальный идентификатор для корреляции связанных событий
+    ///     Например, WorkerTookTask и WorkerCompletedTask одной задачи на одной стадии имеют одинаковый CorrelationId
     /// </summary>
-    public int? CompletedAtTick { get; set; }
+    public Guid CorrelationId { get; set; }
 }

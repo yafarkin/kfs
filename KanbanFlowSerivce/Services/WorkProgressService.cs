@@ -93,18 +93,32 @@ public sealed class WorkProgressService
                 // Если задача завершена, записываем событие и добавляем в список
                 if (wasCompleted)
                 {
-                    _simulation.LogActivity(new HistoryActivity
+                    // Находим событие WorkerTookTask для этой задачи на этой стадии чтобы получить CorrelationId
+                    // Ищем в общей истории симуляции
+                    var tookTaskEvent = _simulation.History
+                        .SelectMany(d => d.Activities)
+                        .Where(a => a.Type == ActivityType.WorkerTookTask)
+                        .OrderByDescending(a => a.DayNumber)
+                        .FirstOrDefault(a =>
+                            a.TaskKey == task.Task.Key &&
+                            a.StageName == stage.Stage.Name);
+
+                    var correlationId = tookTaskEvent?.CorrelationId ?? Guid.NewGuid();
+
+                    var completedActivity = new HistoryActivity
                     {
                         Type = ActivityType.WorkerCompletedTask,
                         Description = $"Worker {worker.Worker.Login} завершил задачу {task.Task.Key} на стадии {stage.Stage.Name}",
                         Task = task,
                         Worker = worker,
                         Stage = stage,
-                        CompletedAtTick = _simulation.CurrentTick,
                         WorkerLogin = worker.Worker.Login,
                         TaskKey = task.Task.Key,
-                        StageName = stage.Stage.Name
-                    });
+                        StageName = stage.Stage.Name,
+                        CorrelationId = correlationId
+                    };
+
+                    _simulation.LogActivity(completedActivity);
 
                     completedTasks.Add(task);
                 }

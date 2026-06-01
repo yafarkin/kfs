@@ -400,7 +400,6 @@ public class ApiMapperTests
         var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
         simulation.StartNewDay();
-        simulation.AdvanceTick(24);
 
         // Act
         var apiState = ApiMapper.ToApiDto(simulation);
@@ -411,7 +410,6 @@ public class ApiMapperTests
         Assert.NotNull(apiState.Board);
         Assert.NotNull(apiState.History);
         Assert.Equal(1, apiState.CurrentDay);
-        Assert.Equal(24, apiState.CurrentTick);
         Assert.Single(apiState.History);
     }
 
@@ -522,8 +520,7 @@ public class ApiMapperTests
         simulation.LogActivity(new KanbanFlowSerivce.Dtos.History.HistoryActivity
         {
             Type = KanbanFlowSerivce.Dtos.History.ActivityType.WorkerTookTask,
-            Description = "Test activity",
-            Tick = 5
+            Description = "Test activity"
         });
         var apiState = ApiMapper.ToApiDto(simulation);
 
@@ -543,7 +540,6 @@ public class ApiMapperTests
         var simulation = new KanbanFlowSerivce.Dtos.Simulation();
         simulation.InitFromConfig(config);
         simulation.StartNewDay();
-        simulation.AdvanceTick(10); // Устанавливаем тик перед логированием
         simulation.LogActivity(new KanbanFlowSerivce.Dtos.History.HistoryActivity
         {
             Type = KanbanFlowSerivce.Dtos.History.ActivityType.TaskMoved,
@@ -559,7 +555,6 @@ public class ApiMapperTests
         Assert.Equal(1, historyDay.DayNumber);
         var activity = Assert.Single(historyDay.Activities);
         Assert.Equal(KanbanFlowSerivce.Dtos.History.ActivityType.TaskMoved, activity.Type);
-        Assert.Equal(10, activity.Tick); // Tick устанавливается из CurrentTick симуляции
         Assert.Equal("Task moved", activity.Description);
         Assert.Equal(50, activity.Progress);
     }

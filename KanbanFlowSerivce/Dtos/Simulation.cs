@@ -20,11 +20,6 @@ public sealed record Simulation
     public int CurrentDay { get; private set; }
 
     /// <summary>
-    ///     Текущий тик симуляции
-    /// </summary>
-    public int CurrentTick { get; private set; }
-
-    /// <summary>
     ///     Генератор случайных чисел для воспроизводимости (используется seed из конфига)
     /// </summary>
     public Random Random { get; private set; } = null!;
@@ -35,7 +30,6 @@ public sealed record Simulation
         Board = BoardMapper.MapToBoard(config);
         History = [];
         CurrentDay = 0;
-        CurrentTick = 0;
         Random = new Random((int)config.Seed);
     }
 
@@ -58,25 +52,16 @@ public sealed record Simulation
             StartNewDay();
         }
 
-        activity.Tick = CurrentTick;
+        activity.Day = History.Last();
         History.Last().AddActivity(activity);
     }
 
     /// <summary>
-    ///     Обновить текущий тик симуляции
-    /// </summary>
-    public void AdvanceTick(int ticks = 1)
-    {
-        CurrentTick += ticks;
-    }
-
-    /// <summary>
-    ///     Восстановить состояние симуляции (день и тик) из сериализованных данных.
+    ///     Восстановить состояние симуляции (день) из сериализованных данных.
     ///     Используется при загрузке состояния для продолжения симуляции.
     /// </summary>
-    public void RestoreState(int currentDay, int currentTick)
+    public void RestoreState(int currentDay)
     {
         CurrentDay = currentDay;
-        CurrentTick = currentTick;
     }
 }

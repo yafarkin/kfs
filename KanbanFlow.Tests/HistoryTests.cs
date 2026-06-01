@@ -98,7 +98,7 @@ public class HistoryTests
             Activity = activity,
             FromStage = fromStage,
             ToStage = toStage,
-            Tick = 10
+            Day = 10
         };
 
         // Act
@@ -109,7 +109,7 @@ public class HistoryTests
         Assert.Same(activity, task.TransitionHistory[0].Activity);
         Assert.Same(fromStage, task.TransitionHistory[0].FromStage);
         Assert.Same(toStage, task.TransitionHistory[0].ToStage);
-        Assert.Equal(10, task.TransitionHistory[0].Tick);
+        Assert.Equal(10, task.TransitionHistory[0].Day);
     }
 
     [Fact]
@@ -139,14 +139,14 @@ public class HistoryTests
             Activity = activity,
             FromStage = fromStage,
             ToStage = toStage,
-            Tick = 25
+            Day = 25
         };
 
         // Act & Assert
         Assert.Same(activity, transition.Activity);
         Assert.Same(fromStage, transition.FromStage);
         Assert.Same(toStage, transition.ToStage);
-        Assert.Equal(25, transition.Tick);
+        Assert.Equal(25, transition.Day);
     }
 
     [Fact]

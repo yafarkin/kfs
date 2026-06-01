@@ -31,12 +31,7 @@ public sealed record ApiSimulationStateDto
     public int CurrentDay { get; set; }
 
     /// <summary>
-    /// Текущий тик симуляции (внутри дня).
-    /// </summary>
-    public int CurrentTick { get; set; }
-
-    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
-    public override string ToString() => $"Simulation Day {CurrentDay}, Tick {CurrentTick}";
+    public override string ToString() => $"Simulation Day {CurrentDay}";
 }

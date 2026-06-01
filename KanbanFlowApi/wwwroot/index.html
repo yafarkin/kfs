@@ -942,13 +942,13 @@
                 <div class="settings-section">
                     <h4><i class="bi bi-sliders me-2"></i>Конфигурация</h4>
                     <div class="settings-row">
-                        <select class="form-select" id="configSelector" style="width: auto; display: inline-block;">
-                            <option value="default">Default (3 воркера)</option>
-                            <option value="twork">TWork (7 воркеров, полный workflow)</option>
+                        <select class="form-select" id="configSelector" style="width: auto; min-width: 200px;">
+                            <option value="">Загрузка...</option>
                         </select>
                         <button class="btn btn-primary" id="btnLoadConfig" onclick="loadDefaultConfig()">
                             <i class="bi bi-plus-circle me-2"></i>Новая
                         </button>
+                        <small class="text-muted" id="configDescription"></small>
                     </div>
                 </div>
 
@@ -991,7 +991,6 @@
             <button class="btn btn-outline-primary" onclick="reloadConfig()">
                 <i class="bi bi-arrow-clockwise me-2"></i>Перезагрузить
             </button>
-            <span class="text-muted ms-auto">Tick: <span id="currentTick">0</span></span>
         </div>
 
         <div class="kanban-board" id="kanbanBoard">
@@ -1046,6 +1045,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
 </body>
 </html>

@@ -9,10 +9,56 @@ let currentWorkerMetrics = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    loadDefaultConfig();
+    loadConfigPresets();
     updateLoadingIndicator();
     initSettingsPanel();
 });
+
+// Загрузка списка доступных конфигураций
+async function loadConfigPresets() {
+    try {
+        const response = await fetch('/api/simulation/presets');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const presets = await response.json();
+
+        const configSelector = document.getElementById('configSelector');
+        if (configSelector) {
+            configSelector.innerHTML = presets.map(preset =>
+                `<option value="${preset.name}" ${preset.isDefault ? 'selected' : ''}>${preset.displayName}</option>`
+            ).join('');
+
+            // Сохраняем описания в data-атрибуты для подсказок
+            configSelector.dataset.presets = JSON.stringify(presets);
+
+            // Обновляем описание при изменении селекта
+            configSelector.addEventListener('change', () => {
+                updateConfigDescription(configSelector);
+            });
+
+            // Показываем описание для выбранной конфигурации
+            updateConfigDescription(configSelector);
+        }
+    } catch (error) {
+        console.error('Error loading config presets:', error);
+        showToast('Ошибка загрузки списка конфигураций: ' + error.message, 'danger');
+    }
+}
+
+// Обновление описания конфигурации
+function updateConfigDescription(selector) {
+    const descriptionEl = document.getElementById('configDescription');
+    if (!descriptionEl || !selector.dataset.presets) return;
+
+    const presets = JSON.parse(selector.dataset.presets);
+    const selected = presets.find(p => p.name === selector.value);
+    if (selected) {
+        descriptionEl.textContent = selected.description;
+    } else {
+        descriptionEl.textContent = '';
+    }
+}
 
 // Инициализация панели настроек
 function initSettingsPanel() {
@@ -343,7 +389,6 @@ function renderHistory() {
 function updateControls() {
     const btnSimulateDay = document.getElementById('btnSimulateDay');
     const currentDay = document.getElementById('currentDay');
-    const currentTick = document.getElementById('currentTick');
 
     if (btnSimulateDay) {
         btnSimulateDay.disabled = !simulationState;
@@ -351,10 +396,6 @@ function updateControls() {
 
     if (currentDay) {
         currentDay.textContent = simulationState?.currentDay || 0;
-    }
-
-    if (currentTick) {
-        currentTick.textContent = simulationState?.currentTick || 0;
     }
 }
 
@@ -494,18 +535,23 @@ function importJson() {
     const textarea = document.getElementById('jsonTextarea');
     try {
         const data = JSON.parse(textarea.value);
-        
+
         // Простая валидация
         if (!data.config || !data.board) {
             throw new Error('Неверный формат: отсутствуют config или board');
         }
-        
+
         simulationState = data;
         renderBoard();
         renderWorkers();
         renderHistory();
         updateControls();
         closeJsonModal();
+        
+        // Расчёт метрик после импорта
+        calculateMetrics();
+        calculateWorkerMetrics();
+        
         showToast('Конфигурация импортирована', 'success');
     } catch (err) {
         showToast('Ошибка JSON: ' + err.message, 'danger');

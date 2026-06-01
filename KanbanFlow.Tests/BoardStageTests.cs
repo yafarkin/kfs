@@ -27,162 +27,50 @@ public class BoardStageTests
         Assert.Equal(3, stage.WipCount);
     }
 
-    [Fact]
-    public void IsWipExceeded_WithoutWipLimit_ReturnsFalse()
+    [Theory]
+    [InlineData(null, 2, false)]           // No WIP limit, 2 tasks → not exceeded
+    [InlineData(3, 2, false)]              // WIP 3, 2 tasks → not exceeded
+    [InlineData(2, 2, false)]              // WIP 2, 2 tasks → at limit, not exceeded
+    [InlineData(2, 3, true)]               // WIP 2, 3 tasks → exceeded
+    public void IsWipExceeded_VariousScenarios_ReturnsCorrectResult(int? wipLimit, int taskCount, bool expectedExceeded)
     {
         // Arrange
         var stage = new BoardStage
         {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = null },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.False(stage.IsWipExceeded);
-    }
-
-    [Fact]
-    public void IsWipExceeded_WithWipLimit_NotExceeded_ReturnsFalse()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 3 },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.False(stage.IsWipExceeded);
-    }
-
-    [Fact]
-    public void IsWipExceeded_WithWipLimit_Exceeded_ReturnsTrue()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } },
-                new() { Task = new Task { Key = "TASK-3" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.True(stage.IsWipExceeded);
-    }
-
-    [Fact]
-    public void IsWipExceeded_WithWipLimit_AtLimit_ReturnsFalse()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.False(stage.IsWipExceeded);
-    }
-
-    [Fact]
-    public void CanAcceptTasks_WithoutWipLimit_ReturnsTrue()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = null },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.True(stage.CanAcceptTasks);
-    }
-
-    [Fact]
-    public void CanAcceptTasks_WithWipLimit_NotExceeded_ReturnsTrue()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 3 },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.True(stage.CanAcceptTasks);
-    }
-
-    [Fact]
-    public void CanAcceptTasks_WithWipLimit_AtLimit_ReturnsFalse()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.False(stage.CanAcceptTasks);
-    }
-
-    [Fact]
-    public void CanAcceptTasks_WithWipLimit_Exceeded_ReturnsFalse()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
-            Tasks = new List<BoardTask>
-            {
-                new() { Task = new Task { Key = "TASK-1" } },
-                new() { Task = new Task { Key = "TASK-2" } },
-                new() { Task = new Task { Key = "TASK-3" } }
-            }
-        };
-
-        // Act & Assert
-        Assert.False(stage.CanAcceptTasks);
-    }
-
-    [Fact]
-    public void CanAcceptTasks_EmptyTasks_ReturnsTrue()
-    {
-        // Arrange
-        var stage = new BoardStage
-        {
-            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = 2 },
+            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = wipLimit },
             Tasks = new List<BoardTask>()
         };
 
+        for (var i = 0; i < taskCount; i++)
+        {
+            stage.Tasks.Add(new BoardTask { Task = new Task { Key = $"TASK-{i + 1}" } });
+        }
+
         // Act & Assert
-        Assert.True(stage.CanAcceptTasks);
+        Assert.Equal(expectedExceeded, stage.IsWipExceeded);
+    }
+
+    [Theory]
+    [InlineData(null, 1, true)]            // No WIP limit → can accept
+    [InlineData(3, 2, true)]               // WIP 3, 2 tasks → can accept
+    [InlineData(2, 2, false)]              // WIP 2, 2 tasks → at limit, cannot accept
+    [InlineData(2, 3, false)]              // WIP 2, 3 tasks → exceeded, cannot accept
+    [InlineData(2, 0, true)]               // WIP 2, 0 tasks → can accept
+    public void CanAcceptTasks_VariousScenarios_ReturnsCorrectResult(int? wipLimit, int taskCount, bool expectedCanAccept)
+    {
+        // Arrange
+        var stage = new BoardStage
+        {
+            Stage = new Stage { Name = "Developing", Type = StageType.Work, WipLimit = wipLimit },
+            Tasks = new List<BoardTask>()
+        };
+
+        for (var i = 0; i < taskCount; i++)
+        {
+            stage.Tasks.Add(new BoardTask { Task = new Task { Key = $"TASK-{i + 1}" } });
+        }
+
+        // Act & Assert
+        Assert.Equal(expectedCanAccept, stage.CanAcceptTasks);
     }
 }

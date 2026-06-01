@@ -23,7 +23,7 @@ public sealed record TaskTransitionHistory
     public BoardStage ToStage { get; set; } = null!;
 
     /// <summary>
-    ///     Тик симуляции, когда произошёл переход
+    ///     День симуляции, когда произошёл переход
     /// </summary>
-    public int Tick { get; set; }
+    public int Day { get; set; }
 }

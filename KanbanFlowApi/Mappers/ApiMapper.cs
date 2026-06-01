@@ -99,14 +99,13 @@ public static class ApiMapper
     public static ApiSimulationStateDto ToApiDto(Simulation simulation)
     {
         var configDto = ToApiDto(simulation.Config);
-        
+
         return new ApiSimulationStateDto
         {
             Config = configDto,
             Board = ToApiDto(simulation.Board),
             History = simulation.History.Select(ToApiDto).ToList(),
-            CurrentDay = simulation.CurrentDay,
-            CurrentTick = simulation.CurrentTick
+            CurrentDay = simulation.CurrentDay
         };
     }
 
@@ -127,9 +126,9 @@ public static class ApiMapper
         // Восстанавливаем историю из DTO (перезаписываем пустую)
         simulation.History = dto.History.Select(ToDomainHistoryDay).ToList();
 
-        // Восстанавливаем состояние (день и тик)
-        simulation.RestoreState(dto.CurrentDay, dto.CurrentTick);
-        
+        // Восстанавливаем состояние (день)
+        simulation.RestoreState(dto.CurrentDay);
+
         return simulation;
     }
 
@@ -309,22 +308,30 @@ public static class ApiMapper
         return new ApiHistoryActivityDto
         {
             Type = activity.Type,
-            Tick = activity.Tick,
             Description = activity.Description,
             TaskKey = activity.Task?.Task.Key ?? activity.TaskKey,
-            WorkerLogin = activity.Worker?.Worker.Login,
+            WorkerLogin = activity.Worker?.Worker.Login ?? activity.WorkerLogin,
             StageName = activity.Stage?.Stage.Name ?? activity.StageName,
-            Progress = activity.Progress
+            Progress = activity.Progress,
+            CorrelationId = activity.CorrelationId
         };
     }
 
     private static HistoryDay ToDomainHistoryDay(ApiHistoryDayDto dto)
     {
-        return new HistoryDay
+        var historyDay = new HistoryDay
         {
-            DayNumber = dto.DayNumber,
-            Activities = dto.Activities.Select(ToDomainActivity).ToList()
+            DayNumber = dto.DayNumber
         };
+
+        foreach (var activityDto in dto.Activities)
+        {
+            var activity = ToDomainActivity(activityDto);
+            activity.Day = historyDay;
+            historyDay.Activities.Add(activity);
+        }
+
+        return historyDay;
     }
 
     private static HistoryActivity ToDomainActivity(ApiHistoryActivityDto dto)
@@ -332,12 +339,12 @@ public static class ApiMapper
         return new HistoryActivity
         {
             Type = dto.Type,
-            Tick = dto.Tick,
             Description = dto.Description,
             Progress = dto.Progress,
             StageName = dto.StageName,
             TaskKey = dto.TaskKey,
-            WorkerLogin = dto.WorkerLogin
+            WorkerLogin = dto.WorkerLogin,
+            CorrelationId = dto.CorrelationId
             // Task, Worker, Stage не восстанавливаются — это только для чтения
         };
     }

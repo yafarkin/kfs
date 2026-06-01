@@ -112,6 +112,8 @@ public sealed class TaskMovementService
                     });
                     task.Worker = worker;
 
+                    // Записываем событие WorkerTookTask с CorrelationId для расчёта метрик
+                    var correlationId = Guid.NewGuid();
                     _simulation.LogActivity(new HistoryActivity
                     {
                         Type = ActivityType.WorkerTookTask,
@@ -119,11 +121,48 @@ public sealed class TaskMovementService
                         Task = task,
                         Worker = worker,
                         Stage = stage,
-                        StartedAtTick = _simulation.CurrentTick,
                         WorkerLogin = worker.Worker.Login,
                         TaskKey = task.Task.Key,
-                        StageName = stage.Stage.Name
+                        StageName = stage.Stage.Name,
+                        CorrelationId = correlationId
                     });
+
+                    // Если задача была в ожидании — записываем событие возобновления
+                    var waitingEvent = task.TransitionHistory
+                        .OrderByDescending(h => h.Activity.DayNumber)
+                        .FirstOrDefault(h => h.Activity.Type == ActivityType.TaskWaiting);
+
+                    if (waitingEvent != null)
+                    {
+                        _simulation.LogActivity(new HistoryActivity
+                        {
+                            Type = ActivityType.TaskResumed,
+                            Description = $"Задача {task.Task.Key} возобновлена после ожидания на стадии {stage.Stage.Name}",
+                            Task = task,
+                            Stage = stage,
+                            TaskKey = task.Task.Key,
+                            StageName = stage.Stage.Name
+                        });
+                    }
+                }
+                else
+                {
+                    // Воркера нет — проверяем нужно ли записать событие ожидания
+                    var alreadyWaiting = task.TransitionHistory
+                        .Any(h => h.Activity.Type == ActivityType.TaskWaiting);
+
+                    if (!alreadyWaiting)
+                    {
+                        _simulation.LogActivity(new HistoryActivity
+                        {
+                            Type = ActivityType.TaskWaiting,
+                            Description = $"Задача {task.Task.Key} ожидает доступного воркера на стадии {stage.Stage.Name}",
+                            Task = task,
+                            Stage = stage,
+                            TaskKey = task.Task.Key,
+                            StageName = stage.Stage.Name
+                        });
+                    }
                 }
             }
         }
@@ -519,6 +558,20 @@ public sealed class TaskMovementService
         // Обновляем текущую стадию задачи
         task.CurrentStage = toStage;
 
+        // Проверяем нужно ли записать событие LeadTimeStarted
+        if (toStage.Stage.IsLeadTimeStart && !task.TransitionHistory.Any())
+        {
+            _simulation.LogActivity(new HistoryActivity
+            {
+                Type = ActivityType.LeadTimeStarted,
+                Description = $"Задача {task.Task.Key} достигла стадии начала Lead Time: {toStage.Stage.Name}",
+                Task = task,
+                Stage = toStage,
+                TaskKey = task.Task.Key,
+                StageName = toStage.Stage.Name
+            });
+        }
+
         // Добавляем запись в историю
         var workerInfo = worker is not null ? $" (worker: {worker.Worker.Login})" : string.Empty;
         var activity = new HistoryActivity
@@ -534,24 +587,6 @@ public sealed class TaskMovementService
         };
         _simulation.LogActivity(activity);
 
-        // Если задача перемещена на рабочую стадию с worker'ом — записываем что worker взял задачу
-        if (toStage.Stage.Type == StageType.Work && worker is not null)
-        {
-            var workerTookTaskActivity = new HistoryActivity
-            {
-                Type = ActivityType.WorkerTookTask,
-                Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {toStage.Stage.Name}",
-                Task = task,
-                Worker = worker,
-                Stage = toStage,
-                StartedAtTick = _simulation.CurrentTick,
-                WorkerLogin = worker.Worker.Login,
-                TaskKey = task.Task.Key,
-                StageName = toStage.Stage.Name
-            };
-            _simulation.LogActivity(workerTookTaskActivity);
-        }
-        
         // Сбрасываем прогресс
         task.Progress = 0;
 
@@ -571,19 +606,34 @@ public sealed class TaskMovementService
             });
 
             task.Worker = worker;
+
+            // Записываем событие WorkerTookTask с CorrelationId для расчёта метрик
+            var correlationId = Guid.NewGuid();
+            _simulation.LogActivity(new HistoryActivity
+            {
+                Type = ActivityType.WorkerTookTask,
+                Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {toStage.Stage.Name}",
+                Task = task,
+                Worker = worker,
+                Stage = toStage,
+                WorkerLogin = worker.Worker.Login,
+                TaskKey = task.Task.Key,
+                StageName = toStage.Stage.Name,
+                CorrelationId = correlationId
+            });
         }
         else
         {
             task.Worker = null;
         }
-        
+
         // Добавляем запись в историю переходов задачи
         task.TransitionHistory.Add(new TaskTransitionHistory
         {
             Activity = activity,
             FromStage = fromStage,
             ToStage = toStage,
-            Tick = _simulation.CurrentTick
+            Day = _simulation.CurrentDay
         });
     }
 }
