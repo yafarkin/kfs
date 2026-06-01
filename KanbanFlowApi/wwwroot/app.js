@@ -207,6 +207,7 @@ function updateBoard(newState) {
     updateControls();
     calculateMetrics();
     calculateWorkerMetrics();
+    calculateTaskMetrics();
 }
 
 // Анимация прогресса задачи
