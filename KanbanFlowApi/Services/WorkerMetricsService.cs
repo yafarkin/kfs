@@ -36,10 +36,10 @@ public sealed class WorkerMetricsService
     {
         var workerLogin = boardWorker.Worker.Login;
 
-        // 1. Найти все ценные стадии, где работник может работать (есть навыки)
+        // 1. Найти все ценные стадии (Work-тип + создаёт ценность)
+        // Буферные стадии всегда игнорируются, независимо от CreatesValue
         var valuableStageNames = _simulation.Board.Stages
-            .Where(s => s.Stage.CreatesValue && 
-                        s.Stage.RequiredSkills.Any(skill => boardWorker.Worker.Skills.Contains(skill)))
+            .Where(s => s.Stage.Type == StageType.Work && s.Stage.CreatesValue)
             .Select(s => s.Stage.Name)
             .ToHashSet();
 

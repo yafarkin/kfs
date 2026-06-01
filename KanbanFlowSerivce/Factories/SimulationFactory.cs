@@ -208,6 +208,7 @@ public static class SimulationFactory
             RequiredSkills = ["backend"],
             StageProgressPercent = 25,
             WipLimit = 4,
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -228,6 +229,7 @@ public static class SimulationFactory
             RequiredSkills = ["backend"],
             StageProgressPercent = 15,
             WipLimit = 2,
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -248,6 +250,7 @@ public static class SimulationFactory
             RequiredSkills = ["qa"],
             StageProgressPercent = 20,
             WipLimit = 2,
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -269,6 +272,7 @@ public static class SimulationFactory
             RequiredSkills = ["backend", "frontend"],
             StageProgressPercent = 100,
             WipLimit = 4,
+            CreatesValue = true,
             Transitions = []
         };
 
@@ -289,6 +293,7 @@ public static class SimulationFactory
             RequiredSkills = ["backend"],
             StageProgressPercent = 50,
             WipLimit = 4,
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -311,6 +316,7 @@ public static class SimulationFactory
             RequiredSkills = ["qa"],
             StageProgressPercent = 30,
             WipLimit = 2,
+            CreatesValue = true,
             Transitions = []
         };
 
@@ -322,6 +328,7 @@ public static class SimulationFactory
             RequiredSkills = ["frontend"],
             StageProgressPercent = 10,
             WipLimit = 2,
+            CreatesValue = false,
             Transitions = []
         };
 
@@ -342,6 +349,7 @@ public static class SimulationFactory
             RequiredSkills = ["qa"],
             StageProgressPercent = 40,
             WipLimit = 2,
+            CreatesValue = true,
             Transitions = []
         };
 
@@ -363,6 +371,7 @@ public static class SimulationFactory
             RequiredSkills = ["backend", "frontend"],
             StageProgressPercent = 5,
             WipLimit = 5,
+            CreatesValue = false,
             Transitions = []
         };
 
