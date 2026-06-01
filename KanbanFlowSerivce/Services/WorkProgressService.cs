@@ -84,7 +84,10 @@ public sealed class WorkProgressService
                     Task = task,
                     Worker = worker,
                     Stage = stage,
-                    Progress = task.Progress
+                    Progress = task.Progress,
+                    WorkerLogin = worker.Worker.Login,
+                    TaskKey = task.Task.Key,
+                    StageName = stage.Stage.Name
                 });
 
                 // Если задача завершена, записываем событие и добавляем в список

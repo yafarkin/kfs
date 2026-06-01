@@ -20,14 +20,15 @@ public class WorkerMetricsServiceTests
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
-        var service = new TaskMovementService(simulation);
-        
+        var movementService = new TaskMovementService(simulation);
+        var progressService = new WorkProgressService(simulation);
+
         // Симулируем работу (6 дней)
         for (var i = 0; i < 6; i++)
         {
             simulation.StartNewDay();
-            service.ProcessMovements();
-            SimulateWorkProgress(simulation);
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
         }
 
         // Act
@@ -36,15 +37,26 @@ public class WorkerMetricsServiceTests
 
         // Assert - Проверяем что метрики рассчитаны
         Assert.Equal(3, workerMetrics.Count);
-        
+
         var dev1Metrics = workerMetrics.Single(w => w.Login == "dev1-be");
         var dev2Metrics = workerMetrics.Single(w => w.Login == "dev2-fe");
         var qaMetrics = workerMetrics.Single(w => w.Login == "qa1");
 
-        // Все workers имеют > 0 ценных задач (зависит от симуляции)
+        // Все workers имеют >= 0 ценных задач
         Assert.True(dev1Metrics.ValuableTasksCount >= 0);
         Assert.True(dev2Metrics.ValuableTasksCount >= 0);
         Assert.True(qaMetrics.ValuableTasksCount >= 0);
+
+        // Проверяем что WorkerLogin корректно заполнен в истории для WorkerCompletedTask
+        var allActivities = simulation.History.SelectMany(d => d.Activities).ToList();
+        var completedActivities = allActivities
+            .Where(a => a.Type == KanbanFlowSerivce.Dtos.History.ActivityType.WorkerCompletedTask)
+            .ToList();
+
+        foreach (var activity in completedActivities)
+        {
+            Assert.NotNull(activity.WorkerLogin);
+        }
     }
 
     [Fact]
@@ -55,14 +67,15 @@ public class WorkerMetricsServiceTests
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
-        var service = new TaskMovementService(simulation);
-        
+        var movementService = new TaskMovementService(simulation);
+        var progressService = new WorkProgressService(simulation);
+
         // Симулируем работу
         for (var i = 0; i < 6; i++)
         {
             simulation.StartNewDay();
-            service.ProcessMovements();
-            SimulateWorkProgress(simulation);
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
         }
 
         // Act
@@ -84,14 +97,15 @@ public class WorkerMetricsServiceTests
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
-        var service = new TaskMovementService(simulation);
-        
+        var movementService = new TaskMovementService(simulation);
+        var progressService = new WorkProgressService(simulation);
+
         // Симулируем работу
         for (var i = 0; i < 6; i++)
         {
             simulation.StartNewDay();
-            service.ProcessMovements();
-            SimulateWorkProgress(simulation);
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
         }
 
         // Act
@@ -104,7 +118,7 @@ public class WorkerMetricsServiceTests
             // EfficiencyPercent должен быть в диапазоне 0-100
             Assert.True(metrics.EfficiencyPercent >= 0);
             Assert.True(metrics.EfficiencyPercent <= 100);
-            
+
             // WorkTime и BufferTime >= 0
             Assert.True(metrics.WorkTimeDays >= 0);
             Assert.True(metrics.BufferTimeDays >= 0);
@@ -119,14 +133,15 @@ public class WorkerMetricsServiceTests
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
-        var service = new TaskMovementService(simulation);
-        
+        var movementService = new TaskMovementService(simulation);
+        var progressService = new WorkProgressService(simulation);
+
         // Симулируем работу
         for (var i = 0; i < 6; i++)
         {
             simulation.StartNewDay();
-            service.ProcessMovements();
-            SimulateWorkProgress(simulation);
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
         }
 
         // Act
@@ -141,6 +156,39 @@ public class WorkerMetricsServiceTests
     }
 
     [Fact]
+    public void CalculateAllWorkersMetrics_WorkerCompletedTask_HasWorkerLogin()
+    {
+        // Arrange
+        var config = CreateTestConfig();
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+
+        var movementService = new TaskMovementService(simulation);
+        var progressService = new WorkProgressService(simulation);
+
+        // Симулируем работу
+        for (var i = 0; i < 6; i++)
+        {
+            simulation.StartNewDay();
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
+        }
+
+        // Act - Проверяем историю
+        var allActivities = simulation.History.SelectMany(d => d.Activities).ToList();
+        var completedActivities = allActivities
+            .Where(a => a.Type == KanbanFlowSerivce.Dtos.History.ActivityType.WorkerCompletedTask)
+            .ToList();
+
+        // Assert - Если есть WorkerCompletedTask, проверяем что WorkerLogin заполнен
+        foreach (var activity in completedActivities)
+        {
+            Assert.NotNull(activity.WorkerLogin);
+            Assert.NotEmpty(activity.WorkerLogin);
+        }
+    }
+
+    [Fact]
     public void CalculateAllWorkersMetrics_BufferStages_IgnoredInValuableCount()
     {
         // Arrange - Создаём конфигурацию где буфер имеет CreatesValue = true (должен игнорироваться)
@@ -148,14 +196,15 @@ public class WorkerMetricsServiceTests
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
 
-        var service = new TaskMovementService(simulation);
-        
+        var movementService = new TaskMovementService(simulation);
+        var progressService = new WorkProgressService(simulation);
+
         // Симулируем работу
         for (var i = 0; i < 6; i++)
         {
             simulation.StartNewDay();
-            service.ProcessMovements();
-            SimulateWorkProgress(simulation);
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
         }
 
         // Act
@@ -259,29 +308,11 @@ public class WorkerMetricsServiceTests
     private static SimulationConfig CreateTestConfigWithBufferCreatesValue()
     {
         var config = CreateTestConfig();
-        
+
         // Устанавливаем буферной стадии CreatesValue = true (должна игнорироваться кодом)
         var readyForTesting = config.Workflow.Stages.Single(s => s.Name == "Ready for Testing");
         readyForTesting.CreatesValue = true;
-        
-        return config;
-    }
 
-    /// <summary>
-    /// Симулировать работу воркеров (увеличение прогресса задач).
-    /// </summary>
-    private static void SimulateWorkProgress(Simulation simulation)
-    {
-        foreach (var worker in simulation.Board.Workers.Where(w => w.Assignments.Count > 0))
-        {
-            foreach (var assignment in worker.Assignments.ToList())
-            {
-                var task = assignment.Task;
-                if (task.Progress < 100)
-                {
-                    task.Progress = Math.Min(100, task.Progress + 50);
-                }
-            }
-        }
+        return config;
     }
 }
