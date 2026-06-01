@@ -555,7 +555,8 @@ function importJson() {
         calculateMetrics();
         calculateWorkerMetrics();
         calculateTaskMetrics();
-        
+        calculateStageMetrics();
+
         showToast('Конфигурация импортирована', 'success');
     } catch (err) {
         showToast('Ошибка JSON: ' + err.message, 'danger');
