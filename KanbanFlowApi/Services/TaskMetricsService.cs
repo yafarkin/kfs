@@ -170,8 +170,9 @@ public sealed class TaskMetricsService
 
     /// <summary>
     /// Рассчитать активное время и время ожидания для задачи.
-    /// Active = время в Work стадиях (от входа до выхода)
-    /// Wait = время в Buffer стадиях (от входа до выхода)
+    /// Active = время в Work стадиях (от входа до следующего перехода)
+    /// Wait = время в Buffer стадиях (от входа до следующего перехода)
+    /// Стадия Done исключается из расчёта — задача завершена, время не считается.
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
         List<HistoryActivity> activities)
@@ -188,16 +189,28 @@ public sealed class TaskMetricsService
         if (movements.Count == 0)
             return (0, 0);
 
+        // Проверяем, достигла ли задача Done
+        var doneMove = movements.FirstOrDefault(m => m.StageName == "Done");
+        var isCompleted = doneMove != null;
+
+        // Если задача завершена, считаем только до перехода в Done (не включая Done)
+        var movementsToProcess = isCompleted
+            ? movements.TakeWhile(m => m.StageName != "Done").ToList()
+            : movements;
+
+        if (movementsToProcess.Count == 0)
+            return (0, 0);
+
         // Проходим по всем переходам и считаем время в каждой стадии
-        for (var i = 0; i < movements.Count; i++)
+        for (var i = 0; i < movementsToProcess.Count; i++)
         {
-            var currentMove = movements[i];
+            var currentMove = movementsToProcess[i];
             var stageName = currentMove.StageName;
             var enterDay = currentMove.DayNumber;
 
             // Выход из стадии - следующий переход или текущий день
-            var exitDay = (i < movements.Count - 1)
-                ? movements[i + 1].DayNumber
+            var exitDay = (i < movementsToProcess.Count - 1)
+                ? movementsToProcess[i + 1].DayNumber
                 : _simulation.CurrentDay;
 
             var timeInStage = exitDay - enterDay;
