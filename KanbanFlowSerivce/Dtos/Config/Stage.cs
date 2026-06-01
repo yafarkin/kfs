@@ -35,6 +35,13 @@ public sealed record Stage
     public int StageProgressPercent { get; set; } = 100;
 
     /// <summary>
+    ///     Создаёт ли стадия ценность для бизнеса.
+    ///     Например: Developing = true, Testing = true, Code Review = false.
+    ///     Используется для расчёта метрик worker'ов (Throughput, Lead Time).
+    /// </summary>
+    public bool CreatesValue { get; set; } = true;
+
+    /// <summary>
     ///     Переходы к следующим стадиям (DAG)
     /// </summary>
     public List<StageTransition> Transitions { get; set; } = new();

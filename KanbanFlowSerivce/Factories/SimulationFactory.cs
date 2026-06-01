@@ -41,6 +41,7 @@ public static class SimulationFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["backend", "frontend"],
             StageProgressPercent = 100,
+            CreatesValue = true,
             Transitions = new List<StageTransition>()
         };
 
@@ -60,6 +61,7 @@ public static class SimulationFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["qa"],
             StageProgressPercent = 30,
+            CreatesValue = true,
             Transitions = []
         };
 
@@ -77,6 +79,7 @@ public static class SimulationFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["backend", "frontend"],
             StageProgressPercent = 10,
+            CreatesValue = false,
             Transitions = []
         };
 

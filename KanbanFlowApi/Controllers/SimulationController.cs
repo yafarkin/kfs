@@ -209,4 +209,19 @@ public class SimulationController : ControllerBase
 
         return Ok(metrics);
     }
+
+    /// <summary>
+    /// Рассчитать метрики работников (Throughput, Lead Time, Efficiency).
+    /// </summary>
+    [HttpPost("workers/metrics")]
+    public ActionResult<List<ApiWorkerMetricsDto>> GetWorkersMetrics([FromBody] ApiSimulationStateDto state)
+    {
+        // Восстанавливаем доменную симуляцию из DTO
+        var simulation = ApiMapper.ToDomainSimulation(state);
+
+        var metricsService = new WorkerMetricsService(simulation);
+        var workerMetrics = metricsService.CalculateAllWorkersMetrics();
+
+        return Ok(workerMetrics);
+    }
 }

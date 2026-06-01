@@ -26,6 +26,7 @@ public static class TestConfigFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["backend"],
             StageProgressPercent = 100,
+            CreatesValue = true,
             Transitions = []
         };
 
@@ -45,6 +46,7 @@ public static class TestConfigFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["qa"],
             StageProgressPercent = 30,
+            CreatesValue = true,
             Transitions = []
         };
 
@@ -55,6 +57,7 @@ public static class TestConfigFactory
             IsLeadTimeStart = false,
             RequiredSkills = ["backend"],
             StageProgressPercent = 20,
+            CreatesValue = false,
             Transitions = []
         };
 

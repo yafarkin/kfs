@@ -5,6 +5,7 @@ let autoPlayInterval = null;
 let isAutoPlaying = false;
 let isLoading = false;
 let currentMetrics = null;
+let currentWorkerMetrics = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -158,6 +159,7 @@ function updateBoard(newState) {
     renderHistory();
     updateControls();
     calculateMetrics();
+    calculateWorkerMetrics();
 }
 
 // Анимация прогресса задачи
@@ -648,4 +650,80 @@ function renderFrequencyCard(frequency) {
             </div>
         </div>
     `;
+}
+
+// Переключение панели метрик работников
+function toggleWorkerMetricsPanel() {
+    const panel = document.getElementById('workerMetricsPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Расчёт метрик работников через API
+async function calculateWorkerMetrics() {
+    if (!simulationState) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/simulation/workers/metrics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(simulationState)
+        });
+
+        if (!response.ok) {
+            console.error('Error calculating worker metrics:', response.status);
+            return;
+        }
+
+        currentWorkerMetrics = await response.json();
+        renderWorkerMetrics(currentWorkerMetrics);
+    } catch (error) {
+        console.error('Error calculating worker metrics:', error);
+    }
+}
+
+// Рендеринг метрик работников
+function renderWorkerMetrics(workerMetrics) {
+    const grid = document.getElementById('workerMetricsGrid');
+    if (!grid || !workerMetrics) return;
+
+    grid.innerHTML = workerMetrics.map(w => `
+        <div class="worker-metric-card">
+            <div class="worker-metric-header">
+                <i class="bi bi-person-circle"></i>
+                <span class="worker-name">${w.login}</span>
+            </div>
+            <div class="worker-metric-body">
+                <div class="worker-metric-row">
+                    <span class="worker-metric-label">Throughput:</span>
+                    <span class="worker-metric-value">${w.throughput.toFixed(2)} зад/день</span>
+                </div>
+                <div class="worker-metric-row">
+                    <span class="worker-metric-label">Lead Time:</span>
+                    <span class="worker-metric-value">${w.leadTime.toFixed(1)} дн</span>
+                </div>
+                <div class="worker-metric-row">
+                    <span class="worker-metric-label">Утилизация:</span>
+                    <span class="worker-metric-value ${w.efficiencyPercent < 50 ? 'low-efficiency' : ''}">${w.efficiencyPercent.toFixed(1)}%</span>
+                </div>
+                <div class="worker-metric-row small-text">
+                    <span class="worker-metric-label">Work:</span>
+                    <span class="worker-metric-value">${w.workTimeDays.toFixed(1)} дн</span>
+                </div>
+                <div class="worker-metric-row small-text">
+                    <span class="worker-metric-label">Buffer:</span>
+                    <span class="worker-metric-value">${w.bufferTimeDays.toFixed(1)} дн</span>
+                </div>
+                <div class="worker-metric-row small-text">
+                    <span class="worker-metric-label">Ценных задач:</span>
+                    <span class="worker-metric-value">${w.valuableTasksCount}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
 }

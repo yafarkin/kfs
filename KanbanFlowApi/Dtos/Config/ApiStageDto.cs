@@ -49,6 +49,12 @@ public sealed record ApiStageDto
     public int StageProgressPercent { get; set; }
 
     /// <summary>
+    /// Создаёт ли стадия ценность для бизнеса.
+    /// Например: Developing = true, Testing = true, Code Review = false.
+    /// </summary>
+    public bool CreatesValue { get; set; } = true;
+
+    /// <summary>
     /// Список переходов в другие стадии с вероятностями.
     /// </summary>
     public List<ApiStageTransitionDto> Transitions { get; set; } = new();

@@ -54,6 +54,7 @@ public static class ApiMapper
                 RequiresDifferentResource = stageDto.RequiresDifferentResource,
                 RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
                 StageProgressPercent = stageDto.StageProgressPercent,
+                CreatesValue = stageDto.CreatesValue,
                 Transitions = []
             };
         }
@@ -356,6 +357,7 @@ public static class ApiMapper
             RequiresDifferentResource = stage.RequiresDifferentResource,
             RequiresDifferentResourceFromStage = stage.RequiresDifferentResourceFromStage,
             StageProgressPercent = stage.StageProgressPercent,
+            CreatesValue = stage.CreatesValue,
             Transitions = stage.Transitions.Select(t => new ApiStageTransitionDto
             {
                 TargetStageName = t.Stage.Name,

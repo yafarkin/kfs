@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet *)"
+      "Bash(dotnet *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(sed *)",
+      "Bash(git stash)",
+      "Bash(mkdir *)",
+      "Bash(sleep *)",
+      "Bash(curl *)",
+      "Bash(python3 *)",
+      "Bash(pkill *)",
+      "Bash(true)",
+      "Bash(cd *)",
+      "Bash(head *)",
+      "Bash(nohup *)",
+      "Bash(mv *)",
+      "Bash(do *)",
+      "Bash(done)"
     ]
-  }
+  },
+  "$version": 3
 }
