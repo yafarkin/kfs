@@ -201,22 +201,25 @@ public sealed class TaskMetricsService
         if (movementsToProcess.Count == 0)
             return (0, 0);
 
+        // День завершения (переход в Done) или текущий день если не завершена
+        var completionDay = isCompleted ? doneMove!.DayNumber : _simulation.CurrentDay;
+
         // Проходим по всем переходам и считаем время в каждой стадии
         for (var i = 0; i < movementsToProcess.Count; i++)
         {
             var currentMove = movementsToProcess[i];
-            var stageName = currentMove.StageName;
+            var stageName = currentMove.StageName!;
             var enterDay = currentMove.DayNumber;
 
-            // Выход из стадии - следующий переход или текущий день
+            // Выход из стадии - следующий переход или день завершения (не currentDay!)
             var exitDay = (i < movementsToProcess.Count - 1)
                 ? movementsToProcess[i + 1].DayNumber
-                : _simulation.CurrentDay;
+                : completionDay;
 
             var timeInStage = exitDay - enterDay;
 
             // Определяем тип стадии
-            var stageType = GetStageTypeByName(stageName!);
+            var stageType = GetStageTypeByName(stageName);
 
             if (stageType == StageType.Work)
             {
