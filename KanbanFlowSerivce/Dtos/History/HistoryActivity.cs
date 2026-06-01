@@ -69,6 +69,11 @@ public sealed record HistoryActivity
     public string? StageName { get; set; }
 
     /// <summary>
+    ///     Логин воркера (для сериализации/десериализации)
+    /// </summary>
+    public string? WorkerLogin { get; set; }
+
+    /// <summary>
     ///     Ключ задачи (для сериализации/десериализации)
     /// </summary>
     public string? TaskKey { get; set; }

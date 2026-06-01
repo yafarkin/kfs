@@ -336,7 +336,8 @@ public static class ApiMapper
             Description = dto.Description,
             Progress = dto.Progress,
             StageName = dto.StageName,
-            TaskKey = dto.TaskKey
+            TaskKey = dto.TaskKey,
+            WorkerLogin = dto.WorkerLogin
             // Task, Worker, Stage не восстанавливаются — это только для чтения
         };
     }

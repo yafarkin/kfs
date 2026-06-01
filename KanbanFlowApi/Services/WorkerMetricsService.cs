@@ -99,22 +99,8 @@ public sealed class WorkerMetricsService
             return false;
         }
 
-        // workerLogin в истории может быть null, поэтому парсим из description
-        var activityWorkerLogin = ExtractWorkerFromDescription(activity.Description);
-        return activityWorkerLogin == workerLogin;
-    }
-
-    /// <summary>
-    /// Извлечь worker login из description активности.
-    /// </summary>
-    private static string? ExtractWorkerFromDescription(string description)
-    {
-        if (string.IsNullOrEmpty(description))
-            return null;
-
-        // Паттерн: "Worker dev1-be взял" или "Worker dev1-be завершил"
-        var match = System.Text.RegularExpressions.Regex.Match(description, @"Worker\s+([a-zA-Z0-9\-]+)\s+(взял|завершил)");
-        return match.Success ? match.Groups[1].Value : null;
+        // workerLogin берётся напрямую из поля активности
+        return activity.WorkerLogin == workerLogin;
     }
 
     /// <summary>

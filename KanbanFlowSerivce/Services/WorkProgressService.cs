@@ -97,7 +97,10 @@ public sealed class WorkProgressService
                         Task = task,
                         Worker = worker,
                         Stage = stage,
-                        CompletedAtTick = _simulation.CurrentTick
+                        CompletedAtTick = _simulation.CurrentTick,
+                        WorkerLogin = worker.Worker.Login,
+                        TaskKey = task.Task.Key,
+                        StageName = stage.Stage.Name
                     });
 
                     completedTasks.Add(task);

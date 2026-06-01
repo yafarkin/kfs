@@ -119,7 +119,10 @@ public sealed class TaskMovementService
                         Task = task,
                         Worker = worker,
                         Stage = stage,
-                        StartedAtTick = _simulation.CurrentTick
+                        StartedAtTick = _simulation.CurrentTick,
+                        WorkerLogin = worker.Worker.Login,
+                        TaskKey = task.Task.Key,
+                        StageName = stage.Stage.Name
                     });
                 }
             }
