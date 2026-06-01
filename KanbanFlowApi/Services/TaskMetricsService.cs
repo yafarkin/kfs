@@ -271,4 +271,95 @@ public sealed class TaskMetricsService
         var match = System.Text.RegularExpressions.Regex.Match(activity.Description, @"TASK-\d+");
         return match.Success ? match.Value : null;
     }
+
+    /// <summary>
+    /// Рассчитать агрегированные метрики по всем стадиям (P50, P85, P95, Avg, Max).
+    /// </summary>
+    public List<StageMetricsAggregatedDto> CalculateStageMetricsAggregated()
+    {
+        var allTaskMetrics = CalculateAllTasksMetrics();
+
+        // Группируем время по стадиям
+        var stageTimes = new Dictionary<string, List<decimal>>();
+        var stageTypes = new Dictionary<string, string>();
+
+        foreach (var taskMetrics in allTaskMetrics)
+        {
+            foreach (var stage in taskMetrics.Stages)
+            {
+                if (!stageTimes.ContainsKey(stage.StageName))
+                {
+                    stageTimes[stage.StageName] = [];
+                    stageTypes[stage.StageName] = stage.StageType;
+                }
+                stageTimes[stage.StageName].Add(stage.TimeInStageDays);
+            }
+        }
+
+        var result = new List<StageMetricsAggregatedDto>();
+
+        foreach (var kvp in stageTimes.OrderBy(k => GetStageOrder(k.Key)))
+        {
+            var stageName = kvp.Key;
+            var times = kvp.Value.OrderBy(t => t).ToList();
+
+            result.Add(new StageMetricsAggregatedDto
+            {
+                StageName = stageName,
+                StageType = stageTypes[stageName],
+                P50Days = CalculatePercentile(times, 50),
+                P85Days = CalculatePercentile(times, 85),
+                P95Days = CalculatePercentile(times, 95),
+                AvgDays = times.Count > 0 ? times.Average() : 0,
+                MaxDays = times.Count > 0 ? times.Max() : 0,
+                TaskCount = times.Count
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Рассчитать процентиль из отсортированного списка.
+    /// </summary>
+    private static decimal CalculatePercentile(List<decimal> sortedValues, int percentile)
+    {
+        if (sortedValues.Count == 0)
+            return 0;
+
+        if (sortedValues.Count == 1)
+            return sortedValues[0];
+
+        // Используем линейную интерполяцию
+        var rank = (percentile / 100m) * (sortedValues.Count - 1);
+        var lowerIndex = (int)Math.Floor(rank);
+        var upperIndex = (int)Math.Ceiling(rank);
+
+        if (lowerIndex == upperIndex)
+            return sortedValues[lowerIndex];
+
+        var lowerValue = sortedValues[lowerIndex];
+        var upperValue = sortedValues[upperIndex];
+        var fraction = rank - lowerIndex;
+
+        return lowerValue + fraction * (upperValue - lowerValue);
+    }
+
+    /// <summary>
+    /// Получить порядок стадии для сортировки.
+    /// </summary>
+    private int GetStageOrder(string stageName)
+    {
+        return stageName switch
+        {
+            "Todo" => 0,
+            "Developing" => 1,
+            "Ready for Testing" => 2,
+            "Testing" => 3,
+            "Ready to Merge" => 4,
+            "Release Preparation" => 5,
+            "Done" => 6,
+            _ => 99
+        };
+    }
 }

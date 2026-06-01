@@ -208,6 +208,7 @@ function updateBoard(newState) {
     calculateMetrics();
     calculateWorkerMetrics();
     calculateTaskMetrics();
+    calculateStageMetrics();
 }
 
 // Анимация прогресса задачи
@@ -882,4 +883,96 @@ function renderTaskMetrics(taskMetrics) {
             </div>
         </div>
     `).join('');
+}
+
+// Переключение панели метрик стадий
+function toggleStageMetricsPanel() {
+    const panel = document.getElementById('stageMetricsPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Расчёт метрик стадий через API
+async function calculateStageMetrics() {
+    if (!simulationState) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/simulation/stage-metrics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(simulationState)
+        });
+
+        if (!response.ok) {
+            console.error('Error calculating stage metrics:', response.status);
+            return;
+        }
+
+        const stageMetrics = await response.json();
+        console.log('Stage metrics calculated:', stageMetrics);
+        renderStageMetrics(stageMetrics);
+    } catch (error) {
+        console.error('Error calculating stage metrics:', error);
+    }
+}
+
+// Рендеринг метрик стадий
+function renderStageMetrics(stageMetrics) {
+    const grid = document.getElementById('stageMetricsGrid');
+    if (!grid) {
+        console.error('stageMetricsGrid element not found');
+        return;
+    }
+    if (!stageMetrics || stageMetrics.length === 0) {
+        console.warn('No stage metrics to render');
+        grid.innerHTML = '<div class="text-muted">Нет данных для отображения</div>';
+        return;
+    }
+
+    console.log('Rendering stage metrics:', stageMetrics);
+
+    // Находим максимальное P85 для подсветки узких мест
+    const maxP85 = Math.max(...stageMetrics.map(s => s.p85Days));
+
+    grid.innerHTML = `
+        <table class="stage-metrics-table">
+            <thead>
+                <tr>
+                    <th>Стадия</th>
+                    <th>Тип</th>
+                    <th>Задач</th>
+                    <th>P50</th>
+                    <th>P85</th>
+                    <th>P95</th>
+                    <th>Среднее</th>
+                    <th>Макс</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${stageMetrics.map(s => `
+                    <tr>
+                        <td class="stage-name">${s.stageName}</td>
+                        <td>
+                            <span class="stage-type-badge stage-type-${s.stageType.toLowerCase()}">
+                                ${s.stageType}
+                            </span>
+                        </td>
+                        <td>${s.taskCount}</td>
+                        <td class="metric-value">${s.p50Days.toFixed(1)}</td>
+                        <td class="metric-value ${s.p85Days >= maxP85 * 0.8 ? 'highlight' : ''}">
+                            ${s.p85Days.toFixed(1)}
+                        </td>
+                        <td class="metric-value">${s.p95Days.toFixed(1)}</td>
+                        <td>${s.avgDays.toFixed(1)}</td>
+                        <td class="metric-value">${s.maxDays.toFixed(1)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
 }

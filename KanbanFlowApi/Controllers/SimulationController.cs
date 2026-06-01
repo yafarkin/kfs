@@ -159,4 +159,19 @@ public class SimulationController : ControllerBase
 
         return Ok(taskMetrics);
     }
+
+    /// <summary>
+    /// Рассчитать агрегированные метрики по стадиям (P50, P85, P95, Avg, Max).
+    /// </summary>
+    [HttpPost("stage-metrics")]
+    public ActionResult<List<StageMetricsAggregatedDto>> GetStageMetrics([FromBody] ApiSimulationStateDto state)
+    {
+        // Восстанавливаем доменную симуляцию из DTO
+        var simulation = ApiMapper.ToDomainSimulation(state);
+
+        var taskMetricsService = new TaskMetricsService(simulation);
+        var stageMetrics = taskMetricsService.CalculateStageMetricsAggregated();
+
+        return Ok(stageMetrics);
+    }
 }

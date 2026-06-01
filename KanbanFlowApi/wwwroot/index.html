@@ -1042,6 +1042,73 @@
             font-weight: 500;
         }
 
+        /* Метрики стадий */
+        .stage-metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stage-metrics-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .stage-metrics-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+        }
+
+        .stage-metrics-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .stage-metrics-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .stage-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .stage-type-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .stage-type-work {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .stage-type-buffer {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .metric-value.highlight {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
         /* Раскрывающаяся панель метрик */
         .metrics-panel.collapsed .metrics-body {
             display: none;
@@ -1256,9 +1323,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- Раскрывающаяся панель метрик стадий -->
+        <div class="metrics-panel" id="stageMetricsPanel">
+            <div class="metrics-header" onclick="toggleStageMetricsPanel()">
+                <div class="metrics-title">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Метрики стадий (P50, P85)</span>
+                </div>
+                <i class="bi bi-chevron-down metrics-toggle-icon"></i>
+            </div>
+            <div class="metrics-body" id="stageMetricsBody">
+                <div id="stageMetricsGrid">
+                    <!-- Метрики стадий будут добавлены через JS -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>
