@@ -181,66 +181,69 @@ public sealed class WorkerMetricsService
     /// Рассчитать время работы (Work) и ожидания (Buffer) для работника в днях.
     /// </summary>
     private (decimal WorkTime, decimal BufferTime) CalculateWorkerTime(
-        List<HistoryActivity> activities, 
+        List<HistoryActivity> activities,
         string workerLogin)
     {
         var workTime = 0m;
         var bufferTime = 0m;
 
-        // Получить все TaskMoved активности для задач, которые брал этот работник
-        var workerTaskKeys = activities
-            .Where(a => a.Type == ActivityType.WorkerTookTask)
+        // Получить все задачи, где работник завершал работу (WorkerCompletedTask)
+        var workerTaskKeys = _simulation.History
+            .SelectMany(d => d.Activities)
+            .Where(a => a.Type == ActivityType.WorkerCompletedTask && a.WorkerLogin == workerLogin)
             .Select(a => GetTaskKeyFromActivity(a))
             .Where(k => k != null)
             .ToHashSet()!;
 
-        var taskMovements = _simulation.History
-            .SelectMany(d => d.Activities)
-            .Where(a => a.Type == ActivityType.TaskMoved && 
-                        GetTaskKeyFromActivity(a) != null &&
-                        workerTaskKeys.Contains(GetTaskKeyFromActivity(a)!))
-            .OrderBy(a => a.Tick)
-            .ToList();
-
-        if (taskMovements.Count == 0)
-            return (0, 0);
-
-        // Группировать по задачам
+        
+        // Для каждой задачи считаем время на каждой стадии
         foreach (var taskKey in workerTaskKeys)
         {
-            var taskActivities = taskMovements
+            var taskActivities = _simulation.History
+                .SelectMany(d => d.Activities)
                 .Where(a => GetTaskKeyFromActivity(a) == taskKey)
                 .OrderBy(a => a.Tick)
                 .ToList();
 
-            if (taskActivities.Count == 0)
-                continue;
+            // Найти все TaskMoved для этой задачи
+            var movements = taskActivities
+                .Where(a => a.Type == ActivityType.TaskMoved)
+                .ToList();
 
-            for (var i = 0; i < taskActivities.Count - 1; i++)
+            
+            for (var i = 0; i < movements.Count; i++)
             {
-                var currentActivity = taskActivities[i];
-                var nextActivity = taskActivities[i + 1];
-
-                if (currentActivity.StageName == null)
+                var currentMove = movements[i];
+                if (currentMove.StageName == null)
                     continue;
 
-                var durationDays = (nextActivity.Tick - currentActivity.Tick) / 24m;
-
+                // Определить тип стадии
                 var stage = _simulation.Board.Stages
-                    .FirstOrDefault(s => s.Stage.Name == currentActivity.StageName);
+                    .FirstOrDefault(s => s.Stage.Name == currentMove.StageName);
 
-                if (stage?.Stage.Type == StageType.Work)
+                if (stage == null)
+                    continue;
+
+                // Найти когда задача покинула эту стадию (следующее перемещение или конец симуляции)
+                var nextMove = i < movements.Count - 1 ? movements[i + 1] : null;
+                var endTick = nextMove?.Tick ?? _simulation.CurrentTick;
+                var startTick = currentMove.Tick;
+
+                var durationDays = (endTick - startTick) / 24m;
+
+                
+                if (stage.Stage.Type == StageType.Work)
                 {
                     workTime += durationDays;
                 }
-                else if (stage?.Stage.Type == StageType.Buffer)
+                else if (stage.Stage.Type == StageType.Buffer)
                 {
                     bufferTime += durationDays;
                 }
             }
         }
 
-        return (workTime, bufferTime);
+                return (workTime, bufferTime);
     }
 
     /// <summary>
