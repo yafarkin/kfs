@@ -274,12 +274,13 @@ public sealed class TaskMetricsService
 
     /// <summary>
     /// Рассчитать агрегированные метрики по всем стадиям (P50, P85, P95, Avg, Max).
+    /// Стадия Done исключается — для неё метрики бессмысленны.
     /// </summary>
     public List<StageMetricsAggregatedDto> CalculateStageMetricsAggregated()
     {
         var allTaskMetrics = CalculateAllTasksMetrics();
 
-        // Группируем время по стадиям
+        // Группируем время по стадиям (исключая Done)
         var stageTimes = new Dictionary<string, List<decimal>>();
         var stageTypes = new Dictionary<string, string>();
 
@@ -287,6 +288,10 @@ public sealed class TaskMetricsService
         {
             foreach (var stage in taskMetrics.Stages)
             {
+                // Пропускаем стадию Done
+                if (stage.StageName == "Done")
+                    continue;
+
                 if (!stageTimes.ContainsKey(stage.StageName))
                 {
                     stageTimes[stage.StageName] = [];
