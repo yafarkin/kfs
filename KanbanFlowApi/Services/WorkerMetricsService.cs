@@ -98,7 +98,7 @@ public sealed class WorkerMetricsService
     }
 
     /// <summary>
-    /// Получить задачи, где работник работал на ценной стадии.
+    /// Получить задачи, где работник завершил ценную стадию.
     /// </summary>
     private HashSet<string> GetTasksWhereWorkerWorkedOnValuableStage(
         List<HistoryActivity> activities, 
@@ -106,9 +106,12 @@ public sealed class WorkerMetricsService
     {
         var taskKeys = new HashSet<string>();
 
+        // Ищем только WorkerCompletedTask на ценных стадиях
         foreach (var activity in activities)
         {
-            if (activity.StageName != null && valuableStageNames.Contains(activity.StageName))
+            if (activity.Type == ActivityType.WorkerCompletedTask && 
+                activity.StageName != null && 
+                valuableStageNames.Contains(activity.StageName))
             {
                 var taskKey = GetTaskKeyFromActivity(activity);
                 if (taskKey != null)
