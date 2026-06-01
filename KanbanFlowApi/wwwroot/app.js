@@ -6,6 +6,7 @@ let isAutoPlaying = false;
 let isLoading = false;
 let currentMetrics = null;
 let currentWorkerMetrics = null;
+let currentTaskMetrics = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -803,8 +804,9 @@ async function calculateTaskMetrics() {
             return;
         }
 
-        const taskMetrics = await response.json();
-        renderTaskMetrics(taskMetrics);
+        currentTaskMetrics = await response.json();
+        console.log('Task metrics calculated:', currentTaskMetrics);
+        renderTaskMetrics(currentTaskMetrics);
     } catch (error) {
         console.error('Error calculating task metrics:', error);
     }
@@ -813,7 +815,17 @@ async function calculateTaskMetrics() {
 // Рендеринг метрик задач
 function renderTaskMetrics(taskMetrics) {
     const grid = document.getElementById('taskMetricsGrid');
-    if (!grid || !taskMetrics) return;
+    if (!grid) {
+        console.error('taskMetricsGrid element not found');
+        return;
+    }
+    if (!taskMetrics || taskMetrics.length === 0) {
+        console.warn('No task metrics to render');
+        grid.innerHTML = '<div class="text-muted">Нет данных для отображения</div>';
+        return;
+    }
+
+    console.log('Rendering task metrics:', taskMetrics);
 
     grid.innerHTML = taskMetrics.map(t => `
         <div class="task-metric-card">
@@ -858,7 +870,7 @@ function renderTaskMetrics(taskMetrics) {
                         </div>
                         <div class="task-stage-details">
                             <span class="task-stage-time">${s.timeInStageDays.toFixed(1)} дн</span>
-                            ${s.workers.length > 0 ? `
+                            ${s.workers && s.workers.length > 0 ? `
                                 <div class="task-stage-workers">
                                     ${s.workers.map(w => `<span class="worker-badge">${w}</span>`).join('')}
                                 </div>
