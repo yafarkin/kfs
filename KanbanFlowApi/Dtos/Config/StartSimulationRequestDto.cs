@@ -29,4 +29,12 @@ public sealed record StartSimulationRequestDto
     /// Использовать ли вариативность при расчёте времени выполнения задач.
     /// </summary>
     public bool UseVariability { get; set; } = true;
+
+    /// <summary>
+    /// Количество дней для симуляции (опционально). 
+    /// Если null - симуляция выполняется на 1 день.
+    /// Если 0 - симуляция выполняется до завершения всех задач.
+    /// Если > 0 - симуляция выполняется на указанное количество дней.
+    /// </summary>
+    public int? DaysToSimulate { get; set; }
 }

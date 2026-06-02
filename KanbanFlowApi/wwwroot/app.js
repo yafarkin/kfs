@@ -94,7 +94,8 @@ function saveSelectionToStorage() {
         workerPoolPresetName: document.getElementById('workerPoolSelector')?.value,
         taskPresetName: document.getElementById('taskPresetSelector')?.value || null,
         seed: document.getElementById('seedInput')?.value || 42,
-        useVariability: document.getElementById('variabilityToggle')?.checked ?? true
+        useVariability: document.getElementById('variabilityToggle')?.checked ?? true,
+        daysToSimulate: document.getElementById('daysToSimulateInput')?.value || '0'
     };
     localStorage.setItem('kanbanflow_selection', JSON.stringify(selection));
 }
@@ -106,30 +107,35 @@ function restoreSelectionFromStorage() {
 
     try {
         const selection = JSON.parse(saved);
-        
+
         if (selection.processPresetName) {
             const selector = document.getElementById('processSelector');
             if (selector) selector.value = selection.processPresetName;
         }
-        
+
         if (selection.workerPoolPresetName) {
             const selector = document.getElementById('workerPoolSelector');
             if (selector) selector.value = selection.workerPoolPresetName;
         }
-        
+
         if (selection.taskPresetName) {
             const selector = document.getElementById('taskPresetSelector');
             if (selector) selector.value = selection.taskPresetName;
         }
-        
+
         if (selection.seed) {
             const seedInput = document.getElementById('seedInput');
             if (seedInput) seedInput.value = selection.seed;
         }
-        
+
         if (selection.useVariability !== undefined) {
             const toggle = document.getElementById('variabilityToggle');
             if (toggle) toggle.checked = selection.useVariability;
+        }
+
+        if (selection.daysToSimulate !== undefined) {
+            const daysInput = document.getElementById('daysToSimulateInput');
+            if (daysInput) daysInput.value = selection.daysToSimulate;
         }
 
         // Обновляем описания после восстановления
@@ -218,12 +224,14 @@ async function startSimulation() {
         const taskPresetSelector = document.getElementById('taskPresetSelector');
         const seedInput = document.getElementById('seedInput');
         const variabilityToggle = document.getElementById('variabilityToggle');
+        const daysToSimulateInput = document.getElementById('daysToSimulateInput');
 
         const processPresetName = processSelector?.value;
         const workerPoolPresetName = workerPoolSelector?.value;
         const taskPresetName = taskPresetSelector?.value || null;
         const seed = parseInt(seedInput?.value) || 42;
         const useVariability = variabilityToggle?.checked ?? true;
+        const daysToSimulate = daysToSimulateInput?.value ? parseInt(daysToSimulateInput.value) : null;
 
         if (!processPresetName || !workerPoolPresetName) {
             throw new Error('Выберите процесс и команду исполнителей');
@@ -234,7 +242,8 @@ async function startSimulation() {
             workerPoolPresetName,
             taskPresetName,
             seed,
-            useVariability
+            useVariability,
+            daysToSimulate
         };
 
         const response = await fetch('/api/simulation/start', {
@@ -263,7 +272,12 @@ async function startSimulation() {
         // Расчёт всех метрик
         calculateAllMetrics();
 
-        showToast('Симуляция запущена (день 0)', 'success');
+        const dayMessage = daysToSimulate === 0 
+            ? 'Симуляция запущена (до конца)' 
+            : daysToSimulate 
+                ? `Симуляция запущена на ${daysToSimulate} дн.` 
+                : 'Симуляция запущена (день 0)';
+        showToast(dayMessage, 'success');
     } catch (error) {
         console.error('Error starting simulation:', error);
         showToast('Ошибка запуска: ' + error.message, 'danger');
@@ -273,11 +287,79 @@ async function startSimulation() {
     }
 }
 
+// Быстрая симуляция до конца (кнопка "Рассчитать до конца")
+async function simulateToEnd() {
+    const daysToSimulateInput = document.getElementById('daysToSimulateInput');
+    if (daysToSimulateInput) {
+        daysToSimulateInput.value = '0';
+    }
+    await startSimulation();
+}
+
 // Перезагрузка текущей конфигурации (сброс к дню 0)
 async function reloadConfig() {
-    // Перезапускаем симуляцию из текущих выбранных пресетов
-    await startSimulation();
-    showToast('Конфигурация сброшена к дню 0', 'success');
+    isLoading = true;
+    updateLoadingIndicator();
+
+    try {
+        const processSelector = document.getElementById('processSelector');
+        const workerPoolSelector = document.getElementById('workerPoolSelector');
+        const taskPresetSelector = document.getElementById('taskPresetSelector');
+        const seedInput = document.getElementById('seedInput');
+        const variabilityToggle = document.getElementById('variabilityToggle');
+
+        const processPresetName = processSelector?.value;
+        const workerPoolPresetName = workerPoolSelector?.value;
+        const taskPresetName = taskPresetSelector?.value || null;
+        const seed = parseInt(seedInput?.value) || 42;
+        const useVariability = variabilityToggle?.checked ?? true;
+
+        if (!processPresetName || !workerPoolPresetName) {
+            throw new Error('Выберите процесс и команду исполнителей');
+        }
+
+        // Сброс к дню 0 - daysToSimulate = null (без симуляции)
+        const request = {
+            processPresetName,
+            workerPoolPresetName,
+            taskPresetName,
+            seed,
+            useVariability,
+            daysToSimulate: null
+        };
+
+        const response = await fetch('/api/simulation/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+
+        simulationState = await response.json();
+
+        // Сохраняем в localStorage
+        saveSimulationToStorage();
+
+        renderBoard();
+        renderWorkers();
+        renderHistory();
+        updateControls();
+        calculateAllMetrics();
+
+        showToast('Конфигурация сброшена к дню 0', 'success');
+    } catch (error) {
+        console.error('Error reloading config:', error);
+        showToast('Ошибка перезагрузки: ' + error.message, 'danger');
+    } finally {
+        isLoading = false;
+        updateLoadingIndicator();
+    }
 }
 
 // Симуляция одного дня

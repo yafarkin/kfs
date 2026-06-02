@@ -1244,8 +1244,13 @@
                             <span class="input-group-text">Seed</span>
                             <input type="number" class="form-control" id="seedInput" value="42" style="width: 100px;">
                         </div>
+                        <div class="input-group" style="width: auto;">
+                            <span class="input-group-text">Дней</span>
+                            <input type="number" class="form-control" id="daysToSimulateInput" value="0" min="0" 
+                                   title="0 = до конца, 1-N = конкретное количество дней" style="width: 220px;">
+                        </div>
                         <button class="btn btn-primary" id="btnStartSimulation" onclick="startSimulation()">
-                            <i class="bi bi-play-fill me-2"></i>Запустить симуляцию
+                            <i class="bi bi-play-fill me-2"></i>Запустить
                         </button>
                     </div>
                 </div>
@@ -1282,6 +1287,9 @@
         <div class="controls">
             <button class="btn btn-success" id="btnSimulateDay" onclick="simulateDay()" disabled>
                 <i class="bi bi-play-fill me-2"></i>Следующий день
+            </button>
+            <button class="btn btn-success" id="btnSimulateToEnd" onclick="simulateToEnd()">
+                <i class="bi bi-fast-forward-fill me-2"></i>Рассчитать до конца
             </button>
             <button class="btn btn-outline-secondary" id="btnAutoPlay" onclick="toggleAutoPlay()">
                 <i class="bi bi-play-circle me-2"></i>Авто-режим
@@ -1375,6 +1383,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=17"></script>
 </body>
 </html>

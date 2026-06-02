@@ -49,6 +49,7 @@ public class SimulationController : ControllerBase
     /// <summary>
     /// Запустить симуляцию из комбинации пресетов.
     /// Возвращает состояние симуляции на день 0 (готово к началу работы).
+    /// Если указан параметр DaysToSimulate - выполняет симуляцию на N дней или до завершения всех задач.
     /// </summary>
     /// <param name="request">Запрос с именами пресетов</param>
     [HttpPost("start")]
@@ -102,7 +103,52 @@ public class SimulationController : ControllerBase
         var simulation = new Simulation();
         simulation.InitFromConfig(domainConfig);
 
-        // Возвращаем состояние на день 0
+        // Если указан параметр DaysToSimulate - выполняем симуляцию
+        if (request.DaysToSimulate.HasValue)
+        {
+            var daysToSimulate = request.DaysToSimulate.Value;
+            var maxDays = daysToSimulate == 0 ? 10000 : daysToSimulate; // 0 = до конца (ограничиваем 10000 дней)
+            
+            var validationService = new SimulationValidationService(simulation);
+            var movementService = new TaskMovementService(simulation);
+            var workProgressService = new WorkProgressService(simulation);
+
+            for (var day = 0; day < maxDays; day++)
+            {
+                // Проверяем, можно ли продолжить симуляцию
+                var validationResult = validationService.ValidateCanContinue();
+                if (!validationResult.IsValid)
+                {
+                    break;
+                }
+
+                // Начинаем новый день
+                simulation.StartNewDay();
+
+                // Обрабатываем перемещения задач (перед работой)
+                movementService.ProcessMovements();
+
+                // Симулируем выполнение работы и получаем список завершённых задач
+                var completedTasks = workProgressService.SimulateWorkDay();
+
+                // Обрабатываем перемещения завершённых задач (после работы)
+                if (completedTasks.Count > 0)
+                {
+                    movementService.ProcessMovements(completedTasks);
+                }
+
+                // Проверяем, завершилась ли симуляция (все задачи в Done)
+                var allTasksDone = simulation.Board.Tasks.All(t =>
+                    t.CurrentStage?.Stage.Name == "Done" || t.CurrentStage == null);
+
+                if (allTasksDone)
+                {
+                    break;
+                }
+            }
+        }
+
+        // Возвращаем состояние (на день 0 или после симуляции N дней)
         return Ok(ApiMapper.ToApiDto(simulation));
     }
 
