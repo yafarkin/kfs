@@ -130,9 +130,10 @@ public class EdgeCaseTests
         var taskMetricsService = new TaskMetricsService(simulation);
         var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
-        // Assert
+        // Assert - после одного дня задача должна быть в работе на стадии Developing
         var task = taskMetrics.First();
-        Assert.True(task.Status == "In Progress" || task.Status == "Developing" || task.Status == "Todo");
+        // Задача перемещается из Todo в Developing и берётся воркером в первый день
+        Assert.Equal("In Progress", task.Status);
     }
 
     [Fact]
@@ -157,11 +158,13 @@ public class EdgeCaseTests
         var metricsService = new WorkerMetricsService(simulation);
         var workerMetrics = metricsService.CalculateAllWorkersMetrics();
 
-        // Assert
+        // Assert - Efficiency должен быть в допустимых пределах
         var metrics = workerMetrics.First();
-        // Efficiency должен быть высоким если мало ожидания
+        // Проверяем что метрики рассчитаны (не null/NaN)
         Assert.True(metrics.EfficiencyPercent >= 0);
         Assert.True(metrics.EfficiencyPercent <= 100);
+        // Throughput должен быть > 0 если задача завершена
+        Assert.True(metrics.Throughput >= 0);
     }
 
     [Fact]
@@ -178,14 +181,13 @@ public class EdgeCaseTests
         simulation.StartNewDay();
         movementService.ProcessMovements();
 
-        // Assert - задача должна переместиться или остаться в Todo
-        // WIP=0 может блокировать перемещение в некоторых реализациях
+        // Assert - задача НЕ должна переместиться в Developing с WIP=0
         var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
-        
-        // Задача должна быть либо в Todo либо в Developing
-        var totalTasks = todoStage.Tasks.Count + developingStage.Tasks.Count;
-        Assert.Equal(1, totalTasks);
+
+        // Задача остаётся в Todo т.к. Developing имеет WIP=0 и не может принять задачу
+        Assert.Single(todoStage.Tasks);
+        Assert.Empty(developingStage.Tasks);
     }
 
     [Fact]

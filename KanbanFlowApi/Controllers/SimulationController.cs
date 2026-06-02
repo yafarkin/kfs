@@ -107,12 +107,12 @@ public class SimulationController : ControllerBase
     }
 
     /// <summary>
-    /// Рассчитать метрики симуляции (Lead Time, Throughput, Flow Efficiency, Frequency).
-    /// Принимает полное состояние симуляции и возвращает рассчитанные метрики.
+    /// Рассчитать все метрики симуляции (общие, работников, задач, стадий).
+    /// Принимает полное состояние симуляции и возвращает полный набор метрик.
     /// </summary>
     /// <param name="state">Состояние симуляции</param>
-    [HttpPost("calculate-metrics")]
-    public ActionResult<ApiMetricsDto> CalculateMetrics([FromBody] ApiSimulationStateDto state)
+    [HttpPost("all-metrics")]
+    public ActionResult<AllMetricsDto> CalculateAllMetrics([FromBody] ApiSimulationStateDto state)
     {
         // Восстанавливаем доменную симуляцию из DTO
         var simulation = ApiMapper.ToDomainSimulation(state);
@@ -123,55 +123,17 @@ public class SimulationController : ControllerBase
 
         var leadTimeStartStageName = leadTimeStartStage?.Name ?? "Todo";
 
-        // Создаём сервис метрик и рассчитываем
+        // Рассчитываем все метрики
         var metricsService = new MetricsService(simulation, leadTimeStartStageName);
-        var metrics = metricsService.CalculateAllMetrics();
-
-        return Ok(metrics);
-    }
-
-    /// <summary>
-    /// Рассчитать метрики работников (Throughput, Lead Time, Efficiency).
-    /// </summary>
-    [HttpPost("workers/metrics")]
-    public ActionResult<List<ApiWorkerMetricsDto>> GetWorkersMetrics([FromBody] ApiSimulationStateDto state)
-    {
-        // Восстанавливаем доменную симуляцию из DTO
-        var simulation = ApiMapper.ToDomainSimulation(state);
-
-        var metricsService = new WorkerMetricsService(simulation);
-        var workerMetrics = metricsService.CalculateAllWorkersMetrics();
-
-        return Ok(workerMetrics);
-    }
-
-    /// <summary>
-    /// Рассчитать метрики по задачам (Lead Time, Flow Efficiency, время по стадиям, воркеры).
-    /// </summary>
-    [HttpPost("task-metrics")]
-    public ActionResult<List<TaskMetricsDto>> GetTaskMetrics([FromBody] ApiSimulationStateDto state)
-    {
-        // Восстанавливаем доменную симуляцию из DTO
-        var simulation = ApiMapper.ToDomainSimulation(state);
-
+        var workerMetricsService = new WorkerMetricsService(simulation);
         var taskMetricsService = new TaskMetricsService(simulation);
-        var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
-        return Ok(taskMetrics);
-    }
-
-    /// <summary>
-    /// Рассчитать агрегированные метрики по стадиям (P50, P85, P95, Avg, Max).
-    /// </summary>
-    [HttpPost("stage-metrics")]
-    public ActionResult<List<StageMetricsAggregatedDto>> GetStageMetrics([FromBody] ApiSimulationStateDto state)
-    {
-        // Восстанавливаем доменную симуляцию из DTO
-        var simulation = ApiMapper.ToDomainSimulation(state);
-
-        var taskMetricsService = new TaskMetricsService(simulation);
-        var stageMetrics = taskMetricsService.CalculateStageMetricsAggregated();
-
-        return Ok(stageMetrics);
+        return Ok(new AllMetricsDto
+        {
+            SimulationMetrics = metricsService.CalculateAllMetrics(),
+            WorkerMetrics = workerMetricsService.CalculateAllWorkersMetrics(),
+            TaskMetrics = taskMetricsService.CalculateAllTasksMetrics(),
+            StageMetrics = taskMetricsService.CalculateStageMetricsAggregated()
+        });
     }
 }

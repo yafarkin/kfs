@@ -185,7 +185,7 @@ public sealed class WorkerMetricsService
     /// <summary>
     /// Рассчитать активное время работы и время ожидания для работника (в днях).
     /// Active Time = Σ(WorkerCompletedTask.DayNumber - WorkerTookTask.DayNumber) по всем парам
-    /// Wait Time = Σ(WorkerTookTask.DayNumber - предыдущего WorkerCompletedTask.DayNumber)
+    /// Wait Time = время простоя между задачами (только если между завершением и началом следующей задачи прошло > 1 дня)
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
         List<HistoryActivity> allActivities,
@@ -228,8 +228,10 @@ public sealed class WorkerMetricsService
             }
         }
 
-        // Рассчитать время ожидания
-        // Время между WorkerCompletedTask и следующим WorkerTookTask
+        // Рассчитать время ожидания (простой)
+        // Простой считается только если между завершением задачи и началом следующей прошло > 1 дня
+        // Формула: BufferDays = NextTookTask.DayNumber - CompletedTask.DayNumber - 1
+        // Если результат <= 0, то простоя не было (worker начал новую задачу на следующий день или в тот же день)
         var completedTasks = workerEvents
             .Where(a => a.Type == ActivityType.WorkerCompletedTask)
             .OrderBy(a => a.DayNumber)
@@ -245,14 +247,22 @@ public sealed class WorkerMetricsService
 
             if (nextTookTask != null)
             {
-                var waitDuration = (nextTookTask.DayNumber - completedDay);
-                waitTime += waitDuration;
+                // Простой = разница в днях минус 1 (следующий день не считается простоем)
+                var waitDuration = (nextTookTask.DayNumber - completedDay - 1);
+                if (waitDuration > 0)
+                {
+                    waitTime += waitDuration;
+                }
             }
             else
             {
                 // Если нет следующего WorkerTookTask — считаем до конца симуляции
-                var waitDuration = (_simulation.CurrentDay - completedDay);
-                waitTime += waitDuration;
+                // Но последний день тоже не считаем простоем (worker мог быть занят до конца дня)
+                var waitDuration = (_simulation.CurrentDay - completedDay - 1);
+                if (waitDuration > 0)
+                {
+                    waitTime += waitDuration;
+                }
             }
         }
 

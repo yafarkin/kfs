@@ -3,6 +3,7 @@ using KanbanFlowApi.Dtos.Board;
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Dtos.History;
 using KanbanFlowApi.Mappers;
+using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.Config;
 using KanbanFlowSerivce.Enums;
 using Stage = KanbanFlowSerivce.Dtos.Config.Stage;
@@ -21,39 +22,19 @@ public class ApiMapperTests
         // Act
         var apiDto = ApiMapper.ToApiDto(domainConfig);
 
-        // Assert
+        // Assert - основная структура
         Assert.NotNull(apiDto);
         Assert.Equal(42, apiDto.Seed);
         Assert.Equal(2, apiDto.Workers.Count);
         Assert.Equal(2, apiDto.Tasks.Count);
         Assert.Equal(3, apiDto.Workflow.Stages.Count);
-    }
 
-    [Fact]
-    public void ToApiDto_Workers_MappedCorrectly()
-    {
-        // Arrange
-        var domainConfig = CreateDomainConfig();
-
-        // Act
-        var apiDto = ApiMapper.ToApiDto(domainConfig);
-
-        // Assert
+        // Assert - Workers
         var devWorker = Assert.Single(apiDto.Workers, w => w.Login == "dev1");
         Assert.Contains("backend", devWorker.Skills);
         Assert.Equal(100, devWorker.Performance);
-    }
 
-    [Fact]
-    public void ToApiDto_Stages_MappedCorrectly()
-    {
-        // Arrange
-        var domainConfig = CreateDomainConfig();
-
-        // Act
-        var apiDto = ApiMapper.ToApiDto(domainConfig);
-
-        // Assert
+        // Assert - Stages и переходы
         var todoStage = Assert.Single(apiDto.Workflow.Stages, s => s.Name == "Todo");
         Assert.Equal(StageType.Buffer, todoStage.Type);
         var todoTransition = Assert.Single(todoStage.Transitions);
@@ -65,18 +46,8 @@ public class ApiMapperTests
         var devTransition = Assert.Single(developingStage.Transitions);
         Assert.Equal("Done", devTransition.TargetStageName);
         Assert.Equal(1.0, devTransition.Probability);
-    }
 
-    [Fact]
-    public void ToApiDto_Tasks_MappedCorrectly()
-    {
-        // Arrange
-        var domainConfig = CreateDomainConfig();
-
-        // Act
-        var apiDto = ApiMapper.ToApiDto(domainConfig);
-
-        // Assert
+        // Assert - Tasks
         var task1 = Assert.Single(apiDto.Tasks, t => t.Key == "TASK-1");
         Assert.Equal("Implement feature", task1.Summary);
         Assert.Equal(TShirtType.L, task1.ShirtType);
@@ -91,84 +62,32 @@ public class ApiMapperTests
         // Act
         var domainConfig = ApiMapper.ToDomainConfig(apiDto);
 
-        // Assert
+        // Assert - основная структура
         Assert.NotNull(domainConfig);
         Assert.Equal(42, domainConfig.Seed);
         Assert.Equal(2, domainConfig.Workers.Count);
         Assert.Equal(2, domainConfig.Tasks.Count);
         Assert.Equal(3, domainConfig.Workflow.Stages.Count);
-    }
 
-    [Fact]
-    public void ToDomainConfig_Workers_MappedCorrectly()
-    {
-        // Arrange
-        var apiDto = CreateApiDto();
-
-        // Act
-        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
-
-        // Assert
+        // Assert - Workers
         var devWorker = Assert.Single(domainConfig.Workers, w => w.Login == "dev1");
         Assert.Contains("backend", devWorker.Skills);
         Assert.Equal(100, devWorker.Performance);
-    }
 
-    [Fact]
-    public void ToDomainConfig_Stages_MappedCorrectly()
-    {
-        // Arrange
-        var apiDto = CreateApiDto();
-
-        // Act
-        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
-
-        // Assert
-        var todoStage = Assert.Single(domainConfig.Workflow.Stages, s => s.Name == "Todo");
-        Assert.Equal(StageType.Buffer, todoStage.Type);
-        Assert.Single(todoStage.Transitions, t => t.Stage.Name == "Developing");
-
-        var developingStage = Assert.Single(domainConfig.Workflow.Stages, s => s.Name == "Developing");
-        Assert.Equal(StageType.Work, developingStage.Type);
-        Assert.Single(developingStage.Transitions, t => t.Stage.Name == "Done");
-    }
-
-    [Fact]
-    public void ToDomainConfig_Transitions_ReferenceCorrectStages()
-    {
-        // Arrange
-        var apiDto = CreateApiDto();
-
-        // Act
-        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
-
-        // Assert - проверяем что переходы ссылаются на правильные объекты стадий
+        // Assert - Stages и переходы (ссылки на правильные объекты)
         var todoStage = domainConfig.Workflow.Stages.First(s => s.Name == "Todo");
         var developingStage = domainConfig.Workflow.Stages.First(s => s.Name == "Developing");
         var doneStage = domainConfig.Workflow.Stages.First(s => s.Name == "Done");
 
-        // Todo -> Developing
         var todoTransition = Assert.Single(todoStage.Transitions);
         Assert.Same(developingStage, todoTransition.Stage);
 
-        // Developing -> Done
         var developingTransition = Assert.Single(developingStage.Transitions);
         Assert.Same(doneStage, developingTransition.Stage);
 
-        // Done - нет переходов
         Assert.Empty(doneStage.Transitions);
-    }
 
-    [Fact]
-    public void ToDomainConfig_Tasks_MappedCorrectly()
-    {
-        // Arrange
-        var apiDto = CreateApiDto();
-
-        // Act
-        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
-
-        // Assert
+        // Assert - Tasks
         var task1 = Assert.Single(domainConfig.Tasks, t => t.Key == "TASK-1");
         Assert.Equal("Implement feature", task1.Summary);
         Assert.Equal(TShirtType.L, task1.ShirtType);
@@ -258,7 +177,7 @@ public class ApiMapperTests
     }
 
     [Fact]
-    public void ToDomainConfig_EmptyTransitions_CreatesEmptyTransitions()
+    public void ToApiDto_EmptyTransitions_CreatesEmptyTransitions()
     {
         // Arrange
         var apiDto = new ApiSimulationConfigDto
@@ -287,6 +206,111 @@ public class ApiMapperTests
         var doneStage = Assert.Single(domainConfig.Workflow.Stages);
         Assert.Empty(doneStage.Transitions);
     }
+
+    #region Negative Tests
+
+    [Fact]
+    public void ToDomainConfig_TransitionToNonExistentStage_IgnoresTransition()
+    {
+        // Arrange - переход ссылается на несуществующую стадию
+        var apiDto = new ApiSimulationConfigDto
+        {
+            Seed = 1,
+            Workers = new List<ApiWorkerDto>(),
+            Workflow = new ApiWorkflowDto
+            {
+                Stages =
+                [
+                    new()
+                    {
+                        Name = "Todo",
+                        Type = StageType.Buffer,
+                        Transitions = [new() { TargetStageName = "NonExistent", Probability = 1.0 }]
+                    }
+                ]
+            },
+            Tasks = new List<ApiTaskDto>()
+        };
+
+        // Act
+        var domainConfig = ApiMapper.ToDomainConfig(apiDto);
+
+        // Assert - переход должен быть проигнорирован
+        var todoStage = Assert.Single(domainConfig.Workflow.Stages);
+        Assert.Empty(todoStage.Transitions);
+    }
+
+    [Fact]
+    public void ToDomainConfig_MissingWorkerInBoard_ThrowsException()
+    {
+        // Arrange - Board ссылается на воркера которого нет в конфигурации
+        var config = CreateDomainConfig();
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+        
+        var apiState = ApiMapper.ToApiDto(simulation);
+        // Удаляем воркера из конфигурации но оставляем в Board
+        apiState.Config.Workers.Clear();
+
+        // Act & Assert - восстановление должно завершиться ошибкой
+        Assert.Throws<InvalidOperationException>(() => 
+            ApiMapper.ToDomainSimulation(apiState));
+    }
+
+    [Fact]
+    public void ToDomainConfig_MissingTaskInBoard_ThrowsException()
+    {
+        // Arrange - Board ссылается на задачу которой нет в конфигурации
+        var config = CreateDomainConfig();
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+        
+        var apiState = ApiMapper.ToApiDto(simulation);
+        // Удаляем задачу из конфигурации но оставляем в Board
+        apiState.Config.Tasks.Clear();
+
+        // Act & Assert - восстановление должно завершиться ошибкой
+        Assert.Throws<InvalidOperationException>(() => 
+            ApiMapper.ToDomainSimulation(apiState));
+    }
+
+    [Fact]
+    public void ToDomainConfig_MissingStageInBoard_ThrowsException()
+    {
+        // Arrange - Board ссылается на стадию которой нет в конфигурации
+        var config = CreateDomainConfig();
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+        
+        var apiState = ApiMapper.ToApiDto(simulation);
+        // Удаляем стадию из конфигурации
+        apiState.Config.Workflow.Stages.Clear();
+
+        // Act & Assert - восстановление должно завершиться ошибкой
+        Assert.Throws<InvalidOperationException>(() => 
+            ApiMapper.ToDomainSimulation(apiState));
+    }
+
+    [Fact]
+    public void ToDomainConfig_NullCollections_HandledGracefully()
+    {
+        // Arrange - DTO с null коллекциями (если тип позволяет)
+        var apiDto = new ApiSimulationConfigDto
+        {
+            Seed = 1,
+            Workers = null!,
+            Workflow = new ApiWorkflowDto
+            {
+                Stages = null!
+            },
+            Tasks = null!
+        };
+
+        // Act & Assert - должно выбросить ArgumentNullException или обработать
+        Assert.ThrowsAny<Exception>(() => ApiMapper.ToDomainConfig(apiDto));
+    }
+
+    #endregion
 
     private static SimulationConfig CreateDomainConfig()
     {

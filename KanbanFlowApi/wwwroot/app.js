@@ -4,9 +4,7 @@ let simulationState = null;
 let autoPlayInterval = null;
 let isAutoPlaying = false;
 let isLoading = false;
-let currentMetrics = null;
-let currentWorkerMetrics = null;
-let currentTaskMetrics = null;
+let currentAllMetrics = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -124,11 +122,8 @@ async function loadDefaultConfig() {
         renderHistory();
         updateControls();
 
-        // Расчёт метрик после загрузки конфигурации
-        calculateMetrics();
-        calculateWorkerMetrics();
-        calculateTaskMetrics();
-        calculateStageMetrics();
+        // Расчёт всех метрик после загрузки конфигурации
+        calculateAllMetrics();
 
         showToast(`Конфигурация "${configName}" загружена`, 'success');
     } catch (error) {
@@ -212,10 +207,7 @@ function updateBoard(newState) {
     renderWorkers();
     renderHistory();
     updateControls();
-    calculateMetrics();
-    calculateWorkerMetrics();
-    calculateTaskMetrics();
-    calculateStageMetrics();
+    calculateAllMetrics();
 }
 
 // Анимация прогресса задачи
@@ -557,12 +549,9 @@ function importJson() {
         renderHistory();
         updateControls();
         closeJsonModal();
-        
-        // Расчёт метрик после импорта
-        calculateMetrics();
-        calculateWorkerMetrics();
-        calculateTaskMetrics();
-        calculateStageMetrics();
+
+        // Расчёт всех метрик после импорта
+        calculateAllMetrics();
 
         showToast('Конфигурация импортирована', 'success');
     } catch (err) {
@@ -593,14 +582,14 @@ function toggleMetricsPanel() {
     }
 }
 
-// Расчёт метрик через API
-async function calculateMetrics() {
+// Расчёт всех метрик через единый API
+async function calculateAllMetrics() {
     if (!simulationState) {
         return;
     }
 
     try {
-        const response = await fetch('/api/simulation/calculate-metrics', {
+        const response = await fetch('/api/simulation/all-metrics', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -609,14 +598,19 @@ async function calculateMetrics() {
         });
 
         if (!response.ok) {
-            console.error('Error calculating metrics:', response.status);
+            console.error('Error calculating all metrics:', response.status);
             return;
         }
 
-        currentMetrics = await response.json();
-        renderMetrics(currentMetrics);
+        currentAllMetrics = await response.json();
+        
+        // Рендерим все секции метрик
+        renderMetrics(currentAllMetrics.simulationMetrics);
+        renderWorkerMetrics(currentAllMetrics.workerMetrics);
+        renderTaskMetrics(currentAllMetrics.taskMetrics);
+        renderStageMetrics(currentAllMetrics.stageMetrics);
     } catch (error) {
-        console.error('Error calculating metrics:', error);
+        console.error('Error calculating all metrics:', error);
     }
 }
 
@@ -718,33 +712,6 @@ function toggleWorkerMetricsPanel() {
     }
 }
 
-// Расчёт метрик работников через API
-async function calculateWorkerMetrics() {
-    if (!simulationState) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/simulation/workers/metrics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(simulationState)
-        });
-
-        if (!response.ok) {
-            console.error('Error calculating worker metrics:', response.status);
-            return;
-        }
-
-        currentWorkerMetrics = await response.json();
-        renderWorkerMetrics(currentWorkerMetrics);
-    } catch (error) {
-        console.error('Error calculating worker metrics:', error);
-    }
-}
-
 // Рендеринг метрик работников
 function renderWorkerMetrics(workerMetrics) {
     const grid = document.getElementById('workerMetricsGrid');
@@ -791,34 +758,6 @@ function toggleTaskMetricsPanel() {
     const panel = document.getElementById('taskMetricsPanel');
     if (panel) {
         panel.classList.toggle('collapsed');
-    }
-}
-
-// Расчёт метрик задач через API
-async function calculateTaskMetrics() {
-    if (!simulationState) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/simulation/task-metrics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(simulationState)
-        });
-
-        if (!response.ok) {
-            console.error('Error calculating task metrics:', response.status);
-            return;
-        }
-
-        currentTaskMetrics = await response.json();
-        console.log('Task metrics calculated:', currentTaskMetrics);
-        renderTaskMetrics(currentTaskMetrics);
-    } catch (error) {
-        console.error('Error calculating task metrics:', error);
     }
 }
 
@@ -898,34 +837,6 @@ function toggleStageMetricsPanel() {
     const panel = document.getElementById('stageMetricsPanel');
     if (panel) {
         panel.classList.toggle('collapsed');
-    }
-}
-
-// Расчёт метрик стадий через API
-async function calculateStageMetrics() {
-    if (!simulationState) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/simulation/stage-metrics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(simulationState)
-        });
-
-        if (!response.ok) {
-            console.error('Error calculating stage metrics:', response.status);
-            return;
-        }
-
-        const stageMetrics = await response.json();
-        console.log('Stage metrics calculated:', stageMetrics);
-        renderStageMetrics(stageMetrics);
-    } catch (error) {
-        console.error('Error calculating stage metrics:', error);
     }
 }
 
