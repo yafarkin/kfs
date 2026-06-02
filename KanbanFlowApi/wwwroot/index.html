@@ -1203,17 +1203,50 @@
                 <i class="bi bi-chevron-down settings-toggle-icon"></i>
             </div>
             <div class="settings-body">
-                <!-- Конфигурация -->
+                <!-- Конфигурация: Процесс -->
                 <div class="settings-section">
-                    <h4><i class="bi bi-sliders me-2"></i>Конфигурация</h4>
+                    <h4><i class="bi bi-sliders me-2"></i>Производственный процесс</h4>
                     <div class="settings-row">
-                        <select class="form-select" id="configSelector" style="width: auto; min-width: 200px;">
+                        <select class="form-select" id="processSelector" style="width: auto; min-width: 250px;">
                             <option value="">Загрузка...</option>
                         </select>
-                        <button class="btn btn-primary" id="btnLoadConfig" onclick="loadDefaultConfig()">
-                            <i class="bi bi-plus-circle me-2"></i>Новая
+                        <small class="text-muted" id="processDescription"></small>
+                    </div>
+                </div>
+
+                <!-- Конфигурация: Работники -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-people me-2"></i>Команда исполнителей</h4>
+                    <div class="settings-row">
+                        <select class="form-select" id="workerPoolSelector" style="width: auto; min-width: 250px;">
+                            <option value="">Загрузка...</option>
+                        </select>
+                        <small class="text-muted" id="workerPoolDescription"></small>
+                    </div>
+                </div>
+
+                <!-- Конфигурация: Задачи (опционально) -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-card-checklist me-2"></i>Набор задач (опционально)</h4>
+                    <div class="settings-row">
+                        <select class="form-select" id="taskPresetSelector" style="width: auto; min-width: 250px;">
+                            <option value="">Использовать задачи из процесса</option>
+                        </select>
+                        <small class="text-muted" id="taskPresetDescription"></small>
+                    </div>
+                </div>
+
+                <!-- Кнопка запуска -->
+                <div class="settings-section">
+                    <h4><i class="bi bi-play-circle me-2"></i>Запуск симуляции</h4>
+                    <div class="settings-row">
+                        <div class="input-group" style="width: auto;">
+                            <span class="input-group-text">Seed</span>
+                            <input type="number" class="form-control" id="seedInput" value="42" style="width: 100px;">
+                        </div>
+                        <button class="btn btn-primary" id="btnStartSimulation" onclick="startSimulation()">
+                            <i class="bi bi-play-fill me-2"></i>Запустить симуляцию
                         </button>
-                        <small class="text-muted" id="configDescription"></small>
                     </div>
                 </div>
 

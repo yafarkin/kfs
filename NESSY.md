@@ -11,9 +11,10 @@
 - 3 проекта: `KanbanFlowApi`, `KanbanFlowSerivce`, `KanbanFlow.Tests`
 
 **Статус:** Активная разработка. Последние изменения:
+- ✅ **Раздельные пресеты**: процесс + команда + задачи (комбинаторика)
+- ✅ **LocalStorage**: сохранение и восстановление состояния симуляции
 - ✅ Объединены 4 endpoint'а метрик в один `/api/simulation/all-metrics`
 - ✅ Исправлен расчёт `BufferTimeDays` для работников (теперь только реальные простои >1 дня)
-- ✅ Обновлён README.md
 
 ---
 
@@ -23,13 +24,17 @@
 KanbanFlow/
 ├── KanbanFlowApi/              # Веб-API + UI (wwwroot)
 │   ├── Controllers/
-│   │   └── SimulationController.cs    # POST /api/simulation/all-metrics
+│   │   └── SimulationController.cs    # GET /process-presets, /worker-pools, /task-presets; POST /start, /all-metrics
 │   ├── Dtos/
 │   │   ├── Board/             # ApiBoardDto, ApiStageDto, ApiWorkerDto, ApiTaskDto
-│   │   ├── Config/            # ApiConfigDto, ApiWorkflowDto, ApiStageConfigDto
+│   │   ├── Config/            # ProcessPresetDto, WorkerPoolPresetDto, TaskPresetDto, StartSimulationRequestDto
 │   │   ├── History/           # ApiHistoryDayDto, ApiHistoryActivityDto
 │   │   ├── Metrics/           # AllMetricsDto, ApiMetricsDto, ApiWorkerMetricsDto
 │   │   └── Task/              # TaskMetricsDto, StageMetricsAggregatedDto
+│   ├── Factories/
+│   │   ├── ProcessPresetsFactory.cs   # Фабрика пресетов процессов (3 пресета)
+│   │   ├── WorkerPoolPresetsFactory.cs # Фабрика пресетов команд (3 пресета)
+│   │   └── TaskPresetsFactory.cs      # Фабрика пресетов задач (3 пресета)
 │   ├── Mappers/
 │   │   └── ApiMapper.cs       # ToApiDto/ToDomainConfig/ToDomainSimulation
 │   ├── Services/
@@ -37,8 +42,8 @@ KanbanFlow/
 │   │   ├── WorkerMetricsService.cs  # Метрики работников (Throughput, LeadTime, Efficiency)
 │   │   └── TaskMetricsService.cs    # Метрики задач + агрегированные метрики стадий
 │   ├── wwwroot/
-│   │   ├── index.html         # UI: доска, воркеры, история, 4 панели метрик
-│   │   └── app.js             # Клиентская логика: calculateAllMetrics(), рендеринг
+│   │   ├── index.html         # UI: 3 селектора пресетов, доска, воркеры, история, 4 панели метрик
+│   │   └── app.js             # Клиентская логика: startSimulation(), LocalStorage, рендеринг
 │   ├── appsettings.json
 │   └── Program.cs             # Точка входа API
 │
@@ -50,7 +55,8 @@ KanbanFlow/
 │   │   ├── StageType.cs       # Buffer, Work
 │   │   └── TShirtType.cs      # S=1день, M=3дня, L=5дней, XL=8дней
 │   ├── Factories/
-│   │   └── ConfigFactory.cs   # Фабрика тестовых конфигураций
+│   │   ├── ConfigFactory.cs   # Фабрика тестовых конфигураций
+│   │   └── SimulationFactory.cs # Фабрика симуляций
 │   ├── Mappers/
 │   │   └── DomainMapper.cs    # Маппинг доменных DTO
 │   └── Services/
@@ -99,6 +105,33 @@ KanbanFlow/
 ---
 
 ## API
+
+### Endpoint'ы пресетов
+
+```http
+GET /api/simulation/process-presets
+GET /api/simulation/worker-pools
+GET /api/simulation/task-presets
+```
+
+Возвращают списки доступных пресетов для выбора.
+
+### Запуск симуляции
+
+```http
+POST /api/simulation/start
+Content-Type: application/json
+
+{
+  "processPresetName": "kanban-software",
+  "workerPoolPresetName": "small-team",
+  "taskPresetName": "standard-sprint",  // опционально
+  "seed": 42,
+  "useVariability": true
+}
+```
+
+**Ответ:** Состояние симуляции на день 0 (готово к запуску `simulate-day`)
 
 ### Основной endpoint
 
@@ -210,7 +243,14 @@ if (waitDuration > 0)
 ## UI (wwwroot)
 
 ### Структура index.html
-- **Панель управления**: загрузка конфига, симуляция по дням, автосимуляция, импорт/экспорт JSON
+- **Панель настроек** (раскрывающаяся):
+  - **Процесс** — селектор пресета процесса (workflow + задачи по умолчанию)
+  - **Команда** — селектор пресета работников
+  - **Задачи** — селектор пресета задач (опционально, переопределяет задачи процесса)
+  - **Seed** — поле для воспроизводимости
+  - **Вариативность** — toggle использования случайных отклонений
+  - **Экспорт/Импорт** — кнопки для работы с JSON
+- **Кнопки управления**: следующий день, авто-режим, перезагрузить
 - **Доска**: стадии с задачами (карточки с прогрессом)
 - **Воркеры**: карточки с назначенными задачами
 - **История**: лог событий по дням
@@ -222,19 +262,58 @@ if (waitDuration > 0)
 
 ### Ключевые функции app.js
 ```javascript
-let currentAllMetrics = null;  // Единое хранилище всех метрик
+// Хранение пресетов
+let processPresets = [];
+let workerPoolPresets = [];
+let taskPresetPresets = [];
 
-async function calculateAllMetrics() {
-    const response = await fetch('/api/simulation/all-metrics', {
-        method: 'POST',
-        body: JSON.stringify(simulationState)
-    });
-    currentAllMetrics = await response.json();
+// Загрузка пресетов при старте
+async function loadAllPresets() {
+    const [processResponse, workerResponse, taskResponse] = await Promise.all([
+        fetch('/api/simulation/process-presets'),
+        fetch('/api/simulation/worker-pools'),
+        fetch('/api/simulation/task-presets')
+    ]);
+    // Заполнение селекторов + восстановление из LocalStorage
+}
+
+// Запуск симуляции из комбинации пресетов
+async function startSimulation() {
+    const request = {
+        processPresetName: document.getElementById('processSelector').value,
+        workerPoolPresetName: document.getElementById('workerPoolSelector').value,
+        taskPresetName: document.getElementById('taskPresetSelector').value || null,
+        seed: parseInt(document.getElementById('seedInput').value) || 42,
+        useVariability: document.getElementById('variabilityToggle').checked
+    };
     
-    renderMetrics(currentAllMetrics.simulationMetrics);
-    renderWorkerMetrics(currentAllMetrics.workerMetrics);
-    renderTaskMetrics(currentAllMetrics.taskMetrics);
-    renderStageMetrics(currentAllMetrics.stageMetrics);
+    const response = await fetch('/api/simulation/start', {
+        method: 'POST',
+        body: JSON.stringify(request)
+    });
+    
+    simulationState = await response.json();
+    saveSimulationToStorage();  // Сохранение в localStorage
+    // Рендеринг...
+}
+
+// LocalStorage
+function saveSelectionToStorage() {
+    localStorage.setItem('kanbanflow_selection', JSON.stringify({
+        processPresetName, workerPoolPresetName, taskPresetName, seed, useVariability
+    }));
+}
+
+function saveSimulationToStorage() {
+    localStorage.setItem('kanbanflow_simulation', JSON.stringify(simulationState));
+}
+
+function restoreFromLocalStorage() {
+    const saved = localStorage.getItem('kanbanflow_simulation');
+    if (saved) {
+        simulationState = JSON.parse(saved);
+        // Восстановление UI...
+    }
 }
 ```
 
@@ -313,6 +392,24 @@ git add -A && git commit -m "..."
 ---
 
 ## Частые задачи
+
+### Добавление нового пресета
+
+**Процесс:**
+1. Добавить метод в `ProcessPresetsFactory.cs`
+2. Создать `ApiWorkflowDto` со стадиями и переходами
+3. Добавить задачи по умолчанию
+4. Добавить в `GetAllPresets()`
+
+**Команда:**
+1. Добавить метод в `WorkerPoolPresetsFactory.cs`
+2. Создать список `ApiWorkerDto`
+3. Добавить в `GetAllPresets()`
+
+**Задачи:**
+1. Добавить метод в `TaskPresetsFactory.cs`
+2. Создать список `ApiTaskDto`
+3. Добавить в `GetAllPresets()`
 
 ### Исправление бага в метриках
 1. Найти сервис: `MetricsService.cs`, `WorkerMetricsService.cs`, `TaskMetricsService.cs`

@@ -271,8 +271,8 @@ public sealed class TaskMovementService
             BoardWorker? worker = null;
             if (toStage.Stage.Type == StageType.Work)
             {
-                // Если задача не требует навыков для этой стадии — помещаем без воркера
-                // В следующем цикле while она автоматически продвинется дальше
+                // Если задача не требует навыков для этой стадии — пропускаем без воркера
+                // Задача пройдёт через эту стадию без остановки (в следующем цикле ProcessMovements)
                 if (!TaskRequiresStage(task, toStage))
                 {
                     worker = null;

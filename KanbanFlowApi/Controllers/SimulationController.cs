@@ -2,6 +2,7 @@ using KanbanFlowApi.Dtos;
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Dtos.Metrics;
 using KanbanFlowApi.Dtos.Task;
+using KanbanFlowApi.Factories;
 using KanbanFlowApi.Mappers;
 using KanbanFlowApi.Services;
 using KanbanFlowSerivce.Dtos;
@@ -16,7 +17,97 @@ namespace KanbanFlowApi.Controllers;
 public class SimulationController : ControllerBase
 {
     /// <summary>
-    /// Получить список доступных конфигураций симуляции.
+    /// Получить список доступных пресетов производственных процессов.
+    /// </summary>
+    [HttpGet("process-presets")]
+    public ActionResult<List<ProcessPresetDto>> GetProcessPresets()
+    {
+        var presets = ProcessPresetsFactory.GetAllPresets();
+        return Ok(presets);
+    }
+
+    /// <summary>
+    /// Получить список доступных пресетов пулов работников.
+    /// </summary>
+    [HttpGet("worker-pools")]
+    public ActionResult<List<WorkerPoolPresetDto>> GetWorkerPools()
+    {
+        var presets = WorkerPoolPresetsFactory.GetAllPresets();
+        return Ok(presets);
+    }
+
+    /// <summary>
+    /// Получить список доступных пресетов задач.
+    /// </summary>
+    [HttpGet("task-presets")]
+    public ActionResult<List<TaskPresetDto>> GetTaskPresets()
+    {
+        var presets = TaskPresetsFactory.GetAllPresets();
+        return Ok(presets);
+    }
+
+    /// <summary>
+    /// Запустить симуляцию из комбинации пресетов.
+    /// Возвращает состояние симуляции на день 0 (готово к началу работы).
+    /// </summary>
+    /// <param name="request">Запрос с именами пресетов</param>
+    [HttpPost("start")]
+    public ActionResult<ApiSimulationStateDto> StartSimulation([FromBody] StartSimulationRequestDto request)
+    {
+        // Получаем пресет процесса
+        var processPreset = ProcessPresetsFactory.GetPresetByName(request.ProcessPresetName);
+        if (processPreset == null)
+        {
+            return BadRequest(new { error = $"Процесс '{request.ProcessPresetName}' не найден" });
+        }
+
+        // Получаем пресет работников
+        var workerPoolPreset = WorkerPoolPresetsFactory.GetPresetByName(request.WorkerPoolPresetName);
+        if (workerPoolPreset == null)
+        {
+            return BadRequest(new { error = $"Пул работников '{request.WorkerPoolPresetName}' не найден" });
+        }
+
+        // Получаем пресет задач (опционально)
+        List<ApiTaskDto> tasks;
+        if (!string.IsNullOrEmpty(request.TaskPresetName))
+        {
+            var taskPreset = TaskPresetsFactory.GetPresetByName(request.TaskPresetName);
+            if (taskPreset == null)
+            {
+                return BadRequest(new { error = $"Пресет задач '{request.TaskPresetName}' не найден" });
+            }
+            tasks = taskPreset.Tasks;
+        }
+        else
+        {
+            // Используем задачи из процесса
+            tasks = processPreset.Tasks;
+        }
+
+        // Собираем конфигурацию
+        var config = new ApiSimulationConfigDto
+        {
+            Seed = request.Seed,
+            UseVariability = request.UseVariability,
+            Workflow = processPreset.Workflow,
+            Workers = workerPoolPreset.Workers,
+            Tasks = tasks
+        };
+
+        // Создаём доменную конфигурацию через маппер
+        var domainConfig = ApiMapper.ToDomainConfig(config);
+
+        // Инициализируем симуляцию
+        var simulation = new Simulation();
+        simulation.InitFromConfig(domainConfig);
+
+        // Возвращаем состояние на день 0
+        return Ok(ApiMapper.ToApiDto(simulation));
+    }
+
+    /// <summary>
+    /// Получить список доступных конфигураций симуляции (устаревший endpoint).
     /// </summary>
     [HttpGet("presets")]
     public ActionResult<List<ConfigPresetDto>> GetConfigPresets()

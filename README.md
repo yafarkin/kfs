@@ -4,12 +4,14 @@
 
 ## Возможности
 
+- **Гибкое конфигурирование** — раздельный выбор процесса, команды и задач (комбинаторика пресетов)
 - **Симуляция потока задач** — задачи перемещаются по стадиям workflow, воркеры выполняют работу с учётом производительности и WIP-лимитов
 - **Расчёт метрик** — Lead Time, Throughput, Flow Efficiency, Frequency Distribution
 - **Метрики работников** — Throughput, Lead Time, Efficiency (с разделением на ценные и вспомогательные стадии)
 - **Метрики стадий** — P50, P85, P95, Avg, Max время прохождения
 - **Импорт/экспорт конфигурации** — сохранение состояния в JSON
 - **Автосимуляция** — запуск симуляции по дням с анимацией
+- **Local Storage** — автоматическое сохранение и восстановление состояния симуляции
 
 ## Структура проекта
 
@@ -17,13 +19,17 @@
 KanbanFlow/
 ├── KanbanFlowApi/              # Веб-API и UI
 │   ├── Controllers/
-│   │   └── SimulationController.cs    # Единый endpoint /api/simulation/all-metrics
+│   │   └── SimulationController.cs    # Endpoint'ы: GET /process-presets, /worker-pools, /task-presets; POST /start
 │   ├── Dtos/
 │   │   ├── Board/             # DTO состояния доски
-│   │   ├── Config/            # DTO конфигурации workflow
+│   │   ├── Config/            # DTO конфигурации: ProcessPresetDto, WorkerPoolPresetDto, TaskPresetDto
 │   │   ├── History/           # DTO истории активностей
 │   │   ├── Metrics/           # DTO метрик (AllMetricsDto, ApiMetricsDto, etc.)
 │   │   └── Task/              # DTO задач и стадий
+│   ├── Factories/
+│   │   ├── ProcessPresetsFactory.cs   # Фабрика пресетов процессов
+│   │   ├── WorkerPoolPresetsFactory.cs # Фабрика пресетов команд
+│   │   └── TaskPresetsFactory.cs      # Фабрика пресетов задач
 │   ├── Mappers/
 │   │   └── ApiMapper.cs       # Маппинг между API DTO и доменными моделями
 │   ├── Services/
@@ -31,8 +37,8 @@ KanbanFlow/
 │   │   ├── WorkerMetricsService.cs  # Метрики работников
 │   │   └── TaskMetricsService.cs    # Метрики задач и стадий
 │   ├── wwwroot/
-│   │   ├── index.html         # UI приложения
-│   │   └── app.js             # Клиентская логика
+│   │   ├── index.html         # UI приложения (3 селектора пресетов)
+│   │   └── app.js             # Клиентская логика + LocalStorage
 │   └── Program.cs             # Точка входа API
 │
 ├── KanbanFlowSerivce/         # Доменная логика (без зависимостей от API)
@@ -43,7 +49,8 @@ KanbanFlow/
 │   │   ├── StageType.cs       # Типы стадий (Buffer, Work)
 │   │   └── TShirtType.cs      # Размеры задач (S, M, L, XL)
 │   ├── Factories/
-│   │   └── ConfigFactory.cs   # Фабрика тестовых конфигураций
+│   │   ├── ConfigFactory.cs   # Фабрика тестовых конфигураций
+│   │   └── SimulationFactory.cs # Фабрика симуляций
 │   ├── Mappers/
 │   │   └── DomainMapper.cs    # Маппинг доменных DTO
 │   └── Services/
@@ -120,7 +127,78 @@ dotnet test /p:CollectCoverage=true
 
 ## API
 
-### Основной endpoint
+### Endpoint'ы пресетов
+
+```http
+GET /api/simulation/process-presets
+```
+
+**Ответ:** Список пресетов процессов
+```json
+[
+  {
+    "name": "kanban-software",
+    "displayName": "Kanban Software Dev",
+    "description": "7 стадий: Todo → Developing → ...",
+    "workflow": { ... },
+    "tasks": [ ... ],
+    "isDefault": true
+  }
+]
+```
+
+```http
+GET /api/simulation/worker-pools
+```
+
+**Ответ:** Список пресетов команд
+```json
+[
+  {
+    "name": "small-team",
+    "displayName": "Маленькая команда",
+    "description": "3 человека: 2 разработчика + 1 QA",
+    "workers": [ ... ],
+    "isDefault": true
+  }
+]
+```
+
+```http
+GET /api/simulation/task-presets
+```
+
+**Ответ:** Список пресетов задач
+```json
+[
+  {
+    "name": "standard-sprint",
+    "displayName": "Стандартный спринт",
+    "description": "10 задач: 3 XS, 4 S, 3 M",
+    "tasks": [ ... ],
+    "isDefault": true
+  }
+]
+```
+
+### Запуск симуляции
+
+```http
+POST /api/simulation/start
+Content-Type: application/json
+
+{
+  "processPresetName": "kanban-software",
+  "workerPoolPresetName": "small-team",
+  "taskPresetName": "standard-sprint",  // опционально
+  "seed": 42,
+  "useVariability": true
+}
+```
+
+**Ответ:** Состояние симуляции на день 0 (готово к запуску)
+
+### Расчёт метрик
 
 ```http
 POST /api/simulation/all-metrics
@@ -152,6 +230,25 @@ Content-Type: application/json
 - `currentDay` — текущий день симуляции
 
 ## Конфигурация
+
+### Пресеты
+
+Приложение использует **раздельные пресеты** для гибкого конфигурирования:
+
+**Процессы** (`ProcessPresetDto`):
+- `simple-process` — 3 стадии: Todo → Developing → Done
+- `kanban-software` — 7 стадий: полный цикл разработки
+- `twork-process` — 19 стадий: расширенный workflow с Code Review
+
+**Команды** (`WorkerPoolPresetDto`):
+- `solo-developer` — 1 универсал (backend + frontend)
+- `small-team` — 3 человека: 2 разработчика + 1 QA
+- `twork-team` — 7 человек: 4 backend, 1 frontend, 2 QA
+
+**Задачи** (`TaskPresetDto`):
+- `quick-sprint` — 4 задачи (2 S, 2 M)
+- `standard-sprint` — 10 задач (3 XS, 4 S, 3 M)
+- `large-backlog` — 20 задач (8 BE, 6 FE, 6 QA)
 
 ### Workflow
 
