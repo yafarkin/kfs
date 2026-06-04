@@ -15,6 +15,7 @@
 - ✅ **LocalStorage**: сохранение и восстановление состояния симуляции
 - ✅ Объединены 4 endpoint'а метрик в один `/api/simulation/all-metrics`
 - ✅ Исправлен расчёт `BufferTimeDays` для работников (теперь только реальные простои >1 дня)
+- ✅ **Интерактивный CFD**: подсветка областей при наведении, синхронизация с легендой, тултипы
 
 ---
 
@@ -254,6 +255,11 @@ if (waitDuration > 0)
 - **Доска**: стадии с задачами (карточки с прогрессом)
 - **Воркеры**: карточки с назначенными задачами
 - **История**: лог событий по дням
+- **CFD панель**: Cumulative Flow Diagram с интерактивной подсветкой
+  - Подсветка области при наведении курсора
+  - Синхронизация с легендой (наведение на легенду ↔ подсветка области)
+  - Всплывающая подсказка с названием стадии и количеством задач
+  - Затемнение неактивных областей
 - **4 панели метрик**:
   - Simulation Metrics (Lead Time, Throughput, Flow Efficiency, Frequency)
   - Worker Metrics (Throughput, Lead Time, Efficiency)
@@ -314,6 +320,30 @@ function restoreFromLocalStorage() {
         simulationState = JSON.parse(saved);
         // Восстановление UI...
     }
+}
+
+// CFD интерактивность
+function renderCfdChart() {
+    // Рендеринг CFD с data-stage-name атрибутами для интерактивности
+    // Возвращает SVG с областями и легендой
+}
+
+function initCfdInteractivity(chartContainer, stageAreas, data) {
+    // Навешивание обработчиков mouseenter/mouseleave/mousemove
+    // на области графика и элементы легенды
+}
+
+function handleCfdHover(event, stageName, stageMap, data, tooltip, isArea) {
+    // Подсветка активной области + затемнение остальных
+    // Показ тултипа с данными
+}
+
+function handleCfdLeave(stageMap, tooltip) {
+    // Сброс всех стилей и скрытие тултипа
+}
+
+function showTooltip(stageName, data, tooltip) {
+    // Отображение названия стадии и количества задач
 }
 ```
 
