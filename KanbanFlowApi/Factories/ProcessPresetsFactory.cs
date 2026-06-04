@@ -95,8 +95,7 @@ public static class ProcessPresetsFactory
             {
                 new() { Key = "TASK-1", Summary = "[BE] API пользователей", ShirtType = TShirtType.S, RequiredSkills = ["backend", "qa"] },
                 new() { Key = "TASK-2", Summary = "[BE] Тесты для сервиса", ShirtType = TShirtType.M, RequiredSkills = ["backend", "qa"] },
-                new() { Key = "TASK-3", Summary = "[FE] UI компонент", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] },
-                new() { Key = "TASK-4", Summary = "[QA] Автотесты API", ShirtType = TShirtType.M, RequiredSkills = ["qa"] }
+                new() { Key = "TASK-3", Summary = "[FE] UI компонент", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] }
             }
         };
     }
