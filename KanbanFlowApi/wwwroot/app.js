@@ -51,10 +51,10 @@ async function loadAllPresets() {
         const userWorkerPresets = getUserPresets(STORAGE_KEYS.WORKER_PRESETS);
         const userTaskPresets = getUserPresets(STORAGE_KEYS.TASK_PRESETS);
 
-        // Объединяем: пользовательские пресеты добавляем к серверным
-        processPresets = [...serverProcessPresets, ...userProcessPresets];
-        workerPoolPresets = [...serverWorkerPresets, ...userWorkerPresets];
-        taskPresetPresets = [...serverTaskPresets, ...userTaskPresets];
+        // Объединяем: пользовательские пресеты заменяют серверные с тем же именем
+        processPresets = mergePresets(serverProcessPresets, userProcessPresets);
+        workerPoolPresets = mergePresets(serverWorkerPresets, userWorkerPresets);
+        taskPresetPresets = mergePresets(serverTaskPresets, userTaskPresets);
 
         // Заполняем селекторы
         fillSelector('processSelector', processPresets, 'processDescription');
@@ -68,6 +68,25 @@ async function loadAllPresets() {
         console.error('Error loading presets:', error);
         showToast('Ошибка загрузки пресетов: ' + error.message, 'danger');
     }
+}
+
+// Слияние пресетов: пользовательские заменяют серверные с тем же именем
+function mergePresets(serverPresets, userPresets) {
+    // Создаём мапу пользовательских пресетов по имени
+    const userPresetsMap = new Map(userPresets.map(p => [p.name, p]));
+    
+    // Берём серверные пресеты, но заменяем их пользовательскими если имена совпадают
+    const result = serverPresets.map(p => userPresetsMap.get(p.name) || p);
+    
+    // Добавляем пользовательские пресеты, которых нет в серверных
+    const serverNames = new Set(serverPresets.map(p => p.name));
+    for (const userPreset of userPresets) {
+        if (!serverNames.has(userPreset.name)) {
+            result.push(userPreset);
+        }
+    }
+    
+    return result;
 }
 
 // Загрузка пользовательских пресетов из LocalStorage
@@ -309,6 +328,9 @@ async function startSimulation(daysToSimulate = null) {
     updateLoadingIndicator();
 
     try {
+        // Полностью перезагружаем пресеты из LocalStorage + серверных
+        await loadAllPresets();
+
         const processSelector = document.getElementById('processSelector');
         const workerPoolSelector = document.getElementById('workerPoolSelector');
         const taskPresetSelector = document.getElementById('taskPresetSelector');
@@ -325,7 +347,7 @@ async function startSimulation(daysToSimulate = null) {
             throw new Error('Выберите процесс и команду исполнителей');
         }
 
-        // Ищем пресеты в загруженных массивах (серверные + пользовательские из LocalStorage)
+        // Ищем пресеты в обновлённых массивах (серверные + пользовательские из LocalStorage)
         const processPreset = processPresets.find(p => p.name === processPresetName);
         const workerPoolPreset = workerPoolPresets.find(p => p.name === workerPoolPresetName);
         const taskPreset = taskPresetName ? taskPresetPresets.find(p => p.name === taskPresetName) : null;
@@ -402,6 +424,9 @@ async function reloadConfig() {
     updateLoadingIndicator();
 
     try {
+        // Полностью перезагружаем пресеты из LocalStorage + серверных
+        await loadAllPresets();
+
         const processSelector = document.getElementById('processSelector');
         const workerPoolSelector = document.getElementById('workerPoolSelector');
         const taskPresetSelector = document.getElementById('taskPresetSelector');
@@ -418,7 +443,7 @@ async function reloadConfig() {
             throw new Error('Выберите процесс и команду исполнителей');
         }
 
-        // Ищем пресеты в загруженных массивах (серверные + пользовательские из LocalStorage)
+        // Ищем пресеты в обновлённых массивах (серверные + пользовательские из LocalStorage)
         const processPreset = processPresets.find(p => p.name === processPresetName);
         const workerPoolPreset = workerPoolPresets.find(p => p.name === workerPoolPresetName);
         const taskPreset = taskPresetName ? taskPresetPresets.find(p => p.name === taskPresetName) : null;
