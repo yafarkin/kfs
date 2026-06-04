@@ -1140,29 +1140,44 @@ function renderTaskMetrics(taskMetrics) {
                 </div>
             </div>
             <div class="task-stages">
-                <div class="task-stages-title">
-                    <i class="bi bi-layers"></i>
-                    <span>Стадии</span>
-                </div>
-                ${t.stages.map(s => `
-                    <div class="task-stage-row">
-                        <div class="task-stage-info">
-                            <span class="task-stage-name">${s.stageName}</span>
-                            <span class="task-stage-type ${s.stageType.toLowerCase()}">${s.stageType}</span>
-                        </div>
-                        <div class="task-stage-details">
-                            <span class="task-stage-time">${s.timeInStageDays.toFixed(1)} дн</span>
-                            ${s.workers && s.workers.length > 0 ? `
-                                <div class="task-stage-workers">
-                                    ${s.workers.map(w => `<span class="worker-badge">${w}</span>`).join('')}
-                                </div>
-                            ` : ''}
-                        </div>
+                <div class="task-stages-header" onclick="toggleTaskStages(this)">
+                    <div class="task-stages-title">
+                        <i class="bi bi-layers"></i>
+                        <span>Стадии</span>
                     </div>
-                `).join('')}
+                    <i class="bi bi-chevron-down task-stages-toggle"></i>
+                </div>
+                <div class="task-stages-content collapsed">
+                    ${t.stages.map(s => `
+                        <div class="task-stage-row">
+                            <div class="task-stage-info">
+                                <span class="task-stage-name">${s.stageName}</span>
+                                <span class="task-stage-type ${s.stageType.toLowerCase()}">${s.stageType}</span>
+                            </div>
+                            <div class="task-stage-details">
+                                <span class="task-stage-time">${s.timeInStageDays.toFixed(1)} дн</span>
+                                ${s.workers && s.workers.length > 0 ? `
+                                    <div class="task-stage-workers">
+                                        ${s.workers.map(w => `<span class="worker-badge">${w}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         </div>
     `).join('');
+}
+
+// Переключение сворачивания блока стадий
+function toggleTaskStages(headerElement) {
+    const content = headerElement.nextElementSibling;
+    const toggle = headerElement.querySelector('.task-stages-toggle');
+    if (content && toggle) {
+        content.classList.toggle('collapsed');
+        toggle.classList.toggle('collapsed');
+    }
 }
 
 // Переключение панели метрик стадий

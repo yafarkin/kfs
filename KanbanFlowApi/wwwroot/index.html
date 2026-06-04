@@ -845,13 +845,18 @@
         }
 
         /* Метрики задач */
+        .task-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 15px;
+        }
+
         .task-metric-card {
             background: white;
             border: 2px solid #e9ecef;
             border-radius: 10px;
             padding: 15px;
             transition: all 0.3s ease;
-            margin-bottom: 15px;
         }
 
         .task-metric-card:hover {
@@ -960,6 +965,23 @@
             padding-top: 10px;
         }
 
+        .task-stages-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            padding: 6px 0;
+            transition: all 0.2s ease;
+        }
+
+        .task-stages-header:hover {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
         .task-stages-title {
             display: flex;
             align-items: center;
@@ -967,11 +989,31 @@
             font-size: 0.85rem;
             font-weight: bold;
             color: #666;
-            margin-bottom: 8px;
+            margin: 0;
         }
 
         .task-stages-title i {
             color: #667eea;
+        }
+
+        .task-stages-toggle {
+            font-size: 0.75rem;
+            color: #999;
+            transition: transform 0.2s ease;
+        }
+
+        .task-stages-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .task-stages-content {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .task-stages-content.collapsed {
+            max-height: 0;
         }
 
         .task-stage-row {
@@ -1471,7 +1513,7 @@
                 <i class="bi bi-chevron-down metrics-toggle-icon"></i>
             </div>
             <div class="metrics-body" id="taskMetricsBody">
-                <div id="taskMetricsGrid">
+                <div id="taskMetricsGrid" class="task-metrics-grid">
                     <!-- Метрики задач будут добавлены через JS -->
                 </div>
             </div>
@@ -1511,6 +1553,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=26"></script>
+    <script src="app.js?v=27"></script>
 </body>
 </html>
