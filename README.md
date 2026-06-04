@@ -5,6 +5,7 @@
 ## Возможности
 
 - **Гибкое конфигурирование** — раздельный выбор процесса, команды и задач (комбинаторика пресетов)
+- **Редакторы пресетов** — создание и редактирование пользовательских наборов задач и команд (CRUD, валидация, экспорт/импорт)
 - **Симуляция потока задач** — задачи перемещаются по стадиям workflow, воркеры выполняют работу с учётом производительности и WIP-лимитов
 - **Расчёт метрик** — Lead Time, Throughput, Flow Efficiency, Frequency Distribution
 - **Метрики работников** — Throughput, Lead Time, Efficiency (с разделением на ценные и вспомогательные стадии)
@@ -12,7 +13,7 @@
 - **Cumulative Flow Diagram (CFD)** — визуализация потока задач по стадиям с интерактивной подсветкой
 - **Импорт/экспорт конфигурации** — сохранение состояния в JSON
 - **Автосимуляция** — запуск симуляции по дням с анимацией
-- **Local Storage** — автоматическое сохранение и восстановление состояния симуляции
+- **Local Storage** — автоматическое сохранение и восстановление состояния симуляции и пресетов
 
 ## Структура проекта
 
@@ -20,7 +21,10 @@
 KanbanFlow/
 ├── KanbanFlowApi/              # Веб-API и UI
 │   ├── Controllers/
-│   │   └── SimulationController.cs    # Endpoint'ы: GET /process-presets, /worker-pools, /task-presets; POST /start
+│   │   ├── SimulationController.cs    # Endpoint'ы: GET /process-presets, /worker-pools, /task-presets; POST /start
+│   │   ├── ProcessEditorController.cs # CRUD для пресетов процессов
+│   │   ├── WorkerEditorController.cs  # CRUD для пресетов команд
+│   │   └── TaskEditorController.cs    # CRUD для пресетов задач
 │   ├── Dtos/
 │   │   ├── Board/             # DTO состояния доски
 │   │   ├── Config/            # DTO конфигурации: ProcessPresetDto, WorkerPoolPresetDto, TaskPresetDto
@@ -39,7 +43,12 @@ KanbanFlow/
 │   │   └── TaskMetricsService.cs    # Метрики задач и стадий
 │   ├── wwwroot/
 │   │   ├── index.html         # UI приложения (3 селектора пресетов)
-│   │   └── app.js             # Клиентская логика + LocalStorage
+│   │   ├── app.js             # Клиентская логика + LocalStorage + mergePresets()
+│   │   └── editor/
+│   │       ├── workers.html   # Редактор команд
+│   │       ├── worker-editor.js
+│   │       ├── tasks.html     # Редактор задач
+│   │       └── task-editor.js
 │   └── Program.cs             # Точка входа API
 │
 ├── KanbanFlowSerivce/         # Доменная логика (без зависимостей от API)
@@ -342,6 +351,34 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"
 1. Добавить enum в `KanbanFlowSerivce/Enums/ActivityType.cs`
 2. Обновить логику логирования в соответствующем сервисе
 3. Обновить UI для отображения нового типа события
+
+## Редакторы пресетов
+
+Приложение включает редакторы для создания и редактирования пользовательских пресетов:
+
+**Редактор команд** (`/editor/workers.html`):
+- CRUD операций для воркеров (логин, навыки, WIP-лимит, performance, отклонения)
+- Навыки в виде строки через запятую
+- Сохранение в LocalStorage, валидация на backend
+- Экспорт/импорт пресетов в JSON
+
+**Редактор задач** (`/editor/tasks.html`):
+- CRUD операций для задач (ключ, описание, размер T-Shirt, навыки)
+- Навыки в виде строки через запятую
+- Сохранение в LocalStorage, валидация на backend
+- Экспорт/импорт пресетов в JSON
+
+**Как это работает:**
+1. Откройте редактор (`/editor/workers.html` или `/editor/tasks.html`)
+2. Создайте новый пресет или выберите существующий
+3. Добавьте/отредактируйте элементы
+4. Нажмите "Сохранить" — пресет сохранится в LocalStorage браузера
+5. На главной странице нажмите "Перезагрузить" — пресеты обновятся
+
+**Архитектура:**
+- Backend stateless — только валидация, сохранение в LocalStorage браузера
+- Пользовательские пресеты заменяют серверные с тем же именем
+- Изменения подтягиваются сразу после обновления пресетов
 
 ## Известные ограничения
 

@@ -13,6 +13,7 @@
 **Статус:** Активная разработка. Последние изменения:
 - ✅ **Раздельные пресеты**: процесс + команда + задачи (комбинаторика)
 - ✅ **LocalStorage**: сохранение и восстановление состояния симуляции
+- ✅ **Редакторы пресетов**: задачи и команды (CRUD, валидация на backend, сохранение в LocalStorage)
 - ✅ Объединены 4 endpoint'а метрик в один `/api/simulation/all-metrics`
 - ✅ Исправлен расчёт `BufferTimeDays` для работников (теперь только реальные простои >1 дня)
 - ✅ **Интерактивный CFD**: подсветка областей при наведении, синхронизация с легендой, тултипы
@@ -25,7 +26,10 @@
 KanbanFlow/
 ├── KanbanFlowApi/              # Веб-API + UI (wwwroot)
 │   ├── Controllers/
-│   │   └── SimulationController.cs    # GET /process-presets, /worker-pools, /task-presets; POST /start, /all-metrics
+│   │   ├── SimulationController.cs    # GET /process-presets, /worker-pools, /task-presets; POST /start, /all-metrics
+│   │   ├── ProcessEditorController.cs # CRUD для пресетов процессов
+│   │   ├── WorkerEditorController.cs  # CRUD для пресетов команд
+│   │   └── TaskEditorController.cs    # CRUD для пресетов задач
 │   ├── Dtos/
 │   │   ├── Board/             # ApiBoardDto, ApiStageDto, ApiWorkerDto, ApiTaskDto
 │   │   ├── Config/            # ProcessPresetDto, WorkerPoolPresetDto, TaskPresetDto, StartSimulationRequestDto
@@ -44,7 +48,12 @@ KanbanFlow/
 │   │   └── TaskMetricsService.cs    # Метрики задач + агрегированные метрики стадий
 │   ├── wwwroot/
 │   │   ├── index.html         # UI: 3 селектора пресетов, доска, воркеры, история, 4 панели метрик
-│   │   └── app.js             # Клиентская логика: startSimulation(), LocalStorage, рендеринг
+│   │   ├── app.js             # Клиентская логика: startSimulation(), LocalStorage, рендеринг, mergePresets()
+│   │   └── editor/
+│   │       ├── workers.html   # Редактор команд
+│   │       ├── worker-editor.js
+│   │       ├── tasks.html     # Редактор задач
+│   │       └── task-editor.js
 │   ├── appsettings.json
 │   └── Program.cs             # Точка входа API
 │
@@ -369,6 +378,33 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"  # Конкретный 
 - **HistoryActivityTests** — логирование событий, CorrelationId
 - **TaskMovementTests** — перемещение задач между стадиями
 - **WorkProgressTests** — симуляция работы, прогресс задач
+
+---
+
+## Редакторы пресетов
+
+Приложение включает редакторы для создания и редактирования пользовательских пресетов:
+
+**Редактор команд** (`/editor/workers.html`):
+- CRUD операций для воркеров (логин, навыки, WIP-лимит, performance, отклонения)
+- Навыки в виде строки через запятую
+- Сохранение в LocalStorage, валидация на backend (`/api/editor/workers/presets`)
+- Экспорт/импорт пресетов в JSON
+
+**Редактор задач** (`/editor/tasks.html`):
+- CRUD операций для задач (ключ, описание, размер T-Shirt, навыки)
+- Навыки в виде строки через запятую
+- Сохранение в LocalStorage, валидация на backend (`/api/editor/tasks/presets`)
+- Экспорт/импорт пресетов в JSON
+
+**Архитектура редакторов:**
+- Backend stateless — только валидация, сохранение в LocalStorage браузера
+- `app.js` функция `mergePresets()` — заменяет серверные пресеты пользовательскими
+- `startSimulation()` и `reloadConfig()` обновляют пресеты перед использованием
+
+**Доступ к редакторам:**
+- Кнопки в шапке главной страницы
+- Кнопка "Редактор" в секции настроек задач/команд
 
 ---
 
