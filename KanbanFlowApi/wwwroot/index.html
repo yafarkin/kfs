@@ -1298,6 +1298,77 @@
             justify-content: space-between;
             gap: 15px;
         }
+
+        /* CFD интерактивность */
+        .cfd-area {
+            opacity: 0.7;
+            transition: opacity 0.2s ease, filter 0.2s ease;
+            cursor: pointer;
+        }
+
+        .cfd-area:hover {
+            opacity: 1;
+            filter: brightness(1.1);
+        }
+
+        .cfd-area.dimmed {
+            opacity: 0.2;
+            filter: grayscale(0.5);
+        }
+
+        .cfd-legend-item {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .cfd-legend-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .cfd-legend-item.active {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .cfd-legend-item.dimmed {
+            opacity: 0.3;
+        }
+
+        .cfd-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 250px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        .cfd-tooltip.show {
+            display: block;
+        }
+
+        .cfd-tooltip-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .cfd-tooltip-value {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .cfd-tooltip-count {
+            font-weight: bold;
+            color: #4ade80;
+        }
     </style>
 </head>
 <body>

@@ -1343,7 +1343,7 @@ function getColorForStage(stageName) {
     return `hsl(${hue}, 70%, 50%)`;
 }
 
-// Рендеринг CFD графика
+// Рендеринг CFD графика с интерактивной подсветкой
 function renderCfdChart() {
     const chartContainer = document.getElementById('cfdChart');
     if (!chartContainer) {
@@ -1360,13 +1360,13 @@ function renderCfdChart() {
     const { stageNames, colors, data } = cfdData;
 
     // Параметры графика
-    const width = 650;  // Уменьшили ширину графика, чтобы освободить место для легенды
+    const width = 650;
     const height = 350;
     const padding = { top: 20, right: 20, bottom: 50, left: 50 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
-    // Находим максимальное количество задач (для масштаба Y) - это всегда total tasks
+    // Находим максимальное количество задач (для масштаба Y)
     const maxTasks = data.length > 0 ? Math.max(...data.map(d => Object.values(d.counts).reduce((a, b) => a + b, 0))) : 1;
     const maxDay = Math.max(...data.map(d => d.day), 1);
 
@@ -1374,7 +1374,56 @@ function renderCfdChart() {
     const xScale = (day) => padding.left + (day / maxDay) * chartWidth;
     const yScale = (count) => padding.top + chartHeight - (count / maxTasks) * chartHeight;
 
-    // Генерируем SVG
+    // Рисуем STACKED areas (слоями) для каждой стадии
+    const reversedStageNames = [...stageNames].reverse();
+    const reversedColors = [...colors].reverse();
+
+    let cumulativeBottom = data.map(d => 0);
+    const stageAreas = []; // Сохраняем информацию об областях для интерактивности
+
+    for (let i = 0; i < reversedStageNames.length; i++) {
+        const stageName = reversedStageNames[i];
+        const color = reversedColors[i];
+
+        // Считаем кумулятивную сумму для верхней границы этой области
+        const cumulativeTop = data.map((d, idx) => {
+            const count = d.counts[stageName] || 0;
+            return (cumulativeBottom[idx] || 0) + count;
+        });
+
+        // Пропускаем стадии, где никогда не было задач
+        const hasTasks = cumulativeTop.some(val => val > 0);
+        if (!hasTasks) {
+            cumulativeBottom = cumulativeTop;
+            continue;
+        }
+
+        // Строим путь для области
+        let areaPath = `M ${xScale(data[0].day)} ${yScale(cumulativeBottom[0])}`;
+
+        for (let j = 0; j < data.length; j++) {
+            areaPath += ` L ${xScale(data[j].day)} ${yScale(cumulativeTop[j])}`;
+        }
+
+        for (let j = data.length - 1; j >= 0; j--) {
+            areaPath += ` L ${xScale(data[j].day)} ${yScale(cumulativeBottom[j])}`;
+        }
+
+        areaPath += ' Z';
+
+        // Сохраняем данные о стадии для использования в обработчиках
+        stageAreas.push({
+            stageName,
+            color,
+            path: areaPath,
+            cumulativeTop,
+            cumulativeBottom: [...cumulativeBottom]
+        });
+
+        cumulativeBottom = cumulativeTop;
+    }
+
+    // Генерируем SVG с интерактивными элементами
     let svg = `<svg class="cfd-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`;
 
     // Сетка
@@ -1395,75 +1444,41 @@ function renderCfdChart() {
         svg += `<text class="cfd-axis-label" x="${x}" y="${height - padding.bottom + 15}" text-anchor="middle">${day}</text>`;
     }
 
-    // Рисуем STACKED areas (слоями) для каждой стадии
-    // Для классического CFD: снизу Done (завершённые), сверху Todo (оставшиеся)
-    // Поэтому идём в обратном порядке стадий
-    const reversedStageNames = [...stageNames].reverse();
-    const reversedColors = [...colors].reverse();
-    
-    let cumulativeBottom = data.map(d => 0); // Начинаем с 0 для всех дней
-    
-    for (let i = 0; i < reversedStageNames.length; i++) {
-        const stageName = reversedStageNames[i];
-        const color = reversedColors[i];
-        
-        // Считаем кумулятивную сумму для верхней границы этой области
-        const cumulativeTop = data.map((d, idx) => {
-            const count = d.counts[stageName] || 0;
-            return (cumulativeBottom[idx] || 0) + count;
-        });
-        
-        // Пропускаем стадии, где никогда не было задач
-        const hasTasks = cumulativeTop.some(val => val > 0);
-        if (!hasTasks) {
-            cumulativeBottom = cumulativeTop;
-            continue;
-        }
-        
-        // Строим путь для области (от bottom к top)
-        let areaPath = `M ${xScale(data[0].day)} ${yScale(cumulativeBottom[0])}`;
-        
-        // Верхняя линия (слева направо)
-        for (let j = 0; j < data.length; j++) {
-            areaPath += ` L ${xScale(data[j].day)} ${yScale(cumulativeTop[j])}`;
-        }
-        
-        // Нижняя линия (справа налево)
-        for (let j = data.length - 1; j >= 0; j--) {
-            areaPath += ` L ${xScale(data[j].day)} ${yScale(cumulativeBottom[j])}`;
-        }
-        
-        areaPath += ' Z';
-        
-        svg += `<path class="cfd-area" d="${areaPath}" fill="${color}" opacity="0.85" />`;
-        
-        // Обновляем cumulativeBottom для следующей стадии
-        cumulativeBottom = cumulativeTop;
-    }
+    // Рисуем области с data-атрибутами для интерактивности
+    stageAreas.forEach((area, index) => {
+        svg += `<path class="cfd-area" 
+                    d="${area.path}" 
+                    fill="${area.color}" 
+                    data-stage-name="${area.stageName}"
+                    data-stage-index="${index}"
+                    style="pointer-events: all;"/>`;
+    });
 
-    // Рисуем ТОЛЬКО верхнюю границу (контур всего графика)
+    // Верхняя граница
     let topLine = `M ${xScale(data[0].day)} ${yScale(cumulativeBottom[0])}`;
     for (let j = 1; j < data.length; j++) {
         topLine += ` L ${xScale(data[j].day)} ${yScale(cumulativeBottom[j])}`;
     }
-    svg += `<path class="cfd-line" d="${topLine}" stroke="#333" stroke-width="2" fill="none" />`;
+    svg += `<path class="cfd-line" d="${topLine}" stroke="#333" stroke-width="2" fill="none" style="pointer-events: none;"/>`;
 
     svg += '</svg>';
 
-    // Легенда - размещаем СПРАВА от графика в 3 колонки
+    // Легенда с интерактивными элементами
     const numColumns = reversedStageNames.length > 6 ? 3 : (reversedStageNames.length > 3 ? 2 : 1);
     const itemsPerColumn = Math.ceil(reversedStageNames.length / numColumns);
     let legendColumns = '';
-    
+
     for (let col = 0; col < numColumns; col++) {
         const start = col * itemsPerColumn;
         const end = Math.min(start + itemsPerColumn, reversedStageNames.length);
         if (start >= reversedStageNames.length) break;
-        
+
         let columnHtml = '<div class="cfd-legend-column">';
         for (let i = start; i < end; i++) {
             columnHtml += `
-                <div class="cfd-legend-item">
+                <div class="cfd-legend-item" 
+                     data-stage-name="${reversedStageNames[i]}"
+                     data-stage-index="${i}">
                     <div class="cfd-legend-color" style="background: ${reversedColors[i]}"></div>
                     <span>${reversedStageNames[i]}</span>
                 </div>
@@ -1472,6 +1487,9 @@ function renderCfdChart() {
         columnHtml += '</div>';
         legendColumns += columnHtml;
     }
+
+    // Добавляем тултип
+    const tooltipHtml = '<div class="cfd-tooltip" id="cfdTooltip"></div>';
 
     chartContainer.innerHTML = `
         <div class="cfd-chart-wrapper">
@@ -1482,7 +1500,150 @@ function renderCfdChart() {
                 ${legendColumns}
             </div>
         </div>
+        ${tooltipHtml}
     `;
+
+    // Навешиваем обработчики событий после рендеринга
+    initCfdInteractivity(chartContainer, stageAreas, data);
+}
+
+// Инициализация интерактивности CFD
+function initCfdInteractivity(chartContainer, stageAreas, data) {
+    const tooltip = document.getElementById('cfdTooltip');
+    if (!tooltip) return;
+
+    const areaElements = chartContainer.querySelectorAll('.cfd-area');
+    const legendItems = chartContainer.querySelectorAll('.cfd-legend-item');
+
+    // Создаём маппинг stageName -> элементы
+    const stageMap = new Map();
+    
+    areaElements.forEach(area => {
+        const stageName = area.dataset.stageName;
+        stageMap.set(stageName, { ...stageMap.get(stageName), area });
+    });
+
+    legendItems.forEach(item => {
+        const stageName = item.dataset.stageName;
+        const existing = stageMap.get(stageName) || {};
+        stageMap.set(stageName, { ...existing, legend: item });
+    });
+
+    // Обработчики для областей графика
+    areaElements.forEach(area => {
+        area.addEventListener('mouseenter', (e) => handleCfdHover(e, area.dataset.stageName, stageMap, data, tooltip, true));
+        area.addEventListener('mouseleave', () => handleCfdLeave(stageMap, tooltip));
+        area.addEventListener('mousemove', (e) => handleCfdMove(e, tooltip));
+    });
+
+    // Обработчики для элементов легенды
+    legendItems.forEach(item => {
+        item.addEventListener('mouseenter', (e) => handleCfdHover(e, item.dataset.stageName, stageMap, data, tooltip, false));
+        item.addEventListener('mouseleave', () => handleCfdLeave(stageMap, tooltip));
+        item.addEventListener('mousemove', (e) => handleCfdMove(e, tooltip));
+    });
+}
+
+// Обработчик наведения на область/легенду
+function handleCfdHover(event, stageName, stageMap, data, tooltip, isArea) {
+    const stageData = stageMap.get(stageName);
+    if (!stageData) return;
+
+    // Подсветка активной области
+    if (stageData.area) {
+        stageData.area.classList.remove('dimmed');
+        stageData.area.style.opacity = '1';
+        stageData.area.style.filter = 'brightness(1.1)';
+    }
+
+    // Подсветка активной легенды
+    if (stageData.legend) {
+        stageData.legend.classList.add('active');
+        stageData.legend.classList.remove('dimmed');
+    }
+
+    // Затемнение остальных элементов
+    stageMap.forEach((value, key) => {
+        if (key !== stageName) {
+            if (value.area) {
+                value.area.classList.add('dimmed');
+            }
+            if (value.legend) {
+                value.legend.classList.add('dimmed');
+                value.legend.classList.remove('active');
+            }
+        }
+    });
+
+    // Показываем тултип с данными
+    showTooltip(stageName, data, tooltip);
+}
+
+// Обработчик ухода с области/легенды
+function handleCfdLeave(stageMap, tooltip) {
+    // Сброс всех стилей
+    stageMap.forEach((value) => {
+        if (value.area) {
+            value.area.classList.remove('dimmed');
+            value.area.style.opacity = '';
+            value.area.style.filter = '';
+        }
+        if (value.legend) {
+            value.legend.classList.remove('active', 'dimmed');
+        }
+    });
+
+    // Скрываем тултип
+    tooltip.classList.remove('show');
+}
+
+// Обработчик движения мыши (для позиционирования тултипа)
+function handleCfdMove(event, tooltip) {
+    const container = document.getElementById('cfdChart');
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const x = event.clientX - rect.left + 15;
+    const y = event.clientY - rect.top + 15;
+
+    // Проверка выхода за границы
+    const tooltipWidth = 250;
+    const tooltipHeight = 80;
+
+    let finalX = x;
+    let finalY = y;
+
+    if (x + tooltipWidth > rect.width) {
+        finalX = x - tooltipWidth - 10;
+    }
+
+    if (y + tooltipHeight > rect.height) {
+        finalY = y - tooltipHeight - 10;
+    }
+
+    tooltip.style.left = `${finalX}px`;
+    tooltip.style.top = `${finalY}px`;
+}
+
+// Показ тултипа с данными о стадии
+function showTooltip(stageName, data, tooltip) {
+    // Находим последнее значение для этой стадии
+    const latestData = data[data.length - 1];
+    const count = latestData?.counts[stageName] || 0;
+    const day = latestData?.day || 0;
+
+    tooltip.innerHTML = `
+        <div class="cfd-tooltip-title">${stageName}</div>
+        <div class="cfd-tooltip-value">
+            <span>Задач:</span>
+            <span class="cfd-tooltip-count">${count}</span>
+        </div>
+        <div class="cfd-tooltip-value" style="margin-top: 4px; font-size: 0.75rem; opacity: 0.8;">
+            <span>День ${day}</span>
+        </div>
+    `;
+
+    tooltip.classList.add('show');
 }
 
 // Интеграция рендеринга CFD в calculateAllMetrics
