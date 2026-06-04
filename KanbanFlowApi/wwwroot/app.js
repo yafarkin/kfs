@@ -11,6 +11,15 @@ let processPresets = [];
 let workerPoolPresets = [];
 let taskPresetPresets = [];
 
+// Ключи LocalStorage для пользовательских пресетов
+const STORAGE_KEYS = {
+    PROCESS_PRESETS: 'kanbanflow_process_presets',
+    WORKER_PRESETS: 'kanbanflow_worker_presets',
+    TASK_PRESETS: 'kanbanflow_task_presets',
+    SELECTION: 'kanbanflow_selection',
+    SIMULATION: 'kanbanflow_simulation'
+};
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     loadAllPresets();
@@ -22,20 +31,30 @@ document.addEventListener('DOMContentLoaded', () => {
 // Загрузка всех пресетов (процессы, работники, задачи)
 async function loadAllPresets() {
     try {
-        // Загружаем все три типа пресетов параллельно
+        // Загружаем все три типа пресетов параллельно с сервера (editor endpoint'ы)
         const [processResponse, workerResponse, taskResponse] = await Promise.all([
-            fetch('/api/simulation/process-presets'),
-            fetch('/api/simulation/worker-pools'),
-            fetch('/api/simulation/task-presets')
+            fetch('/api/editor/processes/presets'),
+            fetch('/api/editor/workers/presets'),
+            fetch('/api/editor/tasks/presets')
         ]);
 
         if (!processResponse.ok || !workerResponse.ok || !taskResponse.ok) {
             throw new Error('Ошибка загрузки пресетов');
         }
 
-        processPresets = await processResponse.json();
-        workerPoolPresets = await workerResponse.json();
-        taskPresetPresets = await taskResponse.json();
+        const serverProcessPresets = await processResponse.json();
+        const serverWorkerPresets = await workerResponse.json();
+        const serverTaskPresets = await taskResponse.json();
+
+        // Загружаем пользовательские пресеты из LocalStorage
+        const userProcessPresets = getUserPresets(STORAGE_KEYS.PROCESS_PRESETS);
+        const userWorkerPresets = getUserPresets(STORAGE_KEYS.WORKER_PRESETS);
+        const userTaskPresets = getUserPresets(STORAGE_KEYS.TASK_PRESETS);
+
+        // Объединяем: пользовательские пресеты добавляем к серверным
+        processPresets = [...serverProcessPresets, ...userProcessPresets];
+        workerPoolPresets = [...serverWorkerPresets, ...userWorkerPresets];
+        taskPresetPresets = [...serverTaskPresets, ...userTaskPresets];
 
         // Заполняем селекторы
         fillSelector('processSelector', processPresets, 'processDescription');
@@ -48,6 +67,85 @@ async function loadAllPresets() {
     } catch (error) {
         console.error('Error loading presets:', error);
         showToast('Ошибка загрузки пресетов: ' + error.message, 'danger');
+    }
+}
+
+// Загрузка пользовательских пресетов из LocalStorage
+function getUserPresets(storageKey) {
+    try {
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) return [];
+        const presets = JSON.parse(saved);
+        return Array.isArray(presets) ? presets : [];
+    } catch (error) {
+        console.error(`Error loading user presets from ${storageKey}:`, error);
+        return [];
+    }
+}
+
+// Сохранение пользовательского пресета в LocalStorage
+function saveUserPreset(storageKey, preset) {
+    try {
+        const existing = getUserPresets(storageKey);
+        // Проверяем, есть ли пресет с таким именем — если да, обновляем
+        const existingIndex = existing.findIndex(p => p.name === preset.name);
+        if (existingIndex >= 0) {
+            existing[existingIndex] = preset;
+        } else {
+            existing.push(preset);
+        }
+        localStorage.setItem(storageKey, JSON.stringify(existing));
+        return true;
+    } catch (error) {
+        console.error(`Error saving user preset to ${storageKey}:`, error);
+        return false;
+    }
+}
+
+// Удаление пользовательского пресета из LocalStorage
+function deleteUserPreset(storageKey, presetName) {
+    try {
+        const existing = getUserPresets(storageKey);
+        const filtered = existing.filter(p => p.name !== presetName);
+        localStorage.setItem(storageKey, JSON.stringify(filtered));
+        return true;
+    } catch (error) {
+        console.error(`Error deleting user preset from ${storageKey}:`, error);
+        return false;
+    }
+}
+
+// Очистка всего LocalStorage (пользовательские пресеты и настройки)
+function clearAllLocalStorage() {
+    if (!confirm('Вы уверены, что хотите очистить все пользовательские пресеты и настройки? Это действие нельзя отменить.')) {
+        return;
+    }
+
+    try {
+        // Удаляем все ключи KanbanFlow
+        const keysToRemove = [
+            STORAGE_KEYS.PROCESS_PRESETS,
+            STORAGE_KEYS.WORKER_PRESETS,
+            STORAGE_KEYS.TASK_PRESETS,
+            STORAGE_KEYS.SELECTION,
+            STORAGE_KEYS.SIMULATION,
+            'kanbanflow_worker_editor'  // Состояние редактора команд
+        ];
+
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        showToast('LocalStorage очищен. Страница будет перезагружена.', 'success');
+
+        // Перезагружаем страницу через 1 секунду
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+
+        return true;
+    } catch (error) {
+        console.error('Error clearing LocalStorage:', error);
+        showToast('Ошибка очистки LocalStorage: ' + error.message, 'danger');
+        return false;
     }
 }
 
@@ -94,8 +192,7 @@ function saveSelectionToStorage() {
         workerPoolPresetName: document.getElementById('workerPoolSelector')?.value,
         taskPresetName: document.getElementById('taskPresetSelector')?.value || null,
         seed: document.getElementById('seedInput')?.value || 42,
-        useVariability: document.getElementById('variabilityToggle')?.checked ?? true,
-        daysToSimulate: document.getElementById('daysToSimulateInput')?.value || '0'
+        useVariability: document.getElementById('variabilityToggle')?.checked ?? true
     };
     localStorage.setItem('kanbanflow_selection', JSON.stringify(selection));
 }
@@ -131,11 +228,6 @@ function restoreSelectionFromStorage() {
         if (selection.useVariability !== undefined) {
             const toggle = document.getElementById('variabilityToggle');
             if (toggle) toggle.checked = selection.useVariability;
-        }
-
-        if (selection.daysToSimulate !== undefined) {
-            const daysInput = document.getElementById('daysToSimulateInput');
-            if (daysInput) daysInput.value = selection.daysToSimulate;
         }
 
         // Обновляем описания после восстановления
@@ -206,15 +298,13 @@ function updateLoadingIndicator() {
     // Блокировка кнопок
     const btnSimulate = document.getElementById('btnSimulateDay');
     const btnAutoPlay = document.getElementById('btnAutoPlay');
-    const btnStart = document.getElementById('btnStartSimulation');
 
     if (btnSimulate) btnSimulate.disabled = isLoading || !simulationState;
     if (btnAutoPlay) btnAutoPlay.disabled = isLoading;
-    if (btnStart) btnStart.disabled = isLoading;
 }
 
-// Запуск симуляции из комбинации пресетов
-async function startSimulation() {
+// Запуск симуляции из полной конфигурации
+async function startSimulation(daysToSimulate = null) {
     isLoading = true;
     updateLoadingIndicator();
 
@@ -224,27 +314,41 @@ async function startSimulation() {
         const taskPresetSelector = document.getElementById('taskPresetSelector');
         const seedInput = document.getElementById('seedInput');
         const variabilityToggle = document.getElementById('variabilityToggle');
-        const daysToSimulateInput = document.getElementById('daysToSimulateInput');
 
         const processPresetName = processSelector?.value;
         const workerPoolPresetName = workerPoolSelector?.value;
         const taskPresetName = taskPresetSelector?.value || null;
         const seed = parseInt(seedInput?.value) || 42;
         const useVariability = variabilityToggle?.checked ?? true;
-        const daysToSimulate = daysToSimulateInput?.value ? parseInt(daysToSimulateInput.value) : null;
 
         if (!processPresetName || !workerPoolPresetName) {
             throw new Error('Выберите процесс и команду исполнителей');
         }
 
+        // Ищем пресеты в загруженных массивах (серверные + пользовательские из LocalStorage)
+        const processPreset = processPresets.find(p => p.name === processPresetName);
+        const workerPoolPreset = workerPoolPresets.find(p => p.name === workerPoolPresetName);
+        const taskPreset = taskPresetName ? taskPresetPresets.find(p => p.name === taskPresetName) : null;
+
+        if (!processPreset) {
+            throw new Error(`Процесс '${processPresetName}' не найден`);
+        }
+        if (!workerPoolPreset) {
+            throw new Error(`Команда '${workerPoolPresetName}' не найдена`);
+        }
+
+        // Собираем полную конфигурацию для отправки на backend
         const request = {
-            processPresetName,
-            workerPoolPresetName,
-            taskPresetName,
             seed,
             useVariability,
+            workflow: processPreset.workflow,
+            workers: workerPoolPreset.workers,
+            // Задачи: если указан taskPreset — используем его, иначе — задачи из процесса
+            tasks: taskPreset ? taskPreset.tasks : processPreset.tasks,
             daysToSimulate
         };
+
+        console.log('[DEBUG] startSimulation request:', request);
 
         const response = await fetch('/api/simulation/start', {
             method: 'POST',
@@ -289,11 +393,7 @@ async function startSimulation() {
 
 // Быстрая симуляция до конца (кнопка "Рассчитать до конца")
 async function simulateToEnd() {
-    const daysToSimulateInput = document.getElementById('daysToSimulateInput');
-    if (daysToSimulateInput) {
-        daysToSimulateInput.value = '0';
-    }
-    await startSimulation();
+    await startSimulation(0);
 }
 
 // Перезагрузка текущей конфигурации (сброс к дню 0)
@@ -318,13 +418,25 @@ async function reloadConfig() {
             throw new Error('Выберите процесс и команду исполнителей');
         }
 
-        // Сброс к дню 0 - daysToSimulate = null (без симуляции)
+        // Ищем пресеты в загруженных массивах (серверные + пользовательские из LocalStorage)
+        const processPreset = processPresets.find(p => p.name === processPresetName);
+        const workerPoolPreset = workerPoolPresets.find(p => p.name === workerPoolPresetName);
+        const taskPreset = taskPresetName ? taskPresetPresets.find(p => p.name === taskPresetName) : null;
+
+        if (!processPreset) {
+            throw new Error(`Процесс '${processPresetName}' не найден`);
+        }
+        if (!workerPoolPreset) {
+            throw new Error(`Команда '${workerPoolPresetName}' не найдена`);
+        }
+
+        // Собираем полную конфигурацию для отправки на backend (daysToSimulate = null для сброса к дню 0)
         const request = {
-            processPresetName,
-            workerPoolPresetName,
-            taskPresetName,
             seed,
             useVariability,
+            workflow: processPreset.workflow,
+            workers: workerPoolPreset.workers,
+            tasks: taskPreset ? taskPreset.tasks : processPreset.tasks,
             daysToSimulate: null
         };
 
@@ -1061,6 +1173,14 @@ function toggleStageMetricsPanel() {
     }
 }
 
+// Переключение панели CFD
+function toggleCfdPanel() {
+    const panel = document.getElementById('cfdPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
 // Рендеринг метрик стадий
 function renderStageMetrics(stageMetrics) {
     const grid = document.getElementById('stageMetricsGrid');
@@ -1115,4 +1235,272 @@ function renderStageMetrics(stageMetrics) {
             </tbody>
         </table>
     `;
+}
+
+// Сбор данных для CFD из истории симуляции
+function collectCfdData() {
+    if (!simulationState || !simulationState.history || simulationState.history.length === 0) {
+        return null;
+    }
+
+    const allStages = simulationState.config.workflow.stages;
+    const stageNames = allStages.map(s => s.name);
+    
+    // Цвета для стадий (красивая палитра)
+    const stageColors = {
+        'Todo': '#6c757d',
+        'Developing': '#667eea',
+        'Testing': '#17a2b8',
+        'Code Review': '#ffc107',
+        'Ready for Testing': '#20c997',
+        'Ready to Merge': '#0dcaf0',
+        'Release Preparation': '#fd7e14',
+        'Done': '#28a745'
+    };
+
+    // Получаем цвета для всех стадий
+    const colors = stageNames.map(name => 
+        stageColors[name] || getColorForStage(name)
+    );
+
+    // Собираем данные по дням: для каждого дня считаем количество задач в каждой стадии
+    const maxDay = simulationState.currentDay;
+    const totalTasks = simulationState.board.tasks.length;
+    
+    // Инициализируем массив данных для каждого дня (от 0 до maxDay)
+    const cfdData = [];
+    
+    // День 0: все задачи в Todo
+    const initialCounts = {};
+    for (const stageName of stageNames) {
+        initialCounts[stageName] = stageName === 'Todo' ? totalTasks : 0;
+    }
+    cfdData.push({ day: 0, counts: initialCounts });
+    
+    // Для каждого дня строим состояние задач
+    // Копируем начальные позиции всех задач (все в Todo)
+    const taskPositions = {};
+    for (const task of simulationState.board.tasks) {
+        taskPositions[task.key] = 'Todo';
+    }
+    
+    // Проходим по всем дням истории
+    for (const dayHistory of simulationState.history) {
+        const dayNumber = dayHistory.dayNumber;
+        
+        // Применяем все события TaskMoved за этот день
+        for (const activity of dayHistory.activities) {
+            if (activity.type === 'TaskMoved' && activity.taskKey) {
+                taskPositions[activity.taskKey] = activity.stageName;
+            }
+        }
+        
+        // Считаем задачи в каждой стадии на конец дня
+        const stageCounts = {};
+        for (const stageName of stageNames) {
+            stageCounts[stageName] = 0;
+        }
+        
+        for (const taskKey of Object.keys(taskPositions)) {
+            const stageName = taskPositions[taskKey];
+            if (stageName && stageCounts.hasOwnProperty(stageName)) {
+                stageCounts[stageName]++;
+            }
+        }
+        
+        cfdData.push({
+            day: dayNumber,
+            counts: stageCounts
+        });
+    }
+
+    return {
+        stageNames,
+        colors,
+        data: cfdData
+    };
+}
+
+// Получить цвет для стадии (генерация по имени)
+function getColorForStage(stageName) {
+    const hash = stageName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hue = hash % 360;
+    return `hsl(${hue}, 70%, 50%)`;
+}
+
+// Рендеринг CFD графика
+function renderCfdChart() {
+    const chartContainer = document.getElementById('cfdChart');
+    if (!chartContainer) {
+        console.error('cfdChart element not found');
+        return;
+    }
+
+    const cfdData = collectCfdData();
+    if (!cfdData || cfdData.data.length === 0) {
+        chartContainer.innerHTML = '<div class="text-muted text-center py-5">Нет данных для отображения CFD. Запустите симуляцию.</div>';
+        return;
+    }
+
+    const { stageNames, colors, data } = cfdData;
+
+    // Параметры графика
+    const width = 650;  // Уменьшили ширину графика, чтобы освободить место для легенды
+    const height = 350;
+    const padding = { top: 20, right: 20, bottom: 50, left: 50 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    // Находим максимальное количество задач (для масштаба Y) - это всегда total tasks
+    const maxTasks = data.length > 0 ? Math.max(...data.map(d => Object.values(d.counts).reduce((a, b) => a + b, 0))) : 1;
+    const maxDay = Math.max(...data.map(d => d.day), 1);
+
+    // Функции масштабирования
+    const xScale = (day) => padding.left + (day / maxDay) * chartWidth;
+    const yScale = (count) => padding.top + chartHeight - (count / maxTasks) * chartHeight;
+
+    // Генерируем SVG
+    let svg = `<svg class="cfd-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`;
+
+    // Сетка
+    const yGridLines = 5;
+    for (let i = 0; i <= yGridLines; i++) {
+        const y = padding.top + (i / yGridLines) * chartHeight;
+        const value = Math.round(maxTasks - (i / yGridLines) * maxTasks);
+        svg += `<line class="cfd-grid-line" x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`;
+        svg += `<text class="cfd-axis-label" x="${padding.left - 10}" y="${y + 4}" text-anchor="end">${value}</text>`;
+    }
+
+    // Ось X
+    const xSteps = Math.min(maxDay + 1, 10);
+    for (let i = 0; i <= xSteps; i++) {
+        const day = Math.round((i / xSteps) * maxDay);
+        const x = xScale(day);
+        svg += `<line class="cfd-grid-line" x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}" />`;
+        svg += `<text class="cfd-axis-label" x="${x}" y="${height - padding.bottom + 15}" text-anchor="middle">${day}</text>`;
+    }
+
+    // Рисуем STACKED areas (слоями) для каждой стадии
+    // Для классического CFD: снизу Done (завершённые), сверху Todo (оставшиеся)
+    // Поэтому идём в обратном порядке стадий
+    const reversedStageNames = [...stageNames].reverse();
+    const reversedColors = [...colors].reverse();
+    
+    let cumulativeBottom = data.map(d => 0); // Начинаем с 0 для всех дней
+    
+    for (let i = 0; i < reversedStageNames.length; i++) {
+        const stageName = reversedStageNames[i];
+        const color = reversedColors[i];
+        
+        // Считаем кумулятивную сумму для верхней границы этой области
+        const cumulativeTop = data.map((d, idx) => {
+            const count = d.counts[stageName] || 0;
+            return (cumulativeBottom[idx] || 0) + count;
+        });
+        
+        // Пропускаем стадии, где никогда не было задач
+        const hasTasks = cumulativeTop.some(val => val > 0);
+        if (!hasTasks) {
+            cumulativeBottom = cumulativeTop;
+            continue;
+        }
+        
+        // Строим путь для области (от bottom к top)
+        let areaPath = `M ${xScale(data[0].day)} ${yScale(cumulativeBottom[0])}`;
+        
+        // Верхняя линия (слева направо)
+        for (let j = 0; j < data.length; j++) {
+            areaPath += ` L ${xScale(data[j].day)} ${yScale(cumulativeTop[j])}`;
+        }
+        
+        // Нижняя линия (справа налево)
+        for (let j = data.length - 1; j >= 0; j--) {
+            areaPath += ` L ${xScale(data[j].day)} ${yScale(cumulativeBottom[j])}`;
+        }
+        
+        areaPath += ' Z';
+        
+        svg += `<path class="cfd-area" d="${areaPath}" fill="${color}" opacity="0.85" />`;
+        
+        // Обновляем cumulativeBottom для следующей стадии
+        cumulativeBottom = cumulativeTop;
+    }
+
+    // Рисуем ТОЛЬКО верхнюю границу (контур всего графика)
+    let topLine = `M ${xScale(data[0].day)} ${yScale(cumulativeBottom[0])}`;
+    for (let j = 1; j < data.length; j++) {
+        topLine += ` L ${xScale(data[j].day)} ${yScale(cumulativeBottom[j])}`;
+    }
+    svg += `<path class="cfd-line" d="${topLine}" stroke="#333" stroke-width="2" fill="none" />`;
+
+    svg += '</svg>';
+
+    // Легенда - размещаем СПРАВА от графика в 3 колонки
+    const numColumns = reversedStageNames.length > 6 ? 3 : (reversedStageNames.length > 3 ? 2 : 1);
+    const itemsPerColumn = Math.ceil(reversedStageNames.length / numColumns);
+    let legendColumns = '';
+    
+    for (let col = 0; col < numColumns; col++) {
+        const start = col * itemsPerColumn;
+        const end = Math.min(start + itemsPerColumn, reversedStageNames.length);
+        if (start >= reversedStageNames.length) break;
+        
+        let columnHtml = '<div class="cfd-legend-column">';
+        for (let i = start; i < end; i++) {
+            columnHtml += `
+                <div class="cfd-legend-item">
+                    <div class="cfd-legend-color" style="background: ${reversedColors[i]}"></div>
+                    <span>${reversedStageNames[i]}</span>
+                </div>
+            `;
+        }
+        columnHtml += '</div>';
+        legendColumns += columnHtml;
+    }
+
+    chartContainer.innerHTML = `
+        <div class="cfd-chart-wrapper">
+            <div class="cfd-svg-container" style="height: ${height + 40}px;">
+                ${svg}
+            </div>
+            <div class="cfd-legend-container">
+                ${legendColumns}
+            </div>
+        </div>
+    `;
+}
+
+// Интеграция рендеринга CFD в calculateAllMetrics
+async function calculateAllMetrics() {
+    if (!simulationState) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/simulation/all-metrics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(simulationState)
+        });
+
+        if (!response.ok) {
+            console.error('Error calculating all metrics:', response.status);
+            return;
+        }
+
+        currentAllMetrics = await response.json();
+
+        // Рендерим все секции метрик
+        renderMetrics(currentAllMetrics.simulationMetrics);
+        renderWorkerMetrics(currentAllMetrics.workerMetrics);
+        renderTaskMetrics(currentAllMetrics.taskMetrics);
+        renderStageMetrics(currentAllMetrics.stageMetrics);
+        
+        // Рендерим CFD график
+        renderCfdChart();
+    } catch (error) {
+        console.error('Error calculating all metrics:', error);
+    }
 }

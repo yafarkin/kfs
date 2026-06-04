@@ -1,25 +1,11 @@
 namespace KanbanFlowApi.Dtos.Config;
 
 /// <summary>
-/// DTO для запроса на запуск симуляции из комбинации пресетов.
+/// DTO для запроса на запуск симуляции с полной конфигурацией.
+/// Backend stateless — конфигурация передаётся полностью с клиента.
 /// </summary>
 public sealed record StartSimulationRequestDto
 {
-    /// <summary>
-    /// Имя пресета производственного процесса (обязательно).
-    /// </summary>
-    public string ProcessPresetName { get; set; } = null!;
-
-    /// <summary>
-    /// Имя пресета пула работников (обязательно).
-    /// </summary>
-    public string WorkerPoolPresetName { get; set; } = null!;
-
-    /// <summary>
-    /// Имя пресета задач (опционально). Если не указан, используются задачи из процесса.
-    /// </summary>
-    public string? TaskPresetName { get; set; }
-
     /// <summary>
     /// Seed для генератора случайных чисел (воспроизводимость симуляции).
     /// </summary>
@@ -31,7 +17,22 @@ public sealed record StartSimulationRequestDto
     public bool UseVariability { get; set; } = true;
 
     /// <summary>
-    /// Количество дней для симуляции (опционально). 
+    /// Воркфлоу (стадии и переходы).
+    /// </summary>
+    public ApiWorkflowDto Workflow { get; set; } = null!;
+
+    /// <summary>
+    /// Список исполнителей (воркеров).
+    /// </summary>
+    public List<ApiWorkerDto> Workers { get; set; } = new();
+
+    /// <summary>
+    /// Список задач для симуляции.
+    /// </summary>
+    public List<ApiTaskDto> Tasks { get; set; } = new();
+
+    /// <summary>
+    /// Количество дней для симуляции (опционально).
     /// Если null - симуляция выполняется на 1 день.
     /// Если 0 - симуляция выполняется до завершения всех задач.
     /// Если > 0 - симуляция выполняется на указанное количество дней.

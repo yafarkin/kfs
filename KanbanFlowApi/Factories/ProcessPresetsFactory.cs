@@ -139,8 +139,8 @@ public static class ProcessPresetsFactory
         stages[6].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready to Develop", Probability = 1.0 });
         stages[7].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Developing", Probability = 1.0 });
         stages[8].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready for Code Review", Probability = 1.0 });
-        stages[9].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready for Testing", Probability = 1.0 });
-        stages[10].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready for Testing", Probability = 1.0 });
+        stages[9].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Code Review", Probability = 1.0 }); // Ready for Code Review -> Code Review
+        stages[10].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready for Testing", Probability = 1.0 }); // Code Review -> Ready for Testing
         stages[11].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Testing", Probability = 1.0 });
         stages[12].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Design Review", Probability = 0.1 });
         stages[12].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Waiting for Automation", Probability = 0.3 });

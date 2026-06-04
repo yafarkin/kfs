@@ -30,6 +30,8 @@ public static class BoardTaskMapper
         foreach (var boardTask in boardTasks)
         {
             stageMap[firstStartStage].Tasks.Add(boardTask);
+            // Устанавливаем CurrentStage для задачи
+            boardTask.CurrentStage = stageMap[firstStartStage];
         }
     }
 }

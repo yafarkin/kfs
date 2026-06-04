@@ -46,7 +46,9 @@ public static class WorkerPoolPresetsFactory
                     Login = "dev1",
                     Skills = ["backend", "frontend"],
                     WipLimit = 1,
-                    Performance = 100
+                    Performance = 100,
+                    DeviationDownPercent = 20,
+                    DeviationUpPercent = 50
                 }
             }
         };
@@ -70,21 +72,27 @@ public static class WorkerPoolPresetsFactory
                     Login = "dev1-be",
                     Skills = ["backend"],
                     WipLimit = 1,
-                    Performance = 100
+                    Performance = 100,
+                    DeviationDownPercent = 20,
+                    DeviationUpPercent = 50
                 },
                 new()
                 {
                     Login = "dev2-fe",
                     Skills = ["frontend"],
                     WipLimit = 1,
-                    Performance = 100
+                    Performance = 100,
+                    DeviationDownPercent = 20,
+                    DeviationUpPercent = 50
                 },
                 new()
                 {
                     Login = "qa1",
                     Skills = ["qa"],
                     WipLimit = 1,
-                    Performance = 100
+                    Performance = 100,
+                    DeviationDownPercent = 30,
+                    DeviationUpPercent = 40
                 }
             }
         };
@@ -103,13 +111,13 @@ public static class WorkerPoolPresetsFactory
             IsDefault = false,
             Workers = new List<ApiWorkerDto>
             {
-                new() { Login = "be-dev-1", Skills = ["backend"], WipLimit = 1, Performance = 100 },
-                new() { Login = "be-dev-2", Skills = ["backend"], WipLimit = 1, Performance = 100 },
-                new() { Login = "be-dev-3", Skills = ["backend"], WipLimit = 1, Performance = 100 },
-                new() { Login = "be-dev-4", Skills = ["backend"], WipLimit = 1, Performance = 100 },
-                new() { Login = "fe-dev-1", Skills = ["frontend"], WipLimit = 1, Performance = 100 },
-                new() { Login = "qa-eng-1", Skills = ["qa"], WipLimit = 1, Performance = 100 },
-                new() { Login = "qa-eng-2", Skills = ["qa"], WipLimit = 1, Performance = 100 }
+                new() { Login = "be-dev-1", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
+                new() { Login = "be-dev-2", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
+                new() { Login = "be-dev-3", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
+                new() { Login = "be-dev-4", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
+                new() { Login = "fe-dev-1", Skills = ["frontend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
+                new() { Login = "qa-eng-1", Skills = ["qa"], WipLimit = 1, Performance = 100, DeviationDownPercent = 30, DeviationUpPercent = 40 },
+                new() { Login = "qa-eng-2", Skills = ["qa"], WipLimit = 1, Performance = 100, DeviationDownPercent = 30, DeviationUpPercent = 40 }
             }
         };
     }

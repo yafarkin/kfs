@@ -26,6 +26,16 @@ public sealed record ApiWorkerDto
     public double Performance { get; set; }
 
     /// <summary>
+    /// Отклонение вниз в процентах (на сколько % может быть быстрее базовой оценки).
+    /// </summary>
+    public double DeviationDownPercent { get; set; }
+
+    /// <summary>
+    /// Отклонение вверх в процентах (на сколько % может быть медленнее базовой оценки).
+    /// </summary>
+    public double DeviationUpPercent { get; set; }
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
     public override string ToString() => $"{Login} ({string.Join(", ", Skills)})";

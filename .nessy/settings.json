@@ -17,7 +17,9 @@
       "Bash(nohup *)",
       "Bash(mv *)",
       "Bash(do *)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(lsof *)",
+      "Bash(xargs *)"
     ]
   },
   "$version": 4

@@ -2,13 +2,12 @@ using KanbanFlowApi.Dtos;
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Dtos.Metrics;
 using KanbanFlowApi.Dtos.Task;
-using KanbanFlowApi.Factories;
 using KanbanFlowApi.Mappers;
 using KanbanFlowApi.Services;
 using KanbanFlowSerivce.Dtos;
-using KanbanFlowSerivce.Factories;
 using KanbanFlowSerivce.Services;
 using Microsoft.AspNetCore.Mvc;
+using Simulation = KanbanFlowSerivce.Dtos.Simulation;
 
 namespace KanbanFlowApi.Controllers;
 
@@ -17,89 +16,39 @@ namespace KanbanFlowApi.Controllers;
 public class SimulationController : ControllerBase
 {
     /// <summary>
-    /// Получить список доступных пресетов производственных процессов.
-    /// </summary>
-    [HttpGet("process-presets")]
-    public ActionResult<List<ProcessPresetDto>> GetProcessPresets()
-    {
-        var presets = ProcessPresetsFactory.GetAllPresets();
-        return Ok(presets);
-    }
-
-    /// <summary>
-    /// Получить список доступных пресетов пулов работников.
-    /// </summary>
-    [HttpGet("worker-pools")]
-    public ActionResult<List<WorkerPoolPresetDto>> GetWorkerPools()
-    {
-        var presets = WorkerPoolPresetsFactory.GetAllPresets();
-        return Ok(presets);
-    }
-
-    /// <summary>
-    /// Получить список доступных пресетов задач.
-    /// </summary>
-    [HttpGet("task-presets")]
-    public ActionResult<List<TaskPresetDto>> GetTaskPresets()
-    {
-        var presets = TaskPresetsFactory.GetAllPresets();
-        return Ok(presets);
-    }
-
-    /// <summary>
-    /// Запустить симуляцию из комбинации пресетов.
+    /// Запустить симуляцию из полной конфигурации.
     /// Возвращает состояние симуляции на день 0 (готово к началу работы).
     /// Если указан параметр DaysToSimulate - выполняет симуляцию на N дней или до завершения всех задач.
     /// </summary>
-    /// <param name="request">Запрос с именами пресетов</param>
+    /// <param name="request">Запрос с полной конфигурацией</param>
     [HttpPost("start")]
     public ActionResult<ApiSimulationStateDto> StartSimulation([FromBody] StartSimulationRequestDto request)
     {
-        // Получаем пресет процесса
-        var processPreset = ProcessPresetsFactory.GetPresetByName(request.ProcessPresetName);
-        if (processPreset == null)
+        // Валидация конфигурации
+        if (request == null)
         {
-            return BadRequest(new { error = $"Процесс '{request.ProcessPresetName}' не найден" });
+            return BadRequest(new { error = "Конфигурация не может быть пустой" });
         }
 
-        // Получаем пресет работников
-        var workerPoolPreset = WorkerPoolPresetsFactory.GetPresetByName(request.WorkerPoolPresetName);
-        if (workerPoolPreset == null)
+        if (request.Workers == null || request.Workers.Count == 0)
         {
-            return BadRequest(new { error = $"Пул работников '{request.WorkerPoolPresetName}' не найден" });
+            return BadRequest(new { error = "Конфигурация должна содержать хотя бы одного работника" });
         }
 
-        // Получаем пресет задач (опционально)
-        List<ApiTaskDto> tasks;
-        if (!string.IsNullOrEmpty(request.TaskPresetName))
+        if (request.Workflow == null || request.Workflow.Stages == null || request.Workflow.Stages.Count == 0)
         {
-            var taskPreset = TaskPresetsFactory.GetPresetByName(request.TaskPresetName);
-            if (taskPreset == null)
-            {
-                return BadRequest(new { error = $"Пресет задач '{request.TaskPresetName}' не найден" });
-            }
-            tasks = taskPreset.Tasks;
-        }
-        else
-        {
-            // Используем задачи из процесса
-            tasks = processPreset.Tasks;
+            return BadRequest(new { error = "Конфигурация должна содержать хотя бы одну стадию" });
         }
 
-        // Собираем конфигурацию
-        var config = new ApiSimulationConfigDto
+        if (request.Tasks == null || request.Tasks.Count == 0)
         {
-            Seed = request.Seed,
-            UseVariability = request.UseVariability,
-            Workflow = processPreset.Workflow,
-            Workers = workerPoolPreset.Workers,
-            Tasks = tasks
-        };
+            return BadRequest(new { error = "Конфигурация должна содержать хотя бы одну задачу" });
+        }
 
-        // Создаём доменную конфигурацию через маппер
-        var domainConfig = ApiMapper.ToDomainConfig(config);
+        // Преобразуем в доменную конфигурацию
+        var domainConfig = ApiMapper.ToDomainConfig(request);
 
-        // Инициализируем симуляцию
+        // Создаём и инициализируем симуляцию
         var simulation = new Simulation();
         simulation.InitFromConfig(domainConfig);
 
@@ -108,7 +57,7 @@ public class SimulationController : ControllerBase
         {
             var daysToSimulate = request.DaysToSimulate.Value;
             var maxDays = daysToSimulate == 0 ? 10000 : daysToSimulate; // 0 = до конца (ограничиваем 10000 дней)
-            
+
             var validationService = new SimulationValidationService(simulation);
             var movementService = new TaskMovementService(simulation);
             var workProgressService = new WorkProgressService(simulation);
@@ -149,47 +98,6 @@ public class SimulationController : ControllerBase
         }
 
         // Возвращаем состояние (на день 0 или после симуляции N дней)
-        return Ok(ApiMapper.ToApiDto(simulation));
-    }
-
-    /// <summary>
-    /// Получить список доступных конфигураций симуляции (устаревший endpoint).
-    /// </summary>
-    [HttpGet("presets")]
-    public ActionResult<List<ConfigPresetDto>> GetConfigPresets()
-    {
-        var presets = SimulationFactory.GetAvailablePresets()
-            .Select(p => new ConfigPresetDto
-            {
-                Name = p.Name,
-                DisplayName = p.DisplayName,
-                Description = p.Description,
-                IsDefault = p.IsDefault
-            })
-            .ToList();
-
-        return Ok(presets);
-    }
-
-    /// <summary>
-    /// Получить начальное состояние симуляции по умолчанию.
-    /// Возвращает готовое состояние для передачи в simulate-day (день 0, задачи ещё не двигались).
-    /// </summary>
-    /// <param name="configName">Название конфигурации: "default", "twork" или "simple". По умолчанию "default".</param>
-    [HttpGet("default-config")]
-    public ActionResult<ApiSimulationStateDto> GetDefaultConfig([FromQuery] string configName = "default")
-    {
-        var config = configName.ToLower() switch
-        {
-            "twork" => SimulationFactory.CreateTWorkConfig(),
-            "simple" => SimpleConfigFactory.CreateDefaultConfig(),
-            _ => SimulationFactory.CreateDefaultConfig()
-        };
-
-        var simulation = new Simulation();
-        simulation.InitFromConfig(config);
-
-        // Возвращаем начальное состояние (день 0, задачи ещё не распределены по стадиям)
         return Ok(ApiMapper.ToApiDto(simulation));
     }
 

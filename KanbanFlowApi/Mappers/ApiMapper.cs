@@ -89,6 +89,60 @@ public static class ApiMapper
         };
     }
 
+    /// <summary>
+    ///     Конвертирует StartSimulationRequestDto в доменную конфигурацию.
+    /// </summary>
+    public static SimulationConfig ToDomainConfig(StartSimulationRequestDto request)
+    {
+        // Сначала создаём все стадии без переходов
+        var stagesMap = new Dictionary<string, Stage>();
+        foreach (var stageDto in request.Workflow.Stages)
+        {
+            stagesMap[stageDto.Name] = new Stage
+            {
+                Name = stageDto.Name,
+                Type = stageDto.Type,
+                IsLeadTimeStart = stageDto.IsLeadTimeStart,
+                WipLimit = stageDto.WipLimit,
+                RequiredSkills = stageDto.RequiredSkills,
+                RequiresDifferentResource = stageDto.RequiresDifferentResource,
+                RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
+                StageProgressPercent = stageDto.StageProgressPercent,
+                CreatesValue = stageDto.CreatesValue,
+                Transitions = []
+            };
+        }
+
+        // Затем устанавливаем переходы с вероятностями
+        foreach (var stageDto in request.Workflow.Stages)
+        {
+            var stage = stagesMap[stageDto.Name];
+            foreach (var transition in stageDto.Transitions)
+            {
+                if (stagesMap.TryGetValue(transition.TargetStageName, out var targetStage))
+                {
+                    stage.Transitions.Add(new StageTransition
+                    {
+                        Stage = targetStage,
+                        Probability = transition.Probability
+                    });
+                }
+            }
+        }
+
+        return new SimulationConfig
+        {
+            Seed = request.Seed,
+            UseVariability = request.UseVariability,
+            Workers = request.Workers.Select(ToDomainWorker).ToList(),
+            Workflow = new Workflow
+            {
+                Stages = stagesMap.Values.ToList()
+            },
+            Tasks = request.Tasks.Select(ToDomainTask).ToList()
+        };
+    }
+
     #endregion
 
     #region Simulation State
@@ -176,6 +230,10 @@ public static class ApiMapper
 
     private static ApiBoardTaskDto ToApiDto(BoardTask task)
     {
+        // Если CurrentStage null, но задача есть в stage.Tasks — используем стадию из задачи
+        // Это может случиться после симуляции, когда задача не была взята в работу
+        var currentStageName = task.CurrentStage?.Stage.Name;
+        
         return new ApiBoardTaskDto
         {
             Key = task.Task.Key,
@@ -184,7 +242,7 @@ public static class ApiMapper
             RequiredSkills = task.Task.RequiredSkills,
             Progress = task.Progress,
             WorkerLogin = task.Worker?.Worker.Login,
-            CurrentStageName = task.CurrentStage?.Stage.Name
+            CurrentStageName = currentStageName
         };
     }
 
@@ -381,7 +439,9 @@ public static class ApiMapper
             Login = worker.Login,
             Skills = worker.Skills,
             WipLimit = worker.WipLimit,
-            Performance = worker.Performance
+            Performance = worker.Performance,
+            DeviationDownPercent = worker.DeviationDownPercent,
+            DeviationUpPercent = worker.DeviationUpPercent
         };
     }
 
@@ -405,7 +465,9 @@ public static class ApiMapper
             Login = dto.Login,
             Skills = dto.Skills,
             WipLimit = dto.WipLimit,
-            Performance = dto.Performance
+            Performance = dto.Performance,
+            DeviationDownPercent = dto.DeviationDownPercent,
+            DeviationUpPercent = dto.DeviationUpPercent
         };
     }
 

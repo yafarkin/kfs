@@ -511,7 +511,7 @@ public class ApiMapperTests
         Assert.Equal("Implement feature", task1.Summary);
         Assert.Equal(KanbanFlowSerivce.Enums.TShirtType.L, task1.ShirtType);
         Assert.Null(task1.WorkerLogin); // Задача ещё не назначена
-        Assert.Null(task1.CurrentStageName);
+        Assert.Equal("Todo", task1.CurrentStageName); // Задача инициализируется в Todo
     }
 
     [Fact]

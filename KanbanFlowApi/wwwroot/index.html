@@ -1150,6 +1150,112 @@
         .metrics-panel.collapsed .metrics-toggle-icon {
             transform: rotate(-90deg);
         }
+
+        /* CFD график */
+        .cfd-chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .cfd-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .cfd-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .cfd-area {
+            opacity: 0.7;
+        }
+
+        .cfd-axis {
+            stroke: #dee2e6;
+            stroke-width: 1;
+        }
+
+        .cfd-axis-label {
+            font-size: 12px;
+            fill: #666;
+        }
+
+        .cfd-grid-line {
+            stroke: #e9ecef;
+            stroke-width: 1;
+            stroke-dasharray: 4, 4;
+        }
+
+        /* CFD - контейнер с графиком и легендой */
+        .cfd-chart-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .cfd-svg-container {
+            flex: 0 0 auto;
+        }
+
+        .cfd-legend-container {
+            flex: 0 0 180px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .cfd-legend-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .cfd-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .cfd-legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .cfd-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 200px;
+        }
+
+        .cfd-tooltip-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .cfd-tooltip-value {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
     </style>
 </head>
 <body>
@@ -1191,6 +1297,11 @@
             <div class="day-counter">
                 <i class="bi bi-calendar3 me-2"></i>День: <span id="currentDay">0</span>
             </div>
+            <div>
+                <a href="/editor/workers.html" class="btn btn-outline-primary btn-sm" target="_blank">
+                    <i class="bi bi-pencil-square me-1"></i>Редактор команд
+                </a>
+            </div>
         </div>
 
         <!-- Раскрывающаяся панель настроек -->
@@ -1221,6 +1332,12 @@
                         <select class="form-select" id="workerPoolSelector" style="width: auto; min-width: 250px;">
                             <option value="">Загрузка...</option>
                         </select>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadAllPresets()" title="Обновить список пресетов">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <a href="/editor/workers.html" target="_blank" class="btn btn-outline-primary btn-sm" title="Редактировать команды">
+                            <i class="bi bi-pencil-square"></i> Редактор
+                        </a>
                         <small class="text-muted" id="workerPoolDescription"></small>
                     </div>
                 </div>
@@ -1244,22 +1361,7 @@
                             <span class="input-group-text">Seed</span>
                             <input type="number" class="form-control" id="seedInput" value="42" style="width: 100px;">
                         </div>
-                        <div class="input-group" style="width: auto;">
-                            <span class="input-group-text">Дней</span>
-                            <input type="number" class="form-control" id="daysToSimulateInput" value="0" min="0" 
-                                   title="0 = до конца, 1-N = конкретное количество дней" style="width: 220px;">
-                        </div>
-                        <button class="btn btn-primary" id="btnStartSimulation" onclick="startSimulation()">
-                            <i class="bi bi-play-fill me-2"></i>Запустить
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Вариативность -->
-                <div class="settings-section">
-                    <h4><i class="bi bi-shuffle me-2"></i>Параметры</h4>
-                    <div class="settings-row">
-                        <div class="form-check form-switch">
+                        <div class="form-check form-switch" style="margin-left: 20px;">
                             <input class="form-check-input" type="checkbox" id="variabilityToggle" checked>
                             <label class="form-check-label" for="variabilityToggle">
                                 <i class="bi bi-shuffle me-1"></i>Вариативность
@@ -1268,15 +1370,25 @@
                     </div>
                 </div>
 
-                <!-- Экспорт/Импорт -->
+                <!-- Вариативность перенесена выше -->
+                <div class="settings-section" style="display: none;">
+                    <h4><i class="bi bi-shuffle me-2"></i>Параметры</h4>
+                    <div class="settings-row">
+                    </div>
+                </div>
+
+                <!-- Экспорт/Импорт и сброс -->
                 <div class="settings-section">
-                    <h4><i class="bi bi-arrow-repeat me-2"></i>Экспорт/Импорт</h4>
+                    <h4><i class="bi bi-arrow-repeat me-2"></i>Экспорт/Импорт и сброс</h4>
                     <div class="settings-row">
                         <button class="btn btn-outline-secondary" onclick="openExportModal()">
                             <i class="bi bi-download me-2"></i>Экспорт
                         </button>
                         <button class="btn btn-outline-secondary" onclick="openImportModal()">
                             <i class="bi bi-upload me-2"></i>Импорт
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="clearAllLocalStorage()" title="Очистить все пользовательские пресеты и настройки">
+                            <i class="bi bi-trash me-2"></i>Сброс LocalStorage
                         </button>
                     </div>
                 </div>
@@ -1380,9 +1492,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- Раскрывающаяся панель Cumulative Flow Diagram -->
+        <div class="metrics-panel" id="cfdPanel">
+            <div class="metrics-header" onclick="toggleCfdPanel()">
+                <div class="metrics-title">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Cumulative Flow Diagram (CFD)</span>
+                </div>
+                <i class="bi bi-chevron-down metrics-toggle-icon"></i>
+            </div>
+            <div class="metrics-body" id="cfdBody">
+                <div id="cfdChart">
+                    <!-- CFD график будет добавлен через JS -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=26"></script>
 </body>
 </html>
