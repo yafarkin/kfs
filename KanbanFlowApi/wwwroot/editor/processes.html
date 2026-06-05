@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор процессов - KanbanFlow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .editor-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 1.8rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 10px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            transition: background 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .toolbar {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .preset-info {
+            background: #e8f4f8;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .preset-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .preset-info p {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 0;
+        }
+
+        .panels-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .panels-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stages-panel, .tasks-panel {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .stages-panel h2, .tasks-panel h2 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .stage-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .stage-card.editing {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .stage-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .stage-card-header h3 {
+            font-size: 1.1rem;
+            margin: 0;
+            color: #333;
+        }
+
+        .stage-summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .stage-summary span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stage-summary strong {
+            color: #333;
+        }
+
+        .stage-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+
+        .form-group small {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .form-check {
+            margin-top: 8px;
+        }
+
+        .form-check-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .transitions-section {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .transitions-section h4 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .transition-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .transition-item select, .transition-item input {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+
+        .transition-item .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-gradient:hover {
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+            color: white;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            margin: 0;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .skills-helper {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .skills-helper strong {
+            color: #333;
+        }
+
+        .export-panel {
+            background: #e8f8e8;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+
+        .export-panel.show {
+            display: block;
+        }
+
+        .export-panel h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .export-panel code {
+            display: block;
+            background: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #d63384;
+            margin-bottom: 10px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .skill-tag.removable {
+            cursor: pointer;
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .skill-tag.removable:hover {
+            background: #f5c6cb;
+        }
+
+        .badge-stage-type {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+
+        .badge-buffer {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .badge-work {
+            background: #667eea;
+            color: white;
+        }
+
+        .badge-leadtime {
+            background: #28a745;
+            color: white;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 8px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="header">
+            <h1><i class="bi bi-sliders me-2"></i>Редактор процессов</h1>
+            <div class="nav-links">
+                <a href="/"><i class="bi bi-house me-1"></i>Главная</a>
+                <a href="/editor/workers.html"><i class="bi bi-people me-1"></i>Команды</a>
+                <a href="/editor/processes.html"><i class="bi bi-sliders me-1"></i>Процессы</a>
+                <a href="/editor/tasks.html"><i class="bi bi-card-checklist me-1"></i>Задачи</a>
+            </div>
+        </div>
+
+        <div class="preset-info" id="presetInfo" style="display: none;">
+            <h3 id="presetName"></h3>
+            <p id="presetDescription"></p>
+        </div>
+
+        <div class="export-panel" id="exportPanel">
+            <h3><i class="bi bi-check-circle me-2"></i>Пресет процесса готов к применению!</h3>
+            <p class="mb-2">Чтобы применить изменения на главной странице:</p>
+            <code id="exportInstructions"></code>
+            <button class="btn btn-sm btn-gradient" onclick="copyExportInstructions()">
+                <i class="bi bi-clipboard me-1"></i>Копировать инструкцию
+            </button>
+        </div>
+
+        <div class="alert alert-info mt-3" id="debugPanel">
+            <h6><i class="bi bi-bug me-2"></i>Отладка</h6>
+            <pre id="debugInfo" class="mb-0" style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;"></pre>
+            <button class="btn btn-sm btn-outline-secondary mt-2" onclick="updateDebugInfo()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Обновить
+            </button>
+            <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearDebugInfo()">
+                <i class="bi bi-trash me-1"></i>Очистить LocalStorage
+            </button>
+        </div>
+
+        <div class="toolbar">
+            <label for="presetSelector" class="fw-bold mb-0">Пресет:</label>
+            <select id="presetSelector" class="form-select" style="width: auto; min-width: 250px;">
+                <option value="">-- Выберите пресет или создайте новый --</option>
+            </select>
+            <button class="btn btn-gradient btn-sm" onclick="createNewPreset()">
+                <i class="bi bi-plus-lg me-1"></i>Новый пресет
+            </button>
+            <button class="btn btn-success btn-sm" onclick="saveCurrentPreset()">
+                <i class="bi bi-save me-1"></i>Сохранить
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCurrentPreset()">
+                <i class="bi bi-trash me-1"></i>Удалить
+            </button>
+            <div class="vr mx-2"></div>
+            <button class="btn btn-primary btn-sm" onclick="addStage()">
+                <i class="bi bi-plus-circle me-1"></i>Добавить стадию
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="exportPreset()">
+                <i class="bi bi-download me-1"></i>Экспорт
+            </button>
+            <label class="btn btn-secondary btn-sm mb-0">
+                <i class="bi bi-upload me-1"></i>Импорт
+                <input type="file" accept=".json" onchange="importPreset(event)" style="display: none;">
+            </label>
+        </div>
+
+        <div class="panels-container">
+            <div class="stages-panel">
+                <h2><i class="bi bi-layers me-2"></i>Стадии (<span id="stageCount">0</span>)</h2>
+                <div id="stagesContainer">
+                    <div class="empty-state">
+                        <p class="mb-3">Список стадий пуст</p>
+                        <button class="btn btn-gradient" onclick="addStage()">
+                            <i class="bi bi-plus-circle me-2"></i>Добавить первую стадию
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tasks-panel">
+                <h2><i class="bi bi-card-checklist me-2"></i>Задачи (<span id="taskCount">0</span>)</h2>
+                <div id="tasksContainer">
+                    <div class="empty-state">
+                        <p class="mb-3">Список задач пуст</p>
+                        <button class="btn btn-gradient" onclick="addTask()">
+                            <i class="bi bi-plus-circle me-2"></i>Добавить первую задачу
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для сохранения -->
+    <div class="modal-overlay" id="saveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="bi bi-save me-2"></i>Сохранение пресета</h2>
+                <button class="modal-close" onclick="closeSaveModal()">&times;</button>
+            </div>
+            <div class="mb-3">
+                <label for="savePresetName" class="form-label fw-bold">Имя пресета</label>
+                <input type="text" class="form-control" id="savePresetName" placeholder="my-process">
+                <small class="text-muted">Только латинские буквы, цифры и дефисы</small>
+            </div>
+            <div class="mb-3">
+                <label for="savePresetDisplayName" class="form-label fw-bold">Отображаемое имя</label>
+                <input type="text" class="form-control" id="savePresetDisplayName" placeholder="Мой процесс">
+            </div>
+            <div class="mb-3">
+                <label for="savePresetDescription" class="form-label fw-bold">Описание</label>
+                <input type="text" class="form-control" id="savePresetDescription" placeholder="Описание процесса...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaveModal()">Отмена</button>
+                <button class="btn btn-success" onclick="confirmSavePreset()">
+                    <i class="bi bi-check-lg me-1"></i>Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="process-editor.js"></script>
+</body>
+</html>
