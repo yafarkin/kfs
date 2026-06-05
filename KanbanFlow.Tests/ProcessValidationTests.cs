@@ -73,10 +73,14 @@ public class ProcessValidationTests
         Assert.True(result.IsValid);
     }
 
+    #endregion
+
+    #region Invalid Processes - Cycles
+
     [Fact]
-    public void Validate_ProcessWithSelfCycle_ReturnsValid()
+    public void Validate_SelfLoop_ReturnsInvalid()
     {
-        // Arrange - процесс с циклом на себя, но есть путь к финальной стадии
+        // Arrange - процесс с циклом на себя
         var preset = new ProcessPresetDto
         {
             Name = "test-process",
@@ -109,13 +113,55 @@ public class ProcessValidationTests
         // Act
         var result = _validationService.Validate(preset);
 
-        // Assert - валидно, т.к. есть путь к финальной стадии
-        Assert.True(result.IsValid);
+        // Assert - self-loop недопустим
+        Assert.False(result.IsValid);
+        Assert.Contains("Цикл на себя", result.ErrorMessage);
+        Assert.Contains("self-loop", result.ErrorMessage);
     }
 
-    #endregion
+    [Fact]
+    public void Validate_Cycle_ReturnsInvalid()
+    {
+        // Arrange - цикл между стадиями
+        var preset = new ProcessPresetDto
+        {
+            Name = "test-process",
+            DisplayName = "Test Process",
+            Description = "Test",
+            Workflow = new ApiWorkflowDto
+            {
+                Stages = new List<ApiStageDto>
+                {
+                    new() { Name = "A", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>
+                        {
+                            new() { TargetStageName = "B", Probability = 1.0 }
+                        }
+                    },
+                    new() { Name = "B", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>
+                        {
+                            new() { TargetStageName = "C", Probability = 1.0 }
+                        }
+                    },
+                    new() { Name = "C", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>
+                        {
+                            new() { TargetStageName = "A", Probability = 1.0 } // Цикл A -> B -> C -> A
+                        }
+                    }
+                }
+            },
+            Tasks = new List<ApiTaskDto>
+            {
+                new() { Key = "TASK-1", Summary = "Test", ShirtType = TShirtType.S, RequiredSkills = new List<string> { "backend" } }
+            }
+        };
 
-    #region Invalid Processes - Missing Target Stage
+        // Act
+        var result = _validationService.Validate(preset);
+
+        // Assert - цикл недопустим
+        Assert.False(result.IsValid);
+        Assert.Contains("цикл", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
 
     [Fact]
     public void Validate_TransitionToNonExistentStage_ReturnsInvalid()
@@ -160,6 +206,7 @@ public class ProcessValidationTests
     public void Validate_AllStagesHaveIncomingTransitions_ReturnsInvalid()
     {
         // Arrange - все стадии имеют входящие переходы, нет стартовой
+        // A -> B -> A это цикл, который должен быть обнаружен
         var preset = new ProcessPresetDto
         {
             Name = "test-process",
@@ -190,58 +237,9 @@ public class ProcessValidationTests
         // Act
         var result = _validationService.Validate(preset);
 
-        // Assert
+        // Assert - цикл должен быть обнаружен
         Assert.False(result.IsValid);
-        Assert.Contains("стартовую стадию", result.ErrorMessage);
-    }
-
-    #endregion
-
-    #region Invalid Processes - Blocking Cycles
-
-    [Fact]
-    public void Validate_CycleWithoutExit_ReturnsInvalid()
-    {
-        // Arrange - цикл без выхода к финальной стадии
-        var preset = new ProcessPresetDto
-        {
-            Name = "test-process",
-            DisplayName = "Test Process",
-            Description = "Test",
-            Workflow = new ApiWorkflowDto
-            {
-                Stages = new List<ApiStageDto>
-                {
-                    new() { Name = "Start", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>
-                        {
-                            new() { TargetStageName = "Loop1", Probability = 1.0 }
-                        }
-                    },
-                    new() { Name = "Loop1", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>
-                        {
-                            new() { TargetStageName = "Loop2", Probability = 1.0 }
-                        }
-                    },
-                    new() { Name = "Loop2", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>
-                        {
-                            new() { TargetStageName = "Loop1", Probability = 1.0 } // Цикл без выхода
-                        }
-                    },
-                    new() { Name = "Done", Type = StageType.Buffer, Transitions = new List<ApiStageTransitionDto>() }
-                }
-            },
-            Tasks = new List<ApiTaskDto>
-            {
-                new() { Key = "TASK-1", Summary = "Test", ShirtType = TShirtType.S, RequiredSkills = new List<string> { "backend" } }
-            }
-        };
-
-        // Act
-        var result = _validationService.Validate(preset);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("невозможно достичь финальной стадии", result.ErrorMessage);
+        Assert.Contains("цикл", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

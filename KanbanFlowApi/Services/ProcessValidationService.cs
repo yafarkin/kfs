@@ -59,6 +59,13 @@ public class ProcessValidationService
             }
         }
 
+        // Проверка на наличие циклов (включая self-loop)
+        var cycleValidation = ValidateNoCycles(stages);
+        if (!cycleValidation.IsValid)
+        {
+            return cycleValidation;
+        }
+
         // Проверка наличия хотя бы одной стартовой стадии (без входящих переходов)
         var hasStartStage = HasStartStage(stages);
         if (!hasStartStage)
@@ -66,13 +73,6 @@ public class ProcessValidationService
             return ValidationResult.Invalid(
                 "Процесс должен иметь хотя бы одну стартовую стадию (без входящих переходов). " +
                 "Все стадии имеют входящие переходы — задачи не смогут начать движение.");
-        }
-
-        // Проверка на наличие циклов, блокирующих старт
-        var cycleValidation = ValidateNoBlockingCycles(stages);
-        if (!cycleValidation.IsValid)
-        {
-            return cycleValidation;
         }
 
         return ValidationResult.Valid();
@@ -125,85 +125,43 @@ public class ProcessValidationService
     }
 
     /// <summary>
-    /// Проверяет наличие хотя бы одной стартовой стадии (без входящих переходов от других стадий).
-    /// Self-loop (переход на себя) не считается входящим переходом.
+    /// Проверяет отсутствие любых циклов в процессе (включая self-loop).
+    /// Циклы недопустимы — процесс должен быть ациклическим графом (DAG).
     /// </summary>
-    private bool HasStartStage(List<ApiStageDto> stages)
+    private ValidationResult ValidateNoCycles(List<ApiStageDto> stages)
     {
-        // Находим все стадии, которые являются целевыми для переходов ОТ ДРУГИХ стадий
-        var targetStages = new HashSet<string>();
+        // Проверка self-loop (переход стадии на себя)
         foreach (var stage in stages)
         {
             if (stage.Transitions != null)
             {
-                foreach (var transition in stage.Transitions)
+                var selfLoop = stage.Transitions.FirstOrDefault(t => t.TargetStageName == stage.Name);
+                if (selfLoop != null)
                 {
-                    // Self-loop не считается входящим переходом
-                    if (transition.TargetStageName != stage.Name)
-                    {
-                        targetStages.Add(transition.TargetStageName);
-                    }
+                    return ValidationResult.Invalid(
+                        $"Цикл на себя (self-loop) недопустим: стадия '{stage.Name}' имеет переход на себя.");
                 }
             }
         }
 
-        // Стартовая стадия — та, которая не является целевой ни для одного перехода от другой стадии
-        var hasStart = stages.Any(s => !targetStages.Contains(s.Name));
-        return hasStart;
-    }
-
-    /// <summary>
-    /// Проверяет отсутствие циклов, блокирующих возможность старта.
-    /// Цикл блокирует старт, если все стадии в цикле имеют только входящие переходы из этого же цикла.
-    /// </summary>
-    private ValidationResult ValidateNoBlockingCycles(List<ApiStageDto> stages)
-    {
-        // Строим граф переходов
-        var adjacencyList = new Dictionary<string, List<string>>();
+        // Проверка циклов через DFS с раскраской вершин
+        // 0 = white (не посещена), 1 = gray (в стеке), 2 = black (завершена)
+        var color = new Dictionary<string, int>();
         foreach (var stage in stages)
         {
-            adjacencyList[stage.Name] = stage.Transitions?.Select(t => t.TargetStageName).ToList() ?? new List<string>();
+            color[stage.Name] = 0;
         }
 
-        // Находим стартовые стадии (без входящих от других стадий)
-        var targetStages = new HashSet<string>();
         foreach (var stage in stages)
         {
-            if (stage.Transitions != null)
+            if (color[stage.Name] == 0)
             {
-                foreach (var transition in stage.Transitions)
+                var cycleResult = DetectCycle(stage.Name, color, stages.ToDictionary(s => s.Name, s => s.Transitions?.Select(t => t.TargetStageName).ToList() ?? new List<string>()));
+                if (cycleResult != null)
                 {
-                    // Self-loop не считается входящим переходом
-                    if (transition.TargetStageName != stage.Name)
-                    {
-                        targetStages.Add(transition.TargetStageName);
-                    }
+                    return ValidationResult.Invalid(
+                        $"Обнаружен цикл в процессе: {string.Join(" -> ", cycleResult)}. Циклы недопустимы — процесс должен быть ациклическим графом (DAG).");
                 }
-            }
-        }
-
-        var startStages = stages.Where(s => !targetStages.Contains(s.Name)).Select(s => s.Name).ToList();
-
-        if (startStages.Count == 0)
-        {
-            // Уже проверено в HasStartStage
-            return ValidationResult.Valid();
-        }
-
-        // Проверяем, что из каждой стартовой стадии можно достичь хотя бы одной финальной
-        // Финальная стадия — та, у которой нет исходящих переходов
-        var finalStages = stages.Where(s => s.Transitions == null || s.Transitions.Count == 0)
-            .Select(s => s.Name)
-            .ToHashSet();
-
-        foreach (var startStage in startStages)
-        {
-            var reachableFinals = FindReachableFinals(startStage, adjacencyList, finalStages);
-            if (reachableFinals.Count == 0 && finalStages.Count > 0)
-            {
-                return ValidationResult.Invalid(
-                    $"Из стартовой стадии '{startStage}' невозможно достичь финальной стадии. " +
-                    "Проверьте наличие циклов или тупиковых переходов.");
             }
         }
 
@@ -211,47 +169,61 @@ public class ProcessValidationService
     }
 
     /// <summary>
-    /// Находит все финальные стадии, достижимые из заданной.
+    /// DFS для обнаружения цикла. Возвращает путь цикла или null.
     /// </summary>
-    private HashSet<string> FindReachableFinals(
-        string startStage,
-        Dictionary<string, List<string>> adjacencyList,
-        HashSet<string> finalStages)
+    private List<string>? DetectCycle(
+        string current,
+        Dictionary<string, int> color,
+        Dictionary<string, List<string>> adjacencyList)
     {
-        var visited = new HashSet<string>();
-        var reachable = new HashSet<string>();
-        var stack = new Stack<string>();
+        color[current] = 1; // gray - в стеке
 
-        stack.Push(startStage);
-
-        while (stack.Count > 0)
+        if (adjacencyList.TryGetValue(current, out var neighbors))
         {
-            var current = stack.Pop();
-
-            if (visited.Contains(current))
+            foreach (var neighbor in neighbors)
             {
-                continue;
-            }
-
-            visited.Add(current);
-
-            if (finalStages.Contains(current))
-            {
-                reachable.Add(current);
-            }
-
-            if (adjacencyList.TryGetValue(current, out var neighbors))
-            {
-                foreach (var neighbor in neighbors)
+                if (color[neighbor] == 1)
                 {
-                    if (!visited.Contains(neighbor))
+                    // Обнаружен цикл - возвращаем путь
+                    return new List<string> { current, neighbor };
+                }
+
+                if (color[neighbor] == 0)
+                {
+                    var cycle = DetectCycle(neighbor, color, adjacencyList);
+                    if (cycle != null)
                     {
-                        stack.Push(neighbor);
+                        cycle.Insert(0, current);
+                        return cycle;
                     }
                 }
             }
         }
 
-        return reachable;
+        color[current] = 2; // black - завершена
+        return null;
+    }
+
+    /// <summary>
+    /// Проверяет наличие хотя бы одной стартовой стадии (без входящих переходов).
+    /// </summary>
+    private bool HasStartStage(List<ApiStageDto> stages)
+    {
+        // Находим все стадии, которые являются целевыми для переходов
+        var targetStages = new HashSet<string>();
+        foreach (var stage in stages)
+        {
+            if (stage.Transitions != null)
+            {
+                foreach (var transition in stage.Transitions)
+                {
+                    targetStages.Add(transition.TargetStageName);
+                }
+            }
+        }
+
+        // Стартовая стадия — та, которая не является целевой ни для одного перехода
+        var hasStart = stages.Any(s => !targetStages.Contains(s.Name));
+        return hasStart;
     }
 }
