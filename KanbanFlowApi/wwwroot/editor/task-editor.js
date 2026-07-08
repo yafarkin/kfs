@@ -180,9 +180,23 @@ function hidePresetInfo() {
 // Рендеринг списка задач
 function renderTasks() {
     const container = document.getElementById('tasksContainer');
-    document.getElementById('taskCount').textContent = tasks.length;
+    const countElement = document.getElementById('taskCount');
+    
+    console.log('[renderTasks] Вызов, tasks.length:', tasks.length);
+    
+    if (!container) {
+        console.error('[renderTasks] container не найден');
+        return;
+    }
+    if (!countElement) {
+        console.error('[renderTasks] countElement не найден');
+        return;
+    }
+    
+    countElement.textContent = tasks.length;
 
     if (tasks.length === 0) {
+        console.log('[renderTasks] Задач нет, рендерим empty state');
         container.innerHTML = `
             <div class="empty-state">
                 <p class="mb-3">Список задач пуст</p>
@@ -194,12 +208,14 @@ function renderTasks() {
         return;
     }
 
+    console.log('[renderTasks] Рендерим', tasks.length, 'задач');
     container.innerHTML = tasks.map((task, index) => {
         if (task.isEditing) {
             return renderTaskForm(task, index);
         }
         return renderTaskCard(task, index);
     }).join('');
+    console.log('[renderTasks] HTML обновлён');
 }
 
 // Рендеринг карточки задачи (режим просмотра)
@@ -564,6 +580,11 @@ function saveToLocalStorage() {
         tasks
     };
     localStorage.setItem('kanbanflow_task_editor', JSON.stringify(data));
+    console.log('[LocalStorage] Saved:', {
+        currentPresetName: currentPreset?.name || null,
+        tasksCount: tasks.length,
+        firstTask: tasks[0]
+    });
 }
 
 function loadFromLocalStorage() {
@@ -573,6 +594,12 @@ function loadFromLocalStorage() {
             const data = JSON.parse(saved);
             currentPreset = data.currentPreset;
             tasks = data.tasks || [];
+
+            console.log('[LocalStorage] Loaded:', {
+                currentPresetName: currentPreset?.name || null,
+                tasksCount: tasks.length,
+                firstTask: tasks[0]
+            });
 
             if (currentPreset) {
                 showPresetInfo(currentPreset);
@@ -690,3 +717,184 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDebugInfo();
     }, 500);
 });
+
+// ==================== ГЕНЕРАТОР ЗАДАЧ ====================
+
+let generatorRowCounter = 0;
+
+// Открытие генератора задач
+function openGenerator() {
+    const modal = document.getElementById('generatorModal');
+    const container = document.getElementById('generatorRowsContainer');
+    
+    // Очищаем контейнер и добавляем одну строку по умолчанию
+    container.innerHTML = '';
+    generatorRowCounter = 0;
+    addGeneratorRow();
+    
+    updateGeneratorSummary();
+    modal.classList.add('active');
+}
+
+// Закрытие генератора задач
+function closeGenerator() {
+    const modal = document.getElementById('generatorModal');
+    modal.classList.remove('active');
+}
+
+// Добавление строки в генератор
+function addGeneratorRow() {
+    const container = document.getElementById('generatorRowsContainer');
+    const rowId = generatorRowCounter++;
+    
+    const row = document.createElement('div');
+    row.className = 'generator-row';
+    row.dataset.rowId = rowId;
+    
+    row.innerHTML = `
+        <div>
+            <label class="size-label">Навыки (через запятую)</label>
+            <input type="text" class="generator-skills" placeholder="backend, qa" value="">
+        </div>
+        <div>
+            <label class="size-label">XS</label>
+            <input type="number" class="generator-count" data-size="XS" value="0" min="0" onchange="updateGeneratorSummary()">
+        </div>
+        <div>
+            <label class="size-label">S</label>
+            <input type="number" class="generator-count" data-size="S" value="0" min="0" onchange="updateGeneratorSummary()">
+        </div>
+        <div>
+            <label class="size-label">M</label>
+            <input type="number" class="generator-count" data-size="M" value="0" min="0" onchange="updateGeneratorSummary()">
+        </div>
+        <div>
+            <label class="size-label">L</label>
+            <input type="number" class="generator-count" data-size="L" value="0" min="0" onchange="updateGeneratorSummary()">
+        </div>
+        <div>
+            <label class="size-label">XL</label>
+            <input type="number" class="generator-count" data-size="XL" value="0" min="0" onchange="updateGeneratorSummary()">
+        </div>
+        <div>
+            <label class="size-label">&nbsp;</label>
+            <button class="btn-remove-row" onclick="removeGeneratorRow(${rowId})">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(row);
+    updateGeneratorSummary();
+}
+
+// Удаление строки из генератора
+function removeGeneratorRow(rowId) {
+    const row = document.querySelector(`.generator-row[data-row-id="${rowId}"]`);
+    if (row) {
+        row.remove();
+        updateGeneratorSummary();
+    }
+}
+
+// Подсчёт количества задач для генерации
+function updateGeneratorSummary() {
+    let totalCount = 0;
+    
+    const rows = document.querySelectorAll('.generator-row');
+    rows.forEach(row => {
+        const countInputs = row.querySelectorAll('.generator-count');
+        countInputs.forEach(input => {
+            const count = parseInt(input.value) || 0;
+            totalCount += count;
+        });
+    });
+    
+    document.getElementById('totalTasksCount').textContent = totalCount;
+}
+
+// Перемешивание массива (Fisher-Yates shuffle)
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+// Генерация задач на основе настроек
+function generateTasks() {
+    const rows = document.querySelectorAll('.generator-row');
+    let taskKeyCounter = tasks.length + 1;
+    let generatedCount = 0;
+    const newTasks = [];
+    
+    rows.forEach(row => {
+        const skillsInput = row.querySelector('.generator-skills');
+        const skillsString = skillsInput.value.trim();
+        
+        if (!skillsString) {
+            return; // Пропускаем строки без навыков
+        }
+        
+        // Парсим навыки
+        const requiredSkills = skillsString
+            .split(',')
+            .map(s => s.trim())
+            .filter(s => s);
+        
+        if (requiredSkills.length === 0) {
+            return;
+        }
+        
+        // Генерируем задачи для каждого размера
+        const countInputs = row.querySelectorAll('.generator-count');
+        countInputs.forEach(input => {
+            const size = input.dataset.size;
+            const count = parseInt(input.value) || 0;
+            
+            for (let i = 0; i < count; i++) {
+                const newTask = {
+                    id: Date.now() + generatedCount,
+                    key: `TASK-${taskKeyCounter++}`,
+                    summary: `Задача ${requiredSkills.join('+')} #${i + 1}`,
+                    shirtType: size,
+                    requiredSkills: requiredSkills,
+                    isEditing: false
+                };
+                
+                newTasks.push(newTask);
+                generatedCount++;
+            }
+        });
+    });
+    
+    if (generatedCount === 0) {
+        alert('Укажите количество задач хотя бы для одной строки');
+        return;
+    }
+
+    // Перемешиваем задачи перед добавлением
+    const shuffledTasks = shuffleArray(newTasks);
+    
+    // Обновляем номера TASK-N после перемешивания
+    shuffledTasks.forEach((task, index) => {
+        task.key = `TASK-${tasks.length + index + 1}`;
+    });
+    
+    closeGenerator();
+    
+    // Сбрасываем currentPreset, так как задачи сгенерированы вручную
+    currentPreset = null;
+    document.getElementById('presetSelector').value = '';
+    hidePresetInfo();
+    
+    // Добавляем перемешанные задачи
+    tasks.push(...shuffledTasks);
+    
+    renderTasks();
+    saveToLocalStorage();
+
+    alert(`✅ Сгенерировано ${generatedCount} задач(и) (перемешаны)`);
+}
