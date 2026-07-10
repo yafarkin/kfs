@@ -1,5 +1,6 @@
 using KanbanFlowApi.Dtos.Config;
 using KanbanFlowApi.Factories;
+using KanbanFlowApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KanbanFlowApi.Controllers;
@@ -58,62 +59,12 @@ public class ProcessEditorController : ControllerBase
             return BadRequest(new { error = $"Имя '{preset.Name}' зарезервировано для системного пресета" });
         }
 
-        // Валидация workflow
-        if (preset.Workflow == null || preset.Workflow.Stages == null || preset.Workflow.Stages.Count == 0)
+        // Валидация workflow через сервис
+        var validationService = new ProcessValidationService();
+        var validationResult = validationService.Validate(preset);
+        if (!validationResult.IsValid)
         {
-            return BadRequest(new { error = "Процесс должен содержать хотя бы одну стадию" });
-        }
-
-        // Валидация стадий
-        var stageNames = new HashSet<string>();
-        foreach (var stage in preset.Workflow.Stages)
-        {
-            if (string.IsNullOrWhiteSpace(stage.Name))
-            {
-                return BadRequest(new { error = "Название стадии не может быть пустым" });
-            }
-
-            if (stageNames.Contains(stage.Name))
-            {
-                return BadRequest(new { error = $"Дублирующееся название стадии: '{stage.Name}'" });
-            }
-            stageNames.Add(stage.Name);
-
-            // Валидация переходов
-            if (stage.Transitions != null)
-            {
-                foreach (var transition in stage.Transitions)
-                {
-                    if (string.IsNullOrWhiteSpace(transition.TargetStageName))
-                    {
-                        return BadRequest(new { error = $"Целевая стадия перехода не может быть пустой (стадия '{stage.Name}')" });
-                    }
-
-                    if (transition.Probability <= 0 || transition.Probability > 1)
-                    {
-                        return BadRequest(new { error = $"Вероятность перехода должна быть от 0 до 1 (стадия '{stage.Name}')" });
-                    }
-                }
-
-                // Сумма вероятностей переходов должна быть <= 1
-                var totalProbability = stage.Transitions.Sum(t => t.Probability);
-                if (totalProbability > 1.0)
-                {
-                    return BadRequest(new { error = $"Сумма вероятностей переходов стадии '{stage.Name}' не может превышать 1.0 (текущая: {totalProbability:F2})" });
-                }
-            }
-
-            // Валидация WIP-лимита
-            if (stage.WipLimit.HasValue && stage.WipLimit <= 0)
-            {
-                return BadRequest(new { error = $"WIP-лимит стадии '{stage.Name}' должен быть больше 0" });
-            }
-
-            // Валидация прогресса
-            if (stage.StageProgressPercent < 0 || stage.StageProgressPercent > 100)
-            {
-                return BadRequest(new { error = $"Прогресс стадии '{stage.Name}' должен быть от 0 до 100%" });
-            }
+            return BadRequest(new { error = validationResult.ErrorMessage });
         }
 
         // Валидация задач

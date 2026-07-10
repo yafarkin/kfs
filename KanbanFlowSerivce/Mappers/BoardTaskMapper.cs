@@ -25,7 +25,8 @@ public static class BoardTaskMapper
         List<BoardTask> boardTasks,
         Dictionary<string, BoardStage> stageMap)
     {
-        // Пока все задачи распределяем на первую стартовую стадию
+        // Все задачи распределяем на первую стартовую стадию (без входящих переходов)
+        // Self-loop не считается входящим переходом (исправлено в BoardStageMapper.LinkStages)
         var firstStartStage = stageMap.Single(s => s.Value.PrevStages.Count == 0).Key;
         foreach (var boardTask in boardTasks)
         {

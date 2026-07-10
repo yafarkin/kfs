@@ -27,10 +27,11 @@ public static class BoardStageMapper
         {
             var boardStage = stageMap[stageConfig.Name];
 
-            // Находим предыдущие стадии через обратные переходы
+            // Находим предыдущие стадии через обратные переходы (self-loop не считается)
             foreach (var otherStageConfig in stageConfigs)
             {
-                if (otherStageConfig.Transitions.Any(t => t.Stage.Name == stageConfig.Name))
+                if (otherStageConfig.Name != stageConfig.Name && 
+                    otherStageConfig.Transitions.Any(t => t.Stage.Name == stageConfig.Name))
                 {
                     boardStage.PrevStages.Add(stageMap[otherStageConfig.Name]);
                 }

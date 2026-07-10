@@ -620,10 +620,10 @@ function renderBoard() {
                           isBufferStage ? 'buffer-stage' : '';
 
         return `
-            <div class="stage-column ${stageClass}" data-stage-name="${stage.name}">
+            <div class="stage-column ${stageClass}" data-stage-name="${stage.name}" data-stage-index="${stages.indexOf(stage)}" title="Двойной клик для редактирования WIP-лимита">
                 <div class="stage-header">
                     <span class="stage-name">${stage.name}</span>
-                    <span class="stage-wip">WIP: ${stage.wipCount}${stage.wipLimit ? '/' + stage.wipLimit : ''}</span>
+                    <span class="stage-wip">WIP: ${stage.wipCount}${stage.wipLimit !== null && stage.wipLimit !== undefined ? '/' + stage.wipLimit : '/∞'}</span>
                 </div>
                 <div class="task-cards">
                     ${stageTasks.map(task => renderTaskCard(task, stage.name)).join('')}
@@ -631,6 +631,54 @@ function renderBoard() {
             </div>
         `;
     }).join('');
+
+    // Навешиваем обработчик двойного клика на колонки
+    boardContainer.querySelectorAll('.stage-column').forEach(column => {
+        column.addEventListener('dblclick', handleStageDoubleClick);
+    });
+}
+
+// Обработчик двойного клика на колонку стадии
+async function handleStageDoubleClick(event) {
+    const stageColumn = event.currentTarget;
+    const stageIndex = parseInt(stageColumn.dataset.stageIndex);
+    const stageName = stageColumn.dataset.stageName;
+    const currentStage = simulationState.board.stages[stageIndex];
+    const currentWipLimit = currentStage.wipLimit;
+
+    // Показываем диалог с запросом нового WIP-лимита
+    const newWipLimitStr = prompt(
+        `WIP-лимит для стадии "${stageName}"\n\n` +
+        `Текущее значение: ${currentWipLimit !== null ? currentWipLimit : '∞ (без ограничений)'}\n` +
+        `Введите новое значение WIP-лимита (пусто = без ограничений):`,
+        currentWipLimit !== null ? currentWipLimit.toString() : ''
+    );
+
+    // Если пользователь отменил ввод (null) или оставил пустым — устанавливаем без ограничений
+    if (newWipLimitStr === null) {
+        return; // Отмена
+    }
+
+    let newWipLimit = null;
+    if (newWipLimitStr.trim() !== '') {
+        newWipLimit = parseInt(newWipLimitStr);
+        if (isNaN(newWipLimit) || newWipLimit <= 0) {
+            showToast('WIP-лимит должен быть положительным числом', 'danger');
+            return;
+        }
+    }
+
+    // Обновляем WIP-лимит в состоянии симуляции
+    simulationState.board.stages[stageIndex].wipLimit = newWipLimit;
+
+    // Сохраняем в localStorage
+    saveSimulationToStorage();
+
+    // Перерисовываем доску
+    renderBoard();
+    renderWorkers();
+
+    showToast(`WIP-лимит стадии "${stageName}" обновлён: ${newWipLimit !== null ? newWipLimit : '∞'}`, 'success');
 }
 
 // Рендеринг карточки задачи
@@ -977,11 +1025,42 @@ function renderMetrics(metrics) {
     const metricsGrid = document.getElementById('metricsGrid');
     if (!metricsGrid || !metrics) return;
 
+    const currentDay = simulationState?.currentDay || 0;
+
     metricsGrid.innerHTML = `
+        ${renderCurrentDayCard(currentDay)}
         ${renderLeadTimeCard(metrics.leadTime)}
         ${renderThroughputCard(metrics.throughput)}
         ${renderFlowEfficiencyCard(metrics.flowEfficiency)}
         ${renderFrequencyCard(metrics.frequency)}
+    `;
+
+    // Инициализация всплывающих подсказок
+    initMetricTooltips();
+}
+
+// Карточка текущего дня
+function renderCurrentDayCard(currentDay) {
+    return `
+        <div class="metric-card current-day">
+            <div class="metric-title">
+                <i class="bi bi-calendar3"></i>
+                <span>Текущий день</span>
+                <i class="bi bi-info-circle metric-info-icon" data-tooltip="tooltip-current-day"></i>
+            </div>
+            <div class="metric-value">${currentDay}</div>
+            <div class="metric-subvalue">день симуляции</div>
+            <div class="metric-tooltip" id="tooltip-current-day">
+                <div class="metric-tooltip-title">Текущий день симуляции</div>
+                <div class="metric-tooltip-text">
+                    Показывает текущий номер дня в симуляции. Симуляция начинается с дня 0 (начальное состояние) и прогрессирует с каждым запуском "Следующий день".
+                </div>
+                <div class="metric-tooltip-formula">
+                    День 0 = начальное состояние<br>
+                    День N = после N симуляций
+                </div>
+            </div>
+        </div>
     `;
 }
 
@@ -992,11 +1071,22 @@ function renderLeadTimeCard(leadTime) {
             <div class="metric-title">
                 <i class="bi bi-clock"></i>
                 <span>Lead Time</span>
+                <i class="bi bi-info-circle metric-info-icon" data-tooltip="tooltip-leadtime"></i>
             </div>
             <div class="metric-value">${leadTime.p50.toFixed(1)} д</div>
             <div class="metric-subvalue">P50 (медиана)</div>
             <div class="metric-subvalue">P85: ${leadTime.p85.toFixed(1)} д</div>
             <div class="metric-subvalue">Задач: ${leadTime.taskCount}</div>
+            <div class="metric-tooltip" id="tooltip-leadtime">
+                <div class="metric-tooltip-title">Lead Time (время выполнения)</div>
+                <div class="metric-tooltip-text">
+                    Время от стадии с флагом <b>isLeadTimeStart</b> (точка взятия обязательств) до стадии Done. Эта стадия специально отмечается в конфигурации процесса и определяет момент, с которого начинается отсчёт обязательств перед клиентом.
+                </div>
+                <div class="metric-tooltip-formula">
+                    Lead Time = Done.Day - isLeadTimeStart.Day<br>
+                    P50 = медиана, P85 = 85-й перцентиль
+                </div>
+            </div>
         </div>
     `;
 }
@@ -1008,10 +1098,20 @@ function renderThroughputCard(throughput) {
             <div class="metric-title">
                 <i class="bi bi-speedometer2"></i>
                 <span>Throughput</span>
+                <i class="bi bi-info-circle metric-info-icon" data-tooltip="tooltip-throughput"></i>
             </div>
             <div class="metric-value">${throughput.overall.toFixed(2)}</div>
             <div class="metric-subvalue">задач/день (среднее)</div>
             <div class="metric-subvalue">Всего дней: ${throughput.dailyHistory?.length || 0}</div>
+            <div class="metric-tooltip" id="tooltip-throughput">
+                <div class="metric-tooltip-title">Throughput (пропускная способность)</div>
+                <div class="metric-tooltip-text">
+                    Количество задач, завершённых за единицу времени. Считается по количеству задач, <b>дошедших до конечной стадии</b> (стадия без следующих переходов, обычно Done).
+                </div>
+                <div class="metric-tooltip-formula">
+                    Throughput = задачи в конечной стадии / дней симуляции
+                </div>
+            </div>
         </div>
     `;
 }
@@ -1023,10 +1123,24 @@ function renderFlowEfficiencyCard(flowEfficiency) {
             <div class="metric-title">
                 <i class="bi bi-pie-chart"></i>
                 <span>Flow Efficiency</span>
+                <i class="bi bi-info-circle metric-info-icon" data-tooltip="tooltip-flow-efficiency"></i>
             </div>
             <div class="metric-value">${flowEfficiency.efficiencyPercent.toFixed(1)}%</div>
             <div class="metric-subvalue">Активное время: ${flowEfficiency.activeTime.toFixed(1)} д</div>
             <div class="metric-subvalue">Время ожидания: ${flowEfficiency.waitTime.toFixed(1)} д</div>
+            <div class="metric-tooltip" id="tooltip-flow-efficiency">
+                <div class="metric-tooltip-title">Flow Efficiency (эффективность потока)</div>
+                <div class="metric-tooltip-text">
+                    Отношение времени активной работы к общему времени (работа + ожидание). Показывает, насколько эффективно задачи движутся через процесс без простоев.
+                    <br><br>
+                    <b>Активное время</b> — время в рабочих стадиях типа Work (Developing, Testing, Release Preparation).
+                    <br>
+                    <b>Время ожидания</b> — время в буферных стадиях типа Buffer (Todo, Ready for Testing, Ready to Merge).
+                </div>
+                <div class="metric-tooltip-formula">
+                    Efficiency = активное время / (активное + ожидание) × 100%
+                </div>
+            </div>
         </div>
     `;
 }
@@ -1034,12 +1148,13 @@ function renderFlowEfficiencyCard(flowEfficiency) {
 // Карточка Frequency
 function renderFrequencyCard(frequency) {
     const maxCount = Math.max(...Object.values(frequency.distribution), 1);
-    
+
     return `
         <div class="metric-card frequency">
             <div class="metric-title">
                 <i class="bi bi-bar-chart"></i>
                 <span>Распределение по времени</span>
+                <i class="bi bi-info-circle metric-info-icon" data-tooltip="tooltip-frequency"></i>
             </div>
             <div class="metric-subvalue">Всего задач: ${frequency.taskCount}</div>
             <div class="frequency-distribution">
@@ -1058,8 +1173,41 @@ function renderFrequencyCard(frequency) {
                         `;
                     }).join('')}
             </div>
+            <div class="metric-tooltip" id="tooltip-frequency">
+                <div class="metric-tooltip-title">Распределение времени выполнения</div>
+                <div class="metric-tooltip-text">
+                    Показывает, сколько задач было выполнено за определённое количество дней. Помогает понять типичное время выполнения задач в вашем процессе.
+                </div>
+                <div class="metric-tooltip-formula">
+                    Группировка по диапазонам дней
+                </div>
+            </div>
         </div>
     `;
+}
+
+// Переключение панели воркеров
+function toggleWorkersPanel() {
+    const panel = document.getElementById('workersPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Переключение панели истории
+function toggleHistoryPanel() {
+    const panel = document.getElementById('historyPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Переключение панели доски задач
+function toggleKanbanBoardPanel() {
+    const panel = document.getElementById('kanbanBoardPanel');
+    if (panel) {
+        panel.classList.toggle('collapsed');
+    }
 }
 
 // Переключение панели метрик работников
@@ -1067,6 +1215,41 @@ function toggleWorkerMetricsPanel() {
     const panel = document.getElementById('workerMetricsPanel');
     if (panel) {
         panel.classList.toggle('collapsed');
+    }
+}
+
+// Инициализация всплывающих подсказок для метрик
+function initMetricTooltips() {
+    // Удаляем старые обработчики (если есть)
+    document.querySelectorAll('.metric-info-icon').forEach(icon => {
+        icon.removeEventListener('mouseenter', handleMetricIconEnter);
+        icon.removeEventListener('mouseleave', handleMetricIconLeave);
+    });
+
+    // Навешиваем обработчики на иконки
+    document.querySelectorAll('.metric-info-icon').forEach(icon => {
+        icon.addEventListener('mouseenter', handleMetricIconEnter);
+        icon.addEventListener('mouseleave', handleMetricIconLeave);
+    });
+}
+
+function handleMetricIconEnter(event) {
+    const tooltipId = event.target.getAttribute('data-tooltip');
+    if (tooltipId) {
+        const tooltip = document.getElementById(tooltipId);
+        if (tooltip) {
+            tooltip.classList.add('show');
+        }
+    }
+}
+
+function handleMetricIconLeave(event) {
+    const tooltipId = event.target.getAttribute('data-tooltip');
+    if (tooltipId) {
+        const tooltip = document.getElementById(tooltipId);
+        if (tooltip) {
+            tooltip.classList.remove('show');
+        }
     }
 }
 

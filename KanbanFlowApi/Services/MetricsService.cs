@@ -146,23 +146,56 @@ public sealed class MetricsService
 
     /// <summary>
     /// Рассчитать Throughput (пропускную способность).
+    /// Throughput считается по количеству задач, достигших финальной стадии (Done).
     /// </summary>
     public ApiThroughputMetricsDto CalculateThroughput()
     {
         var dailyHistory = new List<ApiThroughputDayDto>();
+        
+        // Находим финальную стадию (у которой нет следующих стадий)
+        var finalStageName = _simulation.Board.Stages
+            .FirstOrDefault(s => s.NextStages.Count == 0)?
+            .Stage.Name;
+
+        if (finalStageName == null)
+        {
+            // Если нет финальной стадии, возвращаем нули
+            return new ApiThroughputMetricsDto
+            {
+                Overall = 0,
+                DailyHistory = dailyHistory
+            };
+        }
+
+        // Считаем количество задач, достигших финальной стадии в каждый день
+        var taskEnteredFinalStage = new HashSet<string>();
         var totalCompleted = 0;
 
         foreach (var day in _simulation.History)
         {
-            var completedCount = day.Activities
-                .Count(a => a.Type == ActivityType.WorkerCompletedTask);
+            var dailyCompleted = 0;
 
-            totalCompleted += completedCount;
+            // Находим все TaskMoved в финальную стадию за этот день
+            var enteredFinalStage = day.Activities
+                .Where(a => a.Type == ActivityType.TaskMoved 
+                           && a.StageName == finalStageName
+                           && a.TaskKey != null);
+
+            foreach (var activity in enteredFinalStage)
+            {
+                // Считаем только первый вход задачи в финальную стадию
+                if (activity.TaskKey != null && !taskEnteredFinalStage.Contains(activity.TaskKey))
+                {
+                    taskEnteredFinalStage.Add(activity.TaskKey);
+                    dailyCompleted++;
+                    totalCompleted++;
+                }
+            }
 
             dailyHistory.Add(new ApiThroughputDayDto
             {
                 DayNumber = day.DayNumber,
-                CompletedTasksCount = completedCount
+                CompletedTasksCount = dailyCompleted
             });
         }
 

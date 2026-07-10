@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Редактор задач - KanbanFlow</title>
+    <title>Редактор процессов - KanbanFlow</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -23,7 +23,7 @@
             border-radius: 15px;
             padding: 25px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -88,19 +88,32 @@
             margin: 0;
         }
 
-        .tasks-panel {
+        .panels-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .panels-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stages-panel, .tasks-panel {
             background: #f8f9fa;
             border-radius: 12px;
             padding: 20px;
         }
 
-        .tasks-panel h2 {
+        .stages-panel h2, .tasks-panel h2 {
             font-size: 1.2rem;
             margin-bottom: 15px;
             color: #333;
         }
 
-        .task-card {
+        .stage-card {
             background: white;
             border: 2px solid #e9ecef;
             border-radius: 10px;
@@ -109,25 +122,25 @@
             transition: all 0.3s ease;
         }
 
-        .task-card.editing {
+        .stage-card.editing {
             border-color: #667eea;
             background: #f8f9ff;
         }
 
-        .task-card-header {
+        .stage-card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
 
-        .task-card-header h3 {
+        .stage-card-header h3 {
             font-size: 1.1rem;
             margin: 0;
             color: #333;
         }
 
-        .task-summary {
+        .stage-summary {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
@@ -135,17 +148,17 @@
             color: #666;
         }
 
-        .task-summary span {
+        .stage-summary span {
             display: flex;
             align-items: center;
             gap: 5px;
         }
 
-        .task-summary strong {
+        .stage-summary strong {
             color: #333;
         }
 
-        .task-form {
+        .stage-form {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
@@ -179,6 +192,48 @@
             color: #888;
             margin-top: 4px;
             display: block;
+        }
+
+        .form-check {
+            margin-top: 8px;
+        }
+
+        .form-check-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .transitions-section {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .transitions-section h4 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .transition-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .transition-item select, .transition-item input {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+
+        .transition-item .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.75rem;
         }
 
         .empty-state {
@@ -325,102 +380,37 @@
             background: #f5c6cb;
         }
 
-        .generator-row {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            display: grid;
-            grid-template-columns: 2fr repeat(5, 80px) 50px;
-            gap: 10px;
-            align-items: center;
+        .badge-stage-type {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
         }
 
-        .generator-row input[type="text"] {
-            padding: 6px 10px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 0.85rem;
+        .badge-buffer {
+            background: #e9ecef;
+            color: #495057;
         }
 
-        .generator-row input[type="number"] {
-            padding: 6px 10px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            width: 100%;
-        }
-
-        .generator-header {
-            font-weight: 600;
-            color: #666;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-
-        .size-label {
-            text-align: center;
-            font-weight: 600;
-            color: #666;
-            font-size: 0.75rem;
-            margin-bottom: 5px;
-        }
-
-        .btn-remove-row {
-            background: #dc3545;
+        .badge-work {
+            background: #667eea;
             color: white;
-            border: none;
-            border-radius: 4px;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1rem;
         }
 
-        .btn-remove-row:hover {
-            background: #c82333;
-        }
-
-        .btn-add-row {
+        .badge-leadtime {
             background: #28a745;
             color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 16px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-add-row:hover {
-            background: #218838;
-        }
-
-        .generator-summary {
-            background: #e7f3ff;
-            border: 1px solid #b3d9ff;
+            font-size: 0.65rem;
+            padding: 2px 6px;
             border-radius: 8px;
-            padding: 12px;
-            margin-top: 15px;
-            font-size: 0.85rem;
-        }
-
-        .generator-summary strong {
-            color: #0056b3;
+            margin-left: 5px;
         }
     </style>
 </head>
 <body>
     <div class="editor-container">
         <div class="header">
-            <h1><i class="bi bi-card-checklist me-2"></i>Редактор задач</h1>
+            <h1><i class="bi bi-sliders me-2"></i>Редактор процессов</h1>
             <div class="nav-links">
                 <a href="/"><i class="bi bi-house me-1"></i>Главная</a>
                 <a href="/editor/workers.html"><i class="bi bi-people me-1"></i>Команды</a>
@@ -435,7 +425,7 @@
         </div>
 
         <div class="export-panel" id="exportPanel">
-            <h3><i class="bi bi-check-circle me-2"></i>Пресет задач готов к применению!</h3>
+            <h3><i class="bi bi-check-circle me-2"></i>Пресет процесса готов к применению!</h3>
             <p class="mb-2">Чтобы применить изменения на главной странице:</p>
             <code id="exportInstructions"></code>
             <button class="btn btn-sm btn-gradient" onclick="copyExportInstructions()">
@@ -469,11 +459,8 @@
                 <i class="bi bi-trash me-1"></i>Удалить
             </button>
             <div class="vr mx-2"></div>
-            <button class="btn btn-primary btn-sm" onclick="addTask()">
-                <i class="bi bi-plus-circle me-1"></i>Добавить задачу
-            </button>
-            <button class="btn btn-info btn-sm" onclick="openGenerator()">
-                <i class="bi bi-magic me-1"></i>Генератор задач
+            <button class="btn btn-primary btn-sm" onclick="addStage()">
+                <i class="bi bi-plus-circle me-1"></i>Добавить стадию
             </button>
             <button class="btn btn-secondary btn-sm" onclick="exportPreset()">
                 <i class="bi bi-download me-1"></i>Экспорт
@@ -484,14 +471,28 @@
             </label>
         </div>
 
-        <div class="tasks-panel">
-            <h2><i class="bi bi-card-checklist me-2"></i>Задачи (<span id="taskCount">0</span>)</h2>
-            <div id="tasksContainer">
-                <div class="empty-state">
-                    <p class="mb-3">Список задач пуст</p>
-                    <button class="btn btn-gradient" onclick="addTask()">
-                        <i class="bi bi-plus-circle me-2"></i>Добавить первую задачу
-                    </button>
+        <div class="panels-container">
+            <div class="stages-panel">
+                <h2><i class="bi bi-layers me-2"></i>Стадии (<span id="stageCount">0</span>)</h2>
+                <div id="stagesContainer">
+                    <div class="empty-state">
+                        <p class="mb-3">Список стадий пуст</p>
+                        <button class="btn btn-gradient" onclick="addStage()">
+                            <i class="bi bi-plus-circle me-2"></i>Добавить первую стадию
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tasks-panel">
+                <h2><i class="bi bi-card-checklist me-2"></i>Задачи (<span id="taskCount">0</span>)</h2>
+                <div id="tasksContainer">
+                    <div class="empty-state">
+                        <p class="mb-3">Список задач пуст</p>
+                        <button class="btn btn-gradient" onclick="addTask()">
+                            <i class="bi bi-plus-circle me-2"></i>Добавить первую задачу
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -506,16 +507,16 @@
             </div>
             <div class="mb-3">
                 <label for="savePresetName" class="form-label fw-bold">Имя пресета</label>
-                <input type="text" class="form-control" id="savePresetName" placeholder="my-tasks">
+                <input type="text" class="form-control" id="savePresetName" placeholder="my-process">
                 <small class="text-muted">Только латинские буквы, цифры и дефисы</small>
             </div>
             <div class="mb-3">
                 <label for="savePresetDisplayName" class="form-label fw-bold">Отображаемое имя</label>
-                <input type="text" class="form-control" id="savePresetDisplayName" placeholder="Мои задачи">
+                <input type="text" class="form-control" id="savePresetDisplayName" placeholder="Мой процесс">
             </div>
             <div class="mb-3">
                 <label for="savePresetDescription" class="form-label fw-bold">Описание</label>
-                <input type="text" class="form-control" id="savePresetDescription" placeholder="Описание пресета задач...">
+                <input type="text" class="form-control" id="savePresetDescription" placeholder="Описание процесса...">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeSaveModal()">Отмена</button>
@@ -526,41 +527,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно генератора задач -->
-    <div class="modal-overlay" id="generatorModal">
-        <div class="modal-content" style="max-width: 900px;">
-            <div class="modal-header">
-                <h2><i class="bi bi-magic me-2"></i>Генератор задач</h2>
-                <button class="modal-close" onclick="closeGenerator()">&times;</button>
-            </div>
-            <p class="text-muted mb-3">Создавайте задачи пакетно на основе навыков и количества для каждого размера</p>
-            
-            <div class="generator-header">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>📋 Конфигурация генерации</span>
-                    <button class="btn btn-add-row" onclick="addGeneratorRow()">
-                        <i class="bi bi-plus-lg"></i> Добавить строку
-                    </button>
-                </div>
-            </div>
-            
-            <div id="generatorRowsContainer">
-                <!-- Строки генератора будут добавляться сюда -->
-            </div>
-            
-            <div class="generator-summary" id="generatorSummary">
-                <strong>📊 Итого:</strong> <span id="totalTasksCount">0</span> задач будет создано
-            </div>
-            
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeGenerator()">Отмена</button>
-                <button class="btn btn-gradient" onclick="generateTasks()">
-                    <i class="bi bi-magic me-1"></i> Сгенерировать задачи
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script src="task-editor.js"></script>
+    <script src="process-editor.js"></script>
 </body>
 </html>
