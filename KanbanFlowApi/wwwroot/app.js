@@ -620,10 +620,10 @@ function renderBoard() {
                           isBufferStage ? 'buffer-stage' : '';
 
         return `
-            <div class="stage-column ${stageClass}" data-stage-name="${stage.name}">
+            <div class="stage-column ${stageClass}" data-stage-name="${stage.name}" data-stage-index="${stages.indexOf(stage)}" title="Двойной клик для редактирования WIP-лимита">
                 <div class="stage-header">
                     <span class="stage-name">${stage.name}</span>
-                    <span class="stage-wip">WIP: ${stage.wipCount}${stage.wipLimit ? '/' + stage.wipLimit : ''}</span>
+                    <span class="stage-wip">WIP: ${stage.wipCount}${stage.wipLimit !== null && stage.wipLimit !== undefined ? '/' + stage.wipLimit : '/∞'}</span>
                 </div>
                 <div class="task-cards">
                     ${stageTasks.map(task => renderTaskCard(task, stage.name)).join('')}
@@ -631,6 +631,54 @@ function renderBoard() {
             </div>
         `;
     }).join('');
+
+    // Навешиваем обработчик двойного клика на колонки
+    boardContainer.querySelectorAll('.stage-column').forEach(column => {
+        column.addEventListener('dblclick', handleStageDoubleClick);
+    });
+}
+
+// Обработчик двойного клика на колонку стадии
+async function handleStageDoubleClick(event) {
+    const stageColumn = event.currentTarget;
+    const stageIndex = parseInt(stageColumn.dataset.stageIndex);
+    const stageName = stageColumn.dataset.stageName;
+    const currentStage = simulationState.board.stages[stageIndex];
+    const currentWipLimit = currentStage.wipLimit;
+
+    // Показываем диалог с запросом нового WIP-лимита
+    const newWipLimitStr = prompt(
+        `WIP-лимит для стадии "${stageName}"\n\n` +
+        `Текущее значение: ${currentWipLimit !== null ? currentWipLimit : '∞ (без ограничений)'}\n` +
+        `Введите новое значение WIP-лимита (пусто = без ограничений):`,
+        currentWipLimit !== null ? currentWipLimit.toString() : ''
+    );
+
+    // Если пользователь отменил ввод (null) или оставил пустым — устанавливаем без ограничений
+    if (newWipLimitStr === null) {
+        return; // Отмена
+    }
+
+    let newWipLimit = null;
+    if (newWipLimitStr.trim() !== '') {
+        newWipLimit = parseInt(newWipLimitStr);
+        if (isNaN(newWipLimit) || newWipLimit <= 0) {
+            showToast('WIP-лимит должен быть положительным числом', 'danger');
+            return;
+        }
+    }
+
+    // Обновляем WIP-лимит в состоянии симуляции
+    simulationState.board.stages[stageIndex].wipLimit = newWipLimit;
+
+    // Сохраняем в localStorage
+    saveSimulationToStorage();
+
+    // Перерисовываем доску
+    renderBoard();
+    renderWorkers();
+
+    showToast(`WIP-лимит стадии "${stageName}" обновлён: ${newWipLimit !== null ? newWipLimit : '∞'}`, 'success');
 }
 
 // Рендеринг карточки задачи

@@ -253,6 +253,13 @@ public static class ApiMapper
         foreach (var stageDto in dto.Stages)
         {
             var configStage = config.Workflow.Stages.Single(s => s.Name == stageDto.Name);
+            
+            // Обновляем WIP-лимит в конфигурации стадии (если был изменён в UI)
+            if (stageDto.WipLimit.HasValue && configStage.WipLimit != stageDto.WipLimit)
+            {
+                configStage.WipLimit = stageDto.WipLimit;
+            }
+            
             stagesMap[stageDto.Name] = new BoardStage
             {
                 Stage = configStage,
