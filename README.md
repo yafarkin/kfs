@@ -5,12 +5,14 @@
 ## Возможности
 
 - **Гибкое конфигурирование** — раздельный выбор процесса, команды и задач (комбинаторика пресетов)
-- **Редакторы пресетов** — создание и редактирование пользовательских наборов задач и команд (CRUD, валидация, экспорт/импорт)
+- **Редакторы пресетов** — создание и редактирование пользовательских наборов процессов, команд и задач (CRUD, валидация, экспорт/импорт)
+- **Генератор задач** — автоматическая генерация задач для спринта с настраиваемыми параметрами
 - **Симуляция потока задач** — задачи перемещаются по стадиям workflow, воркеры выполняют работу с учётом производительности и WIP-лимитов
+- **Редактирование WIP-лимитов** — быстрое изменение WIP-лимита стадии по двойному клику на колонке
 - **Расчёт метрик** — Lead Time, Throughput, Flow Efficiency, Frequency Distribution
 - **Метрики работников** — Throughput, Lead Time, Efficiency (с разделением на ценные и вспомогательные стадии)
 - **Метрики стадий** — P50, P85, P95, Avg, Max время прохождения
-- **Cumulative Flow Diagram (CFD)** — визуализация потока задач по стадиям с интерактивной подсветкой
+- **Cumulative Flow Diagram (CFD)** — визуализация потока задач по стадиям с интерактивной подсветкой (наведение на области и легенду, тултипы)
 - **Импорт/экспорт конфигурации** — сохранение состояния в JSON
 - **Автосимуляция** — запуск симуляции по дням с анимацией
 - **Local Storage** — автоматическое сохранение и восстановление состояния симуляции и пресетов
@@ -21,10 +23,11 @@
 KanbanFlow/
 ├── KanbanFlowApi/              # Веб-API и UI
 │   ├── Controllers/
-│   │   ├── SimulationController.cs    # Endpoint'ы: GET /process-presets, /worker-pools, /task-presets; POST /start
+│   │   ├── SimulationController.cs    # Endpoint'ы: GET /process-presets, /worker-pools, /task-presets; POST /start, /simulate-day, /all-metrics
 │   │   ├── ProcessEditorController.cs # CRUD для пресетов процессов
 │   │   ├── WorkerEditorController.cs  # CRUD для пресетов команд
-│   │   └── TaskEditorController.cs    # CRUD для пресетов задач
+│   │   ├── TaskEditorController.cs    # CRUD для пресетов задач
+│   │   └── EditorController.cs        # Базовый контроллер для редакторов
 │   ├── Dtos/
 │   │   ├── Board/             # DTO состояния доски
 │   │   ├── Config/            # DTO конфигурации: ProcessPresetDto, WorkerPoolPresetDto, TaskPresetDto
@@ -42,9 +45,11 @@ KanbanFlow/
 │   │   ├── WorkerMetricsService.cs  # Метрики работников
 │   │   └── TaskMetricsService.cs    # Метрики задач и стадий
 │   ├── wwwroot/
-│   │   ├── index.html         # UI приложения (3 селектора пресетов)
+│   │   ├── index.html         # UI приложения (3 селектора пресетов, доска, воркеры, метрики)
 │   │   ├── app.js             # Клиентская логика + LocalStorage + mergePresets()
 │   │   └── editor/
+│   │       ├── processes.html # Редактор процессов
+│   │       ├── process-editor.js
 │   │       ├── workers.html   # Редактор команд
 │   │       ├── worker-editor.js
 │   │       ├── tasks.html     # Редактор задач
@@ -141,55 +146,21 @@ dotnet test /p:CollectCoverage=true
 
 ```http
 GET /api/simulation/process-presets
-```
-
-**Ответ:** Список пресетов процессов
-```json
-[
-  {
-    "name": "kanban-software",
-    "displayName": "Kanban Software Dev",
-    "description": "7 стадий: Todo → Developing → ...",
-    "workflow": { ... },
-    "tasks": [ ... ],
-    "isDefault": true
-  }
-]
-```
-
-```http
 GET /api/simulation/worker-pools
-```
-
-**Ответ:** Список пресетов команд
-```json
-[
-  {
-    "name": "small-team",
-    "displayName": "Маленькая команда",
-    "description": "3 человека: 2 разработчика + 1 QA",
-    "workers": [ ... ],
-    "isDefault": true
-  }
-]
-```
-
-```http
 GET /api/simulation/task-presets
 ```
 
-**Ответ:** Список пресетов задач
-```json
-[
-  {
-    "name": "standard-sprint",
-    "displayName": "Стандартный спринт",
-    "description": "10 задач: 3 XS, 4 S, 3 M",
-    "tasks": [ ... ],
-    "isDefault": true
-  }
-]
+Возвращают списки доступных пресетов (процессы, команды, задачи) для выбора.
+
+### Endpoint'ы редакторов
+
+```http
+GET /api/editor/processes/presets
+GET /api/editor/workers/presets
+GET /api/editor/tasks/presets
 ```
+
+Возвращают пресеты для редакторов (серверные + пользовательские из LocalStorage).
 
 ### Запуск симуляции
 
@@ -202,11 +173,28 @@ Content-Type: application/json
   "workerPoolPresetName": "small-team",
   "taskPresetName": "standard-sprint",  // опционально
   "seed": 42,
-  "useVariability": true
+  "useVariability": true,
+  "daysToSimulate": 0  // опционально: 0 = до конца, N = на N дней
 }
 ```
 
-**Ответ:** Состояние симуляции на день 0 (готово к запуску)
+**Ответ:** Состояние симуляции на день 0 (или после N дней симуляции)
+
+### Симуляция дня
+
+```http
+POST /api/simulation/simulate-day
+Content-Type: application/json
+
+{
+  "config": { ... },
+  "board": { ... },
+  "history": [ ... ],
+  "currentDay": 5
+}
+```
+
+**Ответ:** Обновлённое состояние симуляции после одного дня
 
 ### Расчёт метрик
 
@@ -356,6 +344,14 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"
 
 Приложение включает редакторы для создания и редактирования пользовательских пресетов:
 
+**Редактор процессов** (`/editor/processes.html`):
+- CRUD операций для стадий (имя, тип, WIP-лимит, прогресс, навыки, переходы)
+- Настройка переходов между стадиями с вероятностями (сумма = 1.0)
+- Флаг IsLeadTimeStart для отметки начала отсчёта Lead Time
+- Валидация workflow (DAG, отсутствие циклов, self-loop переходы)
+- Сохранение в LocalStorage, валидация на backend
+- Экспорт/импорт пресетов в JSON
+
 **Редактор команд** (`/editor/workers.html`):
 - CRUD операций для воркеров (логин, навыки, WIP-лимит, performance, отклонения)
 - Навыки в виде строки через запятую
@@ -364,12 +360,13 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"
 
 **Редактор задач** (`/editor/tasks.html`):
 - CRUD операций для задач (ключ, описание, размер T-Shirt, навыки)
+- Генератор задач — автоматическое создание задач для спринта с настраиваемыми параметрами (количество, соотношение размеров, навыки)
 - Навыки в виде строки через запятую
 - Сохранение в LocalStorage, валидация на backend
 - Экспорт/импорт пресетов в JSON
 
 **Как это работает:**
-1. Откройте редактор (`/editor/workers.html` или `/editor/tasks.html`)
+1. Откройте редактор (`/editor/processes.html`, `/editor/workers.html` или `/editor/tasks.html`)
 2. Создайте новый пресет или выберите существующий
 3. Добавьте/отредактируйте элементы
 4. Нажмите "Сохранить" — пресет сохранится в LocalStorage браузера
@@ -379,6 +376,10 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"
 - Backend stateless — только валидация, сохранение в LocalStorage браузера
 - Пользовательские пресеты заменяют серверные с тем же именем
 - Изменения подтягиваются сразу после обновления пресетов
+
+**Дополнительно:**
+- Редактирование WIP-лимитов на лету — двойной клик на колонке стадии на главной странице
+- Интерактивная CFD диаграмма — наведение на области графика подсвечивает соответствующую стадию
 
 ## Известные ограничения
 
