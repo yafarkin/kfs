@@ -67,37 +67,6 @@ public class ProcessEditorController : ControllerBase
             return BadRequest(new { error = validationResult.ErrorMessage });
         }
 
-        // Валидация задач
-        if (preset.Tasks == null || preset.Tasks.Count == 0)
-        {
-            return BadRequest(new { error = "Процесс должен содержать хотя бы одну задачу" });
-        }
-
-        var taskKeys = new HashSet<string>();
-        foreach (var task in preset.Tasks)
-        {
-            if (string.IsNullOrWhiteSpace(task.Key))
-            {
-                return BadRequest(new { error = "Ключ задачи не может быть пустым" });
-            }
-
-            if (taskKeys.Contains(task.Key))
-            {
-                return BadRequest(new { error = $"Дублирующийся ключ задачи: '{task.Key}'" });
-            }
-            taskKeys.Add(task.Key);
-
-            if (string.IsNullOrWhiteSpace(task.Summary))
-            {
-                return BadRequest(new { error = $"Описание задачи '{task.Key}' не может быть пустым" });
-            }
-
-            if (task.RequiredSkills == null || task.RequiredSkills.Count == 0)
-            {
-                return BadRequest(new { error = $"Задача '{task.Key}' должна иметь хотя бы один навык" });
-            }
-        }
-
         // Возвращаем валидный пресет (клиент сохранит его в LocalStorage)
         return Ok(preset);
     }

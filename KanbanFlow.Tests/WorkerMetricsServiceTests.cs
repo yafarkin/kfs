@@ -723,15 +723,11 @@ public class WorkerMetricsServiceTests
             progressService.SimulateWorkDay();
         }
 
-        // Debug: выводим историю
+        // Act
         var allActivities = simulation.History.SelectMany((d, idx) => d.Activities.Select(a => new { Day = idx + 1, Activity = a })).ToList();
         var tookTasks = allActivities.Where(x => x.Activity.Type == ActivityType.WorkerTookTask).ToList();
         var completedTasks = allActivities.Where(x => x.Activity.Type == ActivityType.WorkerCompletedTask).ToList();
 
-        Console.WriteLine($"TookTasks: {string.Join(", ", tookTasks.Select(t => $"{t.Activity.TaskKey}@Day{t.Day}"))}");
-        Console.WriteLine($"CompletedTasks: {string.Join(", ", completedTasks.Select(c => $"{c.Activity.TaskKey}@Day{c.Day}"))}");
-
-        // Act
         var metricsService = new WorkerMetricsService(simulation);
         var workerMetrics = metricsService.CalculateAllWorkersMetrics();
 
