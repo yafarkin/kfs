@@ -1,93 +1,44 @@
 // KanbanFlow Simulation - Client Logic
 
+// Две независимые модели:
+// 1. configTemplate — редактируемый шаблон конфигурации (развёрнутый: workflow, workers, tasks, seed, useVariability)
+// 2. simulationState — текущая запущенная симуляция (config + board + history + currentDay)
+let configTemplate = null;
 let simulationState = null;
+
 let autoPlayInterval = null;
 let isAutoPlaying = false;
 let isLoading = false;
 let currentAllMetrics = null;
 
-// Хранилище выбранных пресетов
-let processPresets = [];
-let workerPoolPresets = [];
-let taskPresetPresets = [];
-
-// Ключи LocalStorage для пользовательских пресетов
+// Ключи LocalStorage для пользовательских пресетов и состояний
 const STORAGE_KEYS = {
     PROCESS_PRESETS: 'kanbanflow_process_presets',
     WORKER_PRESETS: 'kanbanflow_worker_presets',
-    TASK_PRESETS: 'kanbanflow_task_presets',
-    SELECTION: 'kanbanflow_selection',
+    CONFIG_TEMPLATE: 'kanbanflow_config_template',
     SIMULATION: 'kanbanflow_simulation'
 };
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    loadAllPresets();
     updateLoadingIndicator();
     initSettingsPanel();
-    restoreFromLocalStorage();
+    restoreConfigTemplateFromStorage();
+    restoreSimulationFromStorage();
+    loadTasksFromEditor(); // Загружаем задачи из редактора если есть
+    updateControls(); // Обновляем состояние кнопок после восстановления
+
+    // Обработчики событий для сохранения seed и useVariability в configTemplate
+    const seedInput = document.getElementById('seedInput');
+    const variabilityToggle = document.getElementById('variabilityToggle');
+
+    if (seedInput) {
+        seedInput.addEventListener('input', saveSelectionToStorage);
+    }
+    if (variabilityToggle) {
+        variabilityToggle.addEventListener('change', saveSelectionToStorage);
+    }
 });
-
-// Загрузка всех пресетов (процессы, работники, задачи)
-async function loadAllPresets() {
-    try {
-        // Загружаем все три типа пресетов параллельно с сервера (editor endpoint'ы)
-        const [processResponse, workerResponse, taskResponse] = await Promise.all([
-            fetch('/api/editor/processes/presets'),
-            fetch('/api/editor/workers/presets'),
-            fetch('/api/editor/tasks/presets')
-        ]);
-
-        if (!processResponse.ok || !workerResponse.ok || !taskResponse.ok) {
-            throw new Error('Ошибка загрузки пресетов');
-        }
-
-        const serverProcessPresets = await processResponse.json();
-        const serverWorkerPresets = await workerResponse.json();
-        const serverTaskPresets = await taskResponse.json();
-
-        // Загружаем пользовательские пресеты из LocalStorage
-        const userProcessPresets = getUserPresets(STORAGE_KEYS.PROCESS_PRESETS);
-        const userWorkerPresets = getUserPresets(STORAGE_KEYS.WORKER_PRESETS);
-        const userTaskPresets = getUserPresets(STORAGE_KEYS.TASK_PRESETS);
-
-        // Объединяем: пользовательские пресеты заменяют серверные с тем же именем
-        processPresets = mergePresets(serverProcessPresets, userProcessPresets);
-        workerPoolPresets = mergePresets(serverWorkerPresets, userWorkerPresets);
-        taskPresetPresets = mergePresets(serverTaskPresets, userTaskPresets);
-
-        // Заполняем селекторы
-        fillSelector('processSelector', processPresets, 'processDescription');
-        fillSelector('workerPoolSelector', workerPoolPresets, 'workerPoolDescription');
-        fillSelector('taskPresetSelector', taskPresetPresets, 'taskPresetDescription', true);
-
-        // Восстанавливаем выбор из LocalStorage (если есть)
-        restoreSelectionFromStorage();
-
-    } catch (error) {
-        console.error('Error loading presets:', error);
-        showToast('Ошибка загрузки пресетов: ' + error.message, 'danger');
-    }
-}
-
-// Слияние пресетов: пользовательские заменяют серверные с тем же именем
-function mergePresets(serverPresets, userPresets) {
-    // Создаём мапу пользовательских пресетов по имени
-    const userPresetsMap = new Map(userPresets.map(p => [p.name, p]));
-    
-    // Берём серверные пресеты, но заменяем их пользовательскими если имена совпадают
-    const result = serverPresets.map(p => userPresetsMap.get(p.name) || p);
-    
-    // Добавляем пользовательские пресеты, которых нет в серверных
-    const serverNames = new Set(serverPresets.map(p => p.name));
-    for (const userPreset of userPresets) {
-        if (!serverNames.has(userPreset.name)) {
-            result.push(userPreset);
-        }
-    }
-    
-    return result;
-}
 
 // Загрузка пользовательских пресетов из LocalStorage
 function getUserPresets(storageKey) {
@@ -145,10 +96,10 @@ function clearAllLocalStorage() {
         const keysToRemove = [
             STORAGE_KEYS.PROCESS_PRESETS,
             STORAGE_KEYS.WORKER_PRESETS,
-            STORAGE_KEYS.TASK_PRESETS,
-            STORAGE_KEYS.SELECTION,
+            STORAGE_KEYS.CONFIG_TEMPLATE,
             STORAGE_KEYS.SIMULATION,
-            'kanbanflow_worker_editor'  // Состояние редактора команд
+            'kanbanflow_worker_editor',  // Состояние редактора команд
+            'kanbanflow_task_editor'     // Состояние редактора задач
         ];
 
         keysToRemove.forEach(key => localStorage.removeItem(key));
@@ -168,100 +119,55 @@ function clearAllLocalStorage() {
     }
 }
 
-// Заполнение селектора пресетами
-function fillSelector(selectorId, presets, descriptionId, addEmptyOption = false) {
-    const selector = document.getElementById(selectorId);
-    const descriptionEl = document.getElementById(descriptionId);
-    
-    if (!selector) return;
-
-    let html = addEmptyOption ? '<option value="">Использовать задачи из процесса</option>' : '';
-    html += presets.map(preset => 
-        `<option value="${preset.name}" ${preset.isDefault ? 'selected' : ''}>${preset.displayName}</option>`
-    ).join('');
-    
-    selector.innerHTML = html;
-
-    // Сохраняем описания
-    selector.dataset.presets = JSON.stringify(presets);
-
-    // Обновляем описание при изменении
-    selector.addEventListener('change', () => {
-        updatePresetDescription(selector, descriptionEl);
-        saveSelectionToStorage();
-    });
-
-    // Показываем описание для выбранного
-    updatePresetDescription(selector, descriptionEl);
-}
-
-// Обновление описания пресета
-function updatePresetDescription(selector, descriptionEl) {
-    if (!descriptionEl || !selector.dataset.presets) return;
-
-    const presets = JSON.parse(selector.dataset.presets);
-    const selected = presets.find(p => p.name === selector.value);
-    descriptionEl.textContent = selected ? selected.description : '';
-}
-
-// Сохранение выбора в LocalStorage
+// Сохранение выбора в LocalStorage (сохраняем seed и useVariability в configTemplate)
 function saveSelectionToStorage() {
-    const selection = {
-        processPresetName: document.getElementById('processSelector')?.value,
-        workerPoolPresetName: document.getElementById('workerPoolSelector')?.value,
-        taskPresetName: document.getElementById('taskPresetSelector')?.value || null,
-        seed: document.getElementById('seedInput')?.value || 42,
-        useVariability: document.getElementById('variabilityToggle')?.checked ?? true
-    };
-    localStorage.setItem('kanbanflow_selection', JSON.stringify(selection));
+    // Инициализируем configTemplate если пустой
+    if (!configTemplate) {
+        configTemplate = {};
+    }
+
+    // Сохраняем seed и useVariability из UI в configTemplate
+    configTemplate.seed = parseInt(document.getElementById('seedInput')?.value) || 42;
+    configTemplate.useVariability = document.getElementById('variabilityToggle')?.checked ?? true;
+
+    // Сохраняем в LocalStorage
+    saveConfigTemplateToStorage();
 }
 
-// Восстановление выбора из LocalStorage
-function restoreSelectionFromStorage() {
-    const saved = localStorage.getItem('kanbanflow_selection');
+// Восстановление configTemplate из LocalStorage
+function restoreConfigTemplateFromStorage() {
+    const saved = localStorage.getItem(STORAGE_KEYS.CONFIG_TEMPLATE);
     if (!saved) return;
 
     try {
-        const selection = JSON.parse(saved);
-
-        if (selection.processPresetName) {
-            const selector = document.getElementById('processSelector');
-            if (selector) selector.value = selection.processPresetName;
+        configTemplate = JSON.parse(saved);
+        if (configTemplate) {
+            showToast('Конфигурация восстановлена из localStorage', 'info');
         }
-
-        if (selection.workerPoolPresetName) {
-            const selector = document.getElementById('workerPoolSelector');
-            if (selector) selector.value = selection.workerPoolPresetName;
-        }
-
-        if (selection.taskPresetName) {
-            const selector = document.getElementById('taskPresetSelector');
-            if (selector) selector.value = selection.taskPresetName;
-        }
-
-        if (selection.seed) {
-            const seedInput = document.getElementById('seedInput');
-            if (seedInput) seedInput.value = selection.seed;
-        }
-
-        if (selection.useVariability !== undefined) {
-            const toggle = document.getElementById('variabilityToggle');
-            if (toggle) toggle.checked = selection.useVariability;
-        }
-
-        // Обновляем описания после восстановления
-        updatePresetDescription(document.getElementById('processSelector'), document.getElementById('processDescription'));
-        updatePresetDescription(document.getElementById('workerPoolSelector'), document.getElementById('workerPoolDescription'));
-        updatePresetDescription(document.getElementById('taskPresetSelector'), document.getElementById('taskPresetDescription'));
-
     } catch (error) {
-        console.error('Error restoring selection:', error);
+        console.error('Error restoring config template:', error);
+    }
+}
+
+// Сохранение configTemplate в LocalStorage
+function saveConfigTemplateToStorage() {
+    if (configTemplate) {
+        localStorage.setItem(STORAGE_KEYS.CONFIG_TEMPLATE, JSON.stringify(configTemplate));
+    }
+}
+
+// Сброс конфигурации (очистка localStorage, но не текущей симуляции)
+function resetConfigTemplate() {
+    if (confirm('Вы уверены, что хотите сбросить сохранённую конфигурацию? Текущая симуляция не пострадает.')) {
+        localStorage.removeItem(STORAGE_KEYS.CONFIG_TEMPLATE);
+        configTemplate = {};
+        showToast('Конфигурация сброшена', 'success');
     }
 }
 
 // Восстановление состояния симуляции из LocalStorage
-function restoreFromLocalStorage() {
-    const saved = localStorage.getItem('kanbanflow_simulation');
+function restoreSimulationFromStorage() {
+    const saved = localStorage.getItem(STORAGE_KEYS.SIMULATION);
     if (!saved) return;
 
     try {
@@ -282,7 +188,7 @@ function restoreFromLocalStorage() {
 // Сохранение состояния симуляции в LocalStorage
 function saveSimulationToStorage() {
     if (simulationState) {
-        localStorage.setItem('kanbanflow_simulation', JSON.stringify(simulationState));
+        localStorage.setItem(STORAGE_KEYS.SIMULATION, JSON.stringify(simulationState));
     }
 }
 
@@ -314,63 +220,65 @@ function updateLoadingIndicator() {
         gear.style.animation = isLoading ? 'spin 1s linear infinite' : 'none';
     }
 
-    // Блокировка кнопок
+    // Блокировка кнопок во время загрузки
     const btnSimulate = document.getElementById('btnSimulateDay');
+    const btnSimulateToEnd = document.getElementById('btnSimulateToEnd');
     const btnAutoPlay = document.getElementById('btnAutoPlay');
 
-    if (btnSimulate) btnSimulate.disabled = isLoading || !simulationState;
+    if (btnSimulate) btnSimulate.disabled = isLoading;
+    if (btnSimulateToEnd) btnSimulateToEnd.disabled = isLoading;
     if (btnAutoPlay) btnAutoPlay.disabled = isLoading;
 }
 
-// Запуск симуляции из полной конфигурации
+// Запуск симуляции из configTemplate
 async function startSimulation(daysToSimulate = null) {
     isLoading = true;
     updateLoadingIndicator();
 
     try {
-        // Полностью перезагружаем пресеты из LocalStorage + серверных
-        await loadAllPresets();
-
-        const processSelector = document.getElementById('processSelector');
-        const workerPoolSelector = document.getElementById('workerPoolSelector');
-        const taskPresetSelector = document.getElementById('taskPresetSelector');
+        // Обновляем seed и useVariability из UI
         const seedInput = document.getElementById('seedInput');
         const variabilityToggle = document.getElementById('variabilityToggle');
-
-        const processPresetName = processSelector?.value;
-        const workerPoolPresetName = workerPoolSelector?.value;
-        const taskPresetName = taskPresetSelector?.value || null;
-        const seed = parseInt(seedInput?.value) || 42;
-        const useVariability = variabilityToggle?.checked ?? true;
-
-        if (!processPresetName || !workerPoolPresetName) {
-            throw new Error('Выберите процесс и команду исполнителей');
+        
+        if (configTemplate) {
+            configTemplate.seed = parseInt(seedInput?.value) || 42;
+            configTemplate.useVariability = variabilityToggle?.checked ?? true;
+            saveConfigTemplateToStorage();
         }
 
-        // Ищем пресеты в обновлённых массивах (серверные + пользовательские из LocalStorage)
-        const processPreset = processPresets.find(p => p.name === processPresetName);
-        const workerPoolPreset = workerPoolPresets.find(p => p.name === workerPoolPresetName);
-        const taskPreset = taskPresetName ? taskPresetPresets.find(p => p.name === taskPresetName) : null;
-
-        if (!processPreset) {
-            throw new Error(`Процесс '${processPresetName}' не найден`);
+        // Проверяем, что configTemplate заполнен
+        if (!configTemplate || !configTemplate.workflow || !configTemplate.workers) {
+            throw new Error('Сначала настройте конфигурацию (команда, процесс, задачи)');
         }
-        if (!workerPoolPreset) {
-            throw new Error(`Команда '${workerPoolPresetName}' не найдена`);
+
+        // Проверяем, что задачи сгенерированы
+        if (!configTemplate.tasks || configTemplate.tasks.length === 0) {
+            throw new Error('Сначала сгенерируйте задачи');
         }
 
         // Собираем полную конфигурацию для отправки на backend
-        const request = {
-            seed,
-            useVariability,
-            workflow: processPreset.workflow,
-            workers: workerPoolPreset.workers,
-            // Задачи: если указан taskPreset — используем его, иначе — задачи из процесса
-            tasks: taskPreset ? taskPreset.tasks : processPreset.tasks,
-            daysToSimulate
+        // Преобразуем workflow.transitions (отдельный список) в stage.transitions (внутри стадий)
+        const allTransitions = configTemplate.workflow.transitions || [];
+        const workflowForBackend = {
+            stages: configTemplate.workflow.stages.map(stage => ({
+                ...stage,
+                transitions: allTransitions
+                    .filter(t => t.fromStageName === stage.name)
+                    .map(t => ({
+                        targetStageName: t.toStageName,
+                        probability: t.probability
+                    }))
+            }))
         };
 
-        console.log('[DEBUG] startSimulation request:', request);
+        const request = {
+            seed: configTemplate.seed || 42,
+            useVariability: configTemplate.useVariability ?? true,
+            workflow: workflowForBackend,
+            workers: configTemplate.workers,
+            tasks: configTemplate.tasks,
+            daysToSimulate
+        };
 
         const response = await fetch('/api/simulation/start', {
             method: 'POST',
@@ -398,10 +306,14 @@ async function startSimulation(daysToSimulate = null) {
         // Расчёт всех метрик
         calculateAllMetrics();
 
-        const dayMessage = daysToSimulate === 0 
-            ? 'Симуляция запущена (до конца)' 
-            : daysToSimulate 
-                ? `Симуляция запущена на ${daysToSimulate} дн.` 
+        // Скрываем плашку начальной настройки если она есть
+        const banner = document.getElementById('initialSetupBanner');
+        if (banner) banner.remove();
+
+        const dayMessage = daysToSimulate === 0
+            ? 'Симуляция запущена (до конца)'
+            : daysToSimulate
+                ? `Симуляция запущена на ${daysToSimulate} дн.`
                 : 'Симуляция запущена (день 0)';
         showToast(dayMessage, 'success');
     } catch (error) {
@@ -415,6 +327,12 @@ async function startSimulation(daysToSimulate = null) {
 
 // Быстрая симуляция до конца (кнопка "Рассчитать до конца")
 async function simulateToEnd() {
+    // Обновляем variabilitу из toggle перед запуском
+    const variabilityToggle = document.getElementById('variabilityToggle');
+    if (configTemplate) {
+        configTemplate.useVariability = variabilityToggle?.checked ?? true;
+        saveConfigTemplateToStorage();
+    }
     await startSimulation(0);
 }
 
@@ -424,44 +342,47 @@ async function reloadConfig() {
     updateLoadingIndicator();
 
     try {
-        // Полностью перезагружаем пресеты из LocalStorage + серверных
-        await loadAllPresets();
-
-        const processSelector = document.getElementById('processSelector');
-        const workerPoolSelector = document.getElementById('workerPoolSelector');
-        const taskPresetSelector = document.getElementById('taskPresetSelector');
+        // Обновляем seed и useVariability из UI
         const seedInput = document.getElementById('seedInput');
         const variabilityToggle = document.getElementById('variabilityToggle');
-
-        const processPresetName = processSelector?.value;
-        const workerPoolPresetName = workerPoolSelector?.value;
-        const taskPresetName = taskPresetSelector?.value || null;
-        const seed = parseInt(seedInput?.value) || 42;
-        const useVariability = variabilityToggle?.checked ?? true;
-
-        if (!processPresetName || !workerPoolPresetName) {
-            throw new Error('Выберите процесс и команду исполнителей');
+        
+        if (configTemplate) {
+            configTemplate.seed = parseInt(seedInput?.value) || 42;
+            configTemplate.useVariability = variabilityToggle?.checked ?? true;
+            saveConfigTemplateToStorage();
         }
 
-        // Ищем пресеты в обновлённых массивах (серверные + пользовательские из LocalStorage)
-        const processPreset = processPresets.find(p => p.name === processPresetName);
-        const workerPoolPreset = workerPoolPresets.find(p => p.name === workerPoolPresetName);
-        const taskPreset = taskPresetName ? taskPresetPresets.find(p => p.name === taskPresetName) : null;
-
-        if (!processPreset) {
-            throw new Error(`Процесс '${processPresetName}' не найден`);
+        // Проверяем, что configTemplate заполнен
+        if (!configTemplate || !configTemplate.workflow || !configTemplate.workers) {
+            throw new Error('Сначала настройте конфигурацию (команда, процесс, задачи)');
         }
-        if (!workerPoolPreset) {
-            throw new Error(`Команда '${workerPoolPresetName}' не найдена`);
+
+        // Проверяем, что задачи сгенерированы
+        if (!configTemplate.tasks || configTemplate.tasks.length === 0) {
+            throw new Error('Сначала сгенерируйте задачи');
         }
 
         // Собираем полную конфигурацию для отправки на backend (daysToSimulate = null для сброса к дню 0)
+        // Преобразуем workflow.transitions (отдельный список) в stage.transitions (внутри стадий)
+        const allTransitions = configTemplate.workflow.transitions || [];
+        const workflowForBackend = {
+            stages: configTemplate.workflow.stages.map(stage => ({
+                ...stage,
+                transitions: allTransitions
+                    .filter(t => t.fromStageName === stage.name)
+                    .map(t => ({
+                        targetStageName: t.toStageName,
+                        probability: t.probability
+                    }))
+            }))
+        };
+
         const request = {
-            seed,
-            useVariability,
-            workflow: processPreset.workflow,
-            workers: workerPoolPreset.workers,
-            tasks: taskPreset ? taskPreset.tasks : processPreset.tasks,
+            seed: configTemplate.seed || 42,
+            useVariability: configTemplate.useVariability ?? true,
+            workflow: workflowForBackend,
+            workers: configTemplate.workers,
+            tasks: configTemplate.tasks,
             daysToSimulate: null
         };
 
@@ -497,6 +418,38 @@ async function reloadConfig() {
         isLoading = false;
         updateLoadingIndicator();
     }
+}
+
+// Получение задач из редактора (вызывается после генерации)
+function loadTasksFromEditor() {
+    try {
+        const saved = localStorage.getItem('kanbanflow_task_editor');
+        if (saved) {
+            const editorData = JSON.parse(saved);
+            if (editorData && Array.isArray(editorData.tasks)) {
+                // Инициализируем configTemplate если пустой
+                if (!configTemplate) {
+                    configTemplate = {};
+                }
+
+                // Сохраняем задачи в configTemplate
+                configTemplate.tasks = editorData.tasks;
+
+                // Сохраняем в LocalStorage
+                saveConfigTemplateToStorage();
+
+                // Восстанавливаем UI
+                restoreConfigTemplateFromStorage();
+
+                showToast(`Загружено ${editorData.tasks.length} задач из редактора`, 'success');
+                return true;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading tasks from editor:', error);
+        showToast('Ошибка загрузки задач: ' + error.message, 'danger');
+    }
+    return false;
 }
 
 // Симуляция одного дня
@@ -796,11 +749,16 @@ function renderHistory() {
 // Обновление элементов управления
 function updateControls() {
     const btnSimulateDay = document.getElementById('btnSimulateDay');
+    const btnSimulateToEnd = document.getElementById('btnSimulateToEnd');
+    const btnAutoPlay = document.getElementById('btnAutoPlay');
     const currentDay = document.getElementById('currentDay');
 
-    if (btnSimulateDay) {
-        btnSimulateDay.disabled = !simulationState;
-    }
+    // Все кнопки блокированы, пока симуляция не запущена
+    const isSimulationRunning = !!simulationState;
+
+    if (btnSimulateDay) btnSimulateDay.disabled = !isSimulationRunning;
+    if (btnSimulateToEnd) btnSimulateToEnd.disabled = !isSimulationRunning;
+    if (btnAutoPlay) btnAutoPlay.disabled = !isSimulationRunning;
 
     if (currentDay) {
         currentDay.textContent = simulationState?.currentDay || 0;
@@ -809,6 +767,11 @@ function updateControls() {
 
 // Переключение авто-режима
 function toggleAutoPlay() {
+    if (!simulationState) {
+        showToast('Сначала запустите симуляцию', 'warning');
+        return;
+    }
+
     if (isAutoPlaying) {
         stopAutoPlay();
     } else {
@@ -1310,12 +1273,9 @@ function renderTaskMetrics(taskMetrics) {
         return;
     }
     if (!taskMetrics || taskMetrics.length === 0) {
-        console.warn('No task metrics to render');
         grid.innerHTML = '<div class="text-muted">Нет данных для отображения</div>';
         return;
     }
-
-    console.log('Rendering task metrics:', taskMetrics);
 
     grid.innerHTML = taskMetrics.map(t => `
         <div class="task-metric-card">
@@ -1412,12 +1372,9 @@ function renderStageMetrics(stageMetrics) {
         return;
     }
     if (!stageMetrics || stageMetrics.length === 0) {
-        console.warn('No stage metrics to render');
         grid.innerHTML = '<div class="text-muted">Нет данных для отображения</div>';
         return;
     }
-
-    console.log('Rendering stage metrics:', stageMetrics);
 
     // Находим максимальное P85 для подсветки узких мест
     const maxP85 = Math.max(...stageMetrics.map(s => s.p85Days));

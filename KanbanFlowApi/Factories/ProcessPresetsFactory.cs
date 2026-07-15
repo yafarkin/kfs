@@ -51,12 +51,7 @@ public static class ProcessPresetsFactory
             DisplayName = "Простой процесс",
             Description = "3 стадии: Todo → Developing → Done. Подходит для обучения.",
             IsDefault = false,
-            Workflow = new ApiWorkflowDto { Stages = stages },
-            Tasks = new List<ApiTaskDto>
-            {
-                new() { Key = "TASK-1", Summary = "Задача S", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
-                new() { Key = "TASK-2", Summary = "Задача M", ShirtType = TShirtType.M, RequiredSkills = ["backend"] }
-            }
+            Workflow = new ApiWorkflowDto { Stages = stages }
         };
     }
 
@@ -90,13 +85,7 @@ public static class ProcessPresetsFactory
             DisplayName = "Kanban Software Dev",
             Description = "7 стадий: Todo → Developing → Ready for Testing → Testing → Ready to Merge → Release Prep → Done",
             IsDefault = true,
-            Workflow = new ApiWorkflowDto { Stages = stages },
-            Tasks = new List<ApiTaskDto>
-            {
-                new() { Key = "TASK-1", Summary = "[BE] API пользователей", ShirtType = TShirtType.S, RequiredSkills = ["backend", "qa"] },
-                new() { Key = "TASK-2", Summary = "[BE] Тесты для сервиса", ShirtType = TShirtType.M, RequiredSkills = ["backend", "qa"] },
-                new() { Key = "TASK-3", Summary = "[FE] UI компонент", ShirtType = TShirtType.S, RequiredSkills = ["frontend"] }
-            }
+            Workflow = new ApiWorkflowDto { Stages = stages }
         };
     }
 
@@ -150,24 +139,13 @@ public static class ProcessPresetsFactory
         stages[16].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready to Release", Probability = 1.0 });
         stages[17].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Done", Probability = 1.0 });
 
-        var tasks = new List<ApiTaskDto>
-        {
-            new() { Key = "BE-1", Summary = "[BE] Модель пользователя", ShirtType = TShirtType.S, RequiredSkills = ["backend", "qa"] },
-            new() { Key = "BE-2", Summary = "[BE] API списка пользователей", ShirtType = TShirtType.S, RequiredSkills = ["backend", "qa"] },
-            new() { Key = "BE-3", Summary = "[BE] API создания пользователя", ShirtType = TShirtType.S, RequiredSkills = ["backend", "qa"] },
-            new() { Key = "FE-1", Summary = "[FE] Форма регистрации", ShirtType = TShirtType.S, RequiredSkills = ["frontend", "qa"] },
-            new() { Key = "FE-2", Summary = "[FE] Форма входа", ShirtType = TShirtType.S, RequiredSkills = ["frontend", "qa"] },
-            new() { Key = "FE-3", Summary = "[FE] Страница профиля", ShirtType = TShirtType.M, RequiredSkills = ["frontend", "qa"] }
-        };
-
         return new ProcessPresetDto
         {
             Name = "twork-process",
             DisplayName = "TWork Process",
             Description = "19 стадий: полный цикл TWork с Code Review, автоматизацией тестов",
             IsDefault = false,
-            Workflow = new ApiWorkflowDto { Stages = stages },
-            Tasks = tasks
+            Workflow = new ApiWorkflowDto { Stages = stages }
         };
     }
 }

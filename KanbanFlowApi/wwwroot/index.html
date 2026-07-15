@@ -724,7 +724,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 1000;
+            z-index: 10000;
         }
 
         /* Индикатор загрузки (шестерёнка) */
@@ -805,6 +805,227 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+        }
+
+        /* Стили для модального окна конфигуратора */
+        .config-editor-modal {
+            max-width: 1400px;
+            width: 95vw;
+            height: 85vh;
+            max-height: 900px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-editor-body {
+            overflow-y: auto;
+            flex: 1;
+            min-height: 400px;
+        }
+
+        .config-section {
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .section-header h4 {
+            margin: 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .config-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .config-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .config-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .config-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .config-item-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .config-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .config-item-body {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .config-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .config-field label {
+            font-size: 0.75rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .config-field input,
+        .config-field select {
+            font-size: 0.85rem;
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .config-field input:focus,
+        .config-field select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .config-sublist {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .config-sublist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .config-sublist-header h5 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .skill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .skill-badge i {
+            cursor: pointer;
+            opacity: 0.6;
+        }
+
+        .skill-badge i:hover {
+            opacity: 1;
+        }
+
+        .nav-tabs .nav-link {
+            color: #666;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 10px 20px;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: transparent;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            padding: 20px 0;
+        }
+
+        /* Кастомные табы для конфигуратора */
+        .config-tabs {
+            display: flex;
+            gap: 5px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 10;
+            padding-top: 10px;
+        }
+
+        .config-tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #666;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .config-tab-btn:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .config-tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .config-tab-content {
+            position: relative;
+            padding-top: 10px;
+        }
+
+        .config-tab-pane {
+            display: none;
+        }
+
+        .config-tab-pane.active {
+            display: block;
         }
 
         .json-textarea {
@@ -1589,6 +1810,71 @@
         .metric-card.current-day .metric-title {
             color: rgba(255, 255, 255, 0.9);
         }
+
+        /* Стили для генератора задач */
+        .generator-row {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .generator-row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .generator-skills {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .generator-counts {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .generator-count-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .generator-count-wrapper label {
+            margin: 0;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .generator-count {
+            width: 60px;
+            padding: 4px 8px;
+            font-size: 0.85rem;
+        }
+
+        .btn-remove-row {
+            color: #dc3545;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 1.2rem;
+        }
+
+        .btn-remove-row:hover {
+            color: #a71d2a;
+        }
+
+        .generator-summary {
+            background: #e8f4f8;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
     </style>
 </head>
 <body>
@@ -1624,6 +1910,93 @@
         </div>
     </div>
 
+    <!-- Модальное окно редактирования конфигурации -->
+    <div class="modal-overlay" id="configEditorModal">
+        <div class="modal-content config-editor-modal">
+            <div class="modal-header">
+                <h3><i class="bi bi-sliders me-2"></i>Настройка конфигурации</h3>
+                <button class="modal-close" onclick="closeConfigEditor()">&times;</button>
+            </div>
+            <div class="modal-body config-editor-body">
+                <!-- Вкладки -->
+                <div class="config-tabs">
+                    <button class="config-tab-btn active" onclick="switchConfigTab('process')">
+                        <i class="bi bi-sliders me-1"></i>Процесс
+                    </button>
+                    <button class="config-tab-btn" onclick="switchConfigTab('workers')">
+                        <i class="bi bi-people me-1"></i>Команда
+                    </button>
+                    <button class="config-tab-btn" onclick="switchConfigTab('tasks')">
+                        <i class="bi bi-card-checklist me-1"></i>Задачи
+                    </button>
+                </div>
+
+                <!-- Содержимое вкладок -->
+                <div class="config-tab-content">
+                    <!-- Вкладка: Процесс -->
+                    <div id="processTabContent" class="config-tab-pane active">
+                        <div class="config-section">
+                            <div class="section-header">
+                                <h4><i class="bi bi-sliders me-2"></i>Производственный процесс</h4>
+                                <div class="d-flex gap-2">
+                                    <select id="processTemplateSelector" class="form-select form-select-sm" style="width: auto;" onchange="loadProcessTemplate(this.value)">
+                                        <option value="">— Выбрать шаблон —</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="addStage()">
+                                        <i class="bi bi-plus-lg me-1"></i>Добавить стадию
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="stagesContainer" class="config-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка: Команда -->
+                    <div id="workersTabContent" class="config-tab-pane">
+                        <div class="config-section">
+                            <div class="section-header">
+                                <h4><i class="bi bi-people me-2"></i>Команда исполнителей</h4>
+                                <div class="d-flex gap-2">
+                                    <select id="workerTemplateSelector" class="form-select form-select-sm" style="width: auto;" onchange="loadWorkerTemplate(this.value)">
+                                        <option value="">— Выбрать шаблон —</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="addWorker()">
+                                        <i class="bi bi-plus-lg me-1"></i>Добавить воркера
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="workersContainer" class="config-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка: Задачи -->
+                    <div id="tasksTabContent" class="config-tab-pane">
+                        <div class="config-section">
+                            <div class="section-header">
+                                <h4><i class="bi bi-card-checklist me-2"></i>Задачи</h4>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="addTask()">
+                                        <i class="bi bi-plus-lg me-1"></i>Добавить задачу
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="openTaskGenerator()">
+                                        <i class="bi bi-magic me-1"></i>Генератор задач
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="tasksContainer" class="config-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeConfigEditor()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveConfigFromEditor()">
+                    <i class="bi bi-check-lg me-2"></i>Сохранить и применить
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="simulation-container">
         <div class="header">
             <h1><i class="bi bi-kanban me-2"></i>KanbanFlow Simulation</h1>
@@ -1642,54 +2015,27 @@
                 <i class="bi bi-chevron-down settings-toggle-icon"></i>
             </div>
             <div class="settings-body">
-                <!-- Конфигурация: Процесс -->
+                <!-- Кнопка настройки конфигурации -->
                 <div class="settings-section">
-                    <h4><i class="bi bi-sliders me-2"></i>Производственный процесс</h4>
-                    <div class="settings-row">
-                        <select class="form-select" id="processSelector" style="width: auto; min-width: 250px;">
-                            <option value="">Загрузка...</option>
-                        </select>
-                        <a href="/editor/processes.html" target="_blank" class="btn btn-outline-primary btn-sm" title="Редактировать процесс">
-                            <i class="bi bi-sliders"></i> Редактор
-                        </a>
-                        <small class="text-muted" id="processDescription"></small>
-                    </div>
-                </div>
-
-                <!-- Конфигурация: Работники -->
-                <div class="settings-section">
-                    <h4><i class="bi bi-people me-2"></i>Команда исполнителей</h4>
-                    <div class="settings-row">
-                        <select class="form-select" id="workerPoolSelector" style="width: auto; min-width: 250px;">
-                            <option value="">Загрузка...</option>
-                        </select>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="loadAllPresets()" title="Обновить список пресетов">
-                            <i class="bi bi-arrow-clockwise"></i>
+                    <div class="settings-row" style="justify-content: center; gap: 10px; padding: 10px 0;">
+                        <button class="btn btn-primary btn-lg" onclick="openConfigEditor()">
+                            <i class="bi bi-sliders me-2"></i>Настроить конфигурацию
                         </button>
-                        <a href="/editor/workers.html" target="_blank" class="btn btn-outline-primary btn-sm" title="Редактировать команды">
-                            <i class="bi bi-pencil-square"></i> Редактор
-                        </a>
-                        <small class="text-muted" id="workerPoolDescription"></small>
+                        <button class="btn btn-outline-danger btn-lg" onclick="resetConfigTemplate()">
+                            <i class="bi bi-trash me-2"></i>Сбросить конфигурацию
+                        </button>
+                    </div>
+                    <div class="settings-row" style="justify-content: center;">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Настройте процесс, команду и задачи в едином редакторе
+                        </small>
                     </div>
                 </div>
 
-                <!-- Конфигурация: Задачи (опционально) -->
+                <!-- Seed и Variability -->
                 <div class="settings-section">
-                    <h4><i class="bi bi-card-checklist me-2"></i>Набор задач (опционально)</h4>
-                    <div class="settings-row">
-                        <select class="form-select" id="taskPresetSelector" style="width: auto; min-width: 250px;">
-                            <option value="">Использовать задачи из процесса</option>
-                        </select>
-                        <a href="/editor/tasks.html" target="_blank" class="btn btn-outline-primary btn-sm" title="Редактировать задачи">
-                            <i class="bi bi-pencil-square"></i> Редактор
-                        </a>
-                        <small class="text-muted" id="taskPresetDescription"></small>
-                    </div>
-                </div>
-
-                <!-- Кнопка запуска -->
-                <div class="settings-section">
-                    <h4><i class="bi bi-play-circle me-2"></i>Запуск симуляции</h4>
+                    <h4><i class="bi bi-sliders me-2"></i>Параметры симуляции</h4>
                     <div class="settings-row">
                         <div class="input-group" style="width: auto;">
                             <span class="input-group-text">Seed</span>
@@ -1702,12 +2048,11 @@
                             </label>
                         </div>
                     </div>
-                </div>
-
-                <!-- Вариативность перенесена выше -->
-                <div class="settings-section" style="display: none;">
-                    <h4><i class="bi bi-shuffle me-2"></i>Параметры</h4>
-                    <div class="settings-row">
+                    <div class="settings-row" style="margin-top: 10px;">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Seed применяется при запуске симуляции. Вариативность — при каждом шаге.
+                        </small>
                     </div>
                 </div>
 
@@ -1868,7 +2213,43 @@
         </div>
     </div>
 
+    <!-- Модальное окно генератора задач -->
+    <div class="modal-overlay" id="taskGeneratorModal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2><i class="bi bi-magic me-2"></i>Генератор задач</h2>
+                <button class="modal-close" onclick="closeTaskGenerator()">&times;</button>
+            </div>
+            <p class="text-muted mb-3">Создавайте задачи пакетно на основе навыков и количества для каждого размера</p>
+            
+            <div class="generator-header">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>📋 Конфигурация генерации</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addGeneratorRow()">
+                        <i class="bi bi-plus-lg"></i> Добавить строку
+                    </button>
+                </div>
+            </div>
+            
+            <div id="generatorRowsContainer">
+                <!-- Строки генератора будут добавляться сюда -->
+            </div>
+            
+            <div class="generator-summary" id="generatorSummary" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <strong>📊 Итого:</strong> <span id="totalTasksCount">0</span> задач будет создано
+            </div>
+            
+            <div class="modal-footer" style="margin-top: 15px;">
+                <button class="btn btn-secondary" onclick="closeTaskGenerator()">Отмена</button>
+                <button class="btn btn-primary" onclick="generateTasks()">
+                    <i class="bi bi-magic me-1"></i> Сгенерировать задачи
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js?v=37"></script>
+    <script src="config-editor.js?v=36"></script>
+    <script src="app.js?v=45"></script>
 </body>
 </html>

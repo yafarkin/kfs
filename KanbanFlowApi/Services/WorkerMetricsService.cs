@@ -70,12 +70,12 @@ public sealed class WorkerMetricsService
         }
         var avgLeadTime = leadTimes.Count > 0 ? leadTimes.Average() : 0m;
 
-        // 5. Flow Efficiency: (Active Work Time) / (Active Work Time + Wait Time)
-        // Active Work Time = время между WorkerTookTask и WorkerCompletedTask
-        // Wait Time = время между WorkerCompletedTask и следующим WorkerTookTask или TaskWaiting
+        // 5. Flow Efficiency: (Active Work Time) / (Total Simulation Days)
+        // Active Work Time = Σ(WorkerCompletedTask.DayNumber - WorkerTookTask.DayNumber) по всем парам
+        // Total Simulation Days = количество дней симуляции
+        // Показывает реальную утилизацию работника за всё время симуляции
         var (activeTime, waitTime) = CalculateFlowEfficiencyTimes(allActivities, workerLogin);
-        var totalTime = activeTime + waitTime;
-        var efficiencyPercent = totalTime > 0 ? (activeTime / totalTime) * 100 : 0m;
+        var efficiencyPercent = (activeTime / totalDays) * 100;
 
         return new ApiWorkerMetricsDto
         {
