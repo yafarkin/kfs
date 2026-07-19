@@ -14,4 +14,14 @@ public sealed record BoardTaskAssignment
     ///     Стадия, на которой воркер работает над задачей
     /// </summary>
     public BoardStage Stage { get; set; } = null!;
+
+    /// <summary>
+    ///     Сколько дней требуется для выполнения задачи на этой стадии (бросается один раз при взятии задачи)
+    /// </summary>
+    public decimal DaysRequired { get; set; }
+
+    /// <summary>
+    ///     Сколько дней уже отработано над задачей (может быть дробным при многозадачности)
+    /// </summary>
+    public decimal DaysWorked { get; set; }
 }

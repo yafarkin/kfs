@@ -1,5 +1,6 @@
 using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.Board;
+using KanbanFlowSerivce.Dtos.Config;
 using KanbanFlowSerivce.Dtos.History;
 using KanbanFlowSerivce.Enums;
 
@@ -103,12 +104,22 @@ public sealed class TaskMovementService
                 var worker = FindAvailableWorker(task, stage);
                 if (worker != null)
                 {
+                    // Рассчитываем длительность задачи один раз при взятии
+                    var daysRequired = worker.Worker.GetDaysForTask(
+                        stage.Stage,
+                        task.Task.ShirtType,
+                        _simulation.Config.UseVariability,
+                        _simulation.Random
+                    );
+
                     // Назначаем воркера на задачу
                     worker.RemoveTaskAssignment(task);
                     worker.Assignments.Add(new BoardTaskAssignment
                     {
                         Task = task,
-                        Stage = stage
+                        Stage = stage,
+                        DaysRequired = daysRequired,
+                        DaysWorked = 0
                     });
                     task.Worker = worker;
 
@@ -596,13 +607,23 @@ public sealed class TaskMovementService
         // Обновляем воркера
         if (worker is not null)
         {
+            // Рассчитываем длительность задачи один раз при взятии
+            var daysRequired = worker.Worker.GetDaysForTask(
+                toStage.Stage,
+                task.Task.ShirtType,
+                _simulation.Config.UseVariability,
+                _simulation.Random
+            );
+
             worker.RemoveTaskAssignment(task);
 
             // Добавляем новое назначение
             worker.Assignments.Add(new BoardTaskAssignment
             {
                 Task = task,
-                Stage = toStage
+                Stage = toStage,
+                DaysRequired = daysRequired,
+                DaysWorked = 0
             });
 
             task.Worker = worker;

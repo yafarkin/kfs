@@ -210,7 +210,7 @@ public class WorkProgressServiceTests
         task.CurrentStage = stage;
         task.Progress = 0;
         stage.Tasks.Add(task);
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 10, DaysWorked = 0 });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -553,8 +553,8 @@ public class WorkProgressServiceTests
         stage.Tasks.Add(task1);
         stage.Tasks.Add(task2);
         
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task1, Stage = stage });
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task2, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task1, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task2, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         
         task1.Worker = worker;
         task2.Worker = worker;

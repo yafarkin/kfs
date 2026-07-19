@@ -50,12 +50,13 @@ public static class WorkerExtensions
         baseEstimate *= performanceMultiplier;
 
         // 4. Применяем отклонения (deviation) к итоговой оценке
-        if (useVariability && random != null && worker.DeviationDownPercent > 0 && worker.DeviationUpPercent > 0)
+        if (useVariability && random != null)
         {
             var estimateWithDeviationDown = baseEstimate * (1.0 - worker.DeviationDownPercent / 100.0);
             var estimateWithDeviationUp = baseEstimate * (1.0 + worker.DeviationUpPercent / 100.0);
 
             // Случайное значение в диапазоне [-deviation, +deviation]
+            // Если deviation = 0, диапазон схлопывается в точку
             baseEstimate = random.NextDouble() * (estimateWithDeviationUp - estimateWithDeviationDown) + estimateWithDeviationDown;
         }
 

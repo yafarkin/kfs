@@ -30,6 +30,16 @@ public sealed class WorkProgressService
 
         foreach (var worker in _simulation.Board.Workers)
         {
+            // Считаем только активные задачи на Work-стадиях (для корректного деления времени)
+            var activeWorkCount = worker.Assignments
+                .Count(a => a.Stage.Stage.Type == StageType.Work && !a.Task.IsCompleted);
+
+            // Если нет активных задач, пропускаем этого воркера
+            if (activeWorkCount == 0)
+            {
+                continue;
+            }
+
             foreach (var assignment in worker.Assignments.ToList())
             {
                 if (assignment.Stage.Stage.Type != StageType.Work)
@@ -46,41 +56,24 @@ public sealed class WorkProgressService
                     continue;
                 }
 
-                // Рассчитываем сколько дней требуется для выполнения задачи на этой стадии
-                var daysRequired = worker.Worker.GetDaysForTask(
-                    stage.Stage, 
-                    task.Task.ShirtType, 
-                    _simulation.Config.UseVariability,
-                    _simulation.Random
-                );
+                // Доля времени которую получает задача сегодня (1 / количество активных задач)
+                var share = 1.0m / activeWorkCount;
 
-                // Защита от деления на ноль: если daysRequired = 0, задача выполняется мгновенно
-                if (daysRequired <= 0)
+                // Увеличиваем отработанное время
+                assignment.DaysWorked += share;
+
+                // Защита от деления на ноль: если DaysRequired не инициализировано, используем 1
+                var daysRequired = assignment.DaysRequired > 0 ? assignment.DaysRequired : 1;
+
+                // Рассчитываем прогресс как процент от отработанного времени
+                task.Progress = (int)Math.Round(100.0m * assignment.DaysWorked / daysRequired);
+
+                // Проверяем завершение задачи
+                var wasCompleted = assignment.DaysWorked >= assignment.DaysRequired;
+                if (wasCompleted)
                 {
                     task.Progress = 100;
-                    completedTasks.Add(task);
-                    continue;
                 }
-
-                // Прогресс за один день = 100% / количество дней
-                // daysRequired уже учитывает performance воркера (рассчитан в GetDaysForTask)
-                var progressPerDay = 100.0m / daysRequired;
-
-                // Скорость выполнения падает пропорционально количеству задач в работе у воркера
-                // Если воркер работает над 2 задачами, каждая выполняется в 2 раза медленнее
-                var activeTasksCount = worker.Assignments.Count;
-                if (activeTasksCount > 1)
-                {
-                    progressPerDay /= activeTasksCount;
-                }
-
-                // Увеличиваем прогресс
-                var newProgress = Math.Min(100, task.Progress + (int)progressPerDay);
-
-                // Проверяем не завершилась ли задача
-                var wasCompleted = !task.IsCompleted && newProgress >= 99;
-
-                task.Progress = newProgress;
 
                 // Записываем в историю
                 _simulation.LogActivity(new HistoryActivity
