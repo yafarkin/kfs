@@ -38,4 +38,9 @@ public sealed record BoardTask
     ///     Текущая стадия задачи
     /// </summary>
     public BoardStage? CurrentStage { get; set; }
+
+    /// <summary>
+    ///     Выбранная следующая стадия (для вероятностных переходов — выбирается один раз при выходе из стадии)
+    /// </summary>
+    public BoardStage? SelectedNextStage { get; set; }
 }

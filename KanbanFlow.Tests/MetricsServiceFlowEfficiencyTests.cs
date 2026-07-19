@@ -80,7 +80,7 @@ public class MetricsServiceFlowEfficiencyTests
         }
 
         // Act
-        var metricsService = new MetricsService(simulation, "Developing");
+        var metricsService = new MetricsService(simulation);
         var flowEfficiency = metricsService.CalculateFlowEfficiency();
 
         // Assert - время в Done не должно считаться как Wait Time
@@ -157,7 +157,7 @@ public class MetricsServiceFlowEfficiencyTests
         }
 
         // Act
-        var metricsService = new MetricsService(simulation, "Developing");
+        var metricsService = new MetricsService(simulation);
         var flowEfficiency = metricsService.CalculateFlowEfficiency();
 
         // Assert - для незавершённой задачи время считается до текущего дня
@@ -239,7 +239,7 @@ public class MetricsServiceFlowEfficiencyTests
         }
 
         // Act
-        var metricsService = new MetricsService(simulation, "Todo");
+        var metricsService = new MetricsService(simulation);
         var flowEfficiency = metricsService.CalculateFlowEfficiency();
 
         // Assert - время в буферных стадиях (Todo, Ready) до Developing считается как Wait

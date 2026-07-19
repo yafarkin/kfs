@@ -12,6 +12,7 @@ namespace KanbanFlowSerivce.Services;
 /// </summary>
 public sealed class WorkProgressService
 {
+    private const decimal CompletionEpsilon = 0.001m;
     private readonly Simulation _simulation;
 
     public WorkProgressService(Simulation simulation)
@@ -68,8 +69,8 @@ public sealed class WorkProgressService
                 // Рассчитываем прогресс как процент от отработанного времени
                 task.Progress = (int)Math.Round(100.0m * assignment.DaysWorked / daysRequired);
 
-                // Проверяем завершение задачи
-                var wasCompleted = assignment.DaysWorked >= assignment.DaysRequired;
+                // Проверяем завершение задачи с допуском (эпсилон) для случаев деления не на степени 2/5
+                var wasCompleted = assignment.DaysWorked >= assignment.DaysRequired - CompletionEpsilon;
                 if (wasCompleted)
                 {
                     task.Progress = 100;

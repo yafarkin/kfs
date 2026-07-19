@@ -12,12 +12,10 @@ namespace KanbanFlowSerivce.Services;
 public sealed class TaskMovementService
 {
     private readonly Simulation _simulation;
-    private readonly Random _random;
 
-    public TaskMovementService(Simulation simulation, Random? random = null)
+    public TaskMovementService(Simulation simulation)
     {
         _simulation = simulation;
-        _random = random ?? new Random();
     }
 
     /// <summary>
@@ -51,12 +49,6 @@ public sealed class TaskMovementService
                 // Пытаемся переместить задачу из предыдущих стадий
                 foreach (var prevStage in stage.PrevStages)
                 {
-                    // Проверяем вероятность перехода из prevStage в stage
-                    if (!IsTransitionAllowed(prevStage, stage))
-                    {
-                        continue;
-                    }
-
                     var moved = TryMoveTask(prevStage, stage, completedTasks);
                     if (moved)
                     {
@@ -104,57 +96,8 @@ public sealed class TaskMovementService
                 var worker = FindAvailableWorker(task, stage);
                 if (worker != null)
                 {
-                    // Рассчитываем длительность задачи один раз при взятии
-                    var daysRequired = worker.Worker.GetDaysForTask(
-                        stage.Stage,
-                        task.Task.ShirtType,
-                        _simulation.Config.UseVariability,
-                        _simulation.Random
-                    );
-
-                    // Назначаем воркера на задачу
-                    worker.RemoveTaskAssignment(task);
-                    worker.Assignments.Add(new BoardTaskAssignment
-                    {
-                        Task = task,
-                        Stage = stage,
-                        DaysRequired = daysRequired,
-                        DaysWorked = 0
-                    });
-                    task.Worker = worker;
-
-                    // Записываем событие WorkerTookTask с CorrelationId для расчёта метрик
-                    var correlationId = Guid.NewGuid();
-                    _simulation.LogActivity(new HistoryActivity
-                    {
-                        Type = ActivityType.WorkerTookTask,
-                        Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {stage.Stage.Name}",
-                        Task = task,
-                        Worker = worker,
-                        Stage = stage,
-                        WorkerLogin = worker.Worker.Login,
-                        TaskKey = task.Task.Key,
-                        StageName = stage.Stage.Name,
-                        CorrelationId = correlationId
-                    });
-
-                    // Если задача была в ожидании — записываем событие возобновления
-                    var waitingEvent = task.TransitionHistory
-                        .OrderByDescending(h => h.Activity.DayNumber)
-                        .FirstOrDefault(h => h.Activity.Type == ActivityType.TaskWaiting);
-
-                    if (waitingEvent != null)
-                    {
-                        _simulation.LogActivity(new HistoryActivity
-                        {
-                            Type = ActivityType.TaskResumed,
-                            Description = $"Задача {task.Task.Key} возобновлена после ожидания на стадии {stage.Stage.Name}",
-                            Task = task,
-                            Stage = stage,
-                            TaskKey = task.Task.Key,
-                            StageName = stage.Stage.Name
-                        });
-                    }
+                    // Назначаем воркера на задачу (единая точка назначения)
+                    AssignWorkerToTask(worker, task, stage);
                 }
                 else
                 {
@@ -220,9 +163,10 @@ public sealed class TaskMovementService
     }
 
     /// <summary>
-    ///     Проверяет, разрешён ли переход из одной стадии в другую на основе вероятности
+    ///     Проверяет, разрешён ли переход из одной стадии в другую.
+    ///     Для вероятностных переходов: ветка выбирается один раз при первой попытке ухода из стадии.
     /// </summary>
-    private bool IsTransitionAllowed(BoardStage fromStage, BoardStage toStage)
+    private bool IsTransitionAllowed(BoardStage fromStage, BoardStage toStage, BoardTask task)
     {
         // Находим переход из fromStage в toStage
         var transition = fromStage.Stage.Transitions
@@ -246,10 +190,60 @@ public sealed class TaskMovementService
             return false;
         }
 
-        // Проверяем вероятность через случайное число
-        var roll = _random.NextDouble();
-        var result = roll < transition.Probability;
-        return result;
+        // Для вероятностных переходов: проверяем, выбрана ли уже эта ветка
+        // Если ветка ещё не выбрана — выбираем сейчас (один раз для задачи)
+        if (task.SelectedNextStage == null)
+        {
+            task.SelectedNextStage = SelectNextStage(fromStage);
+        }
+
+        // Разрешаем переход только в выбранную стадию
+        return task.SelectedNextStage == toStage;
+    }
+
+    /// <summary>
+    ///     Выбирает следующую стадию из всех возможных переходов пропорционально probability.
+    ///     Вызывается один раз для задачи при первой попытке покинуть стадию.
+    /// </summary>
+    private BoardStage SelectNextStage(BoardStage fromStage)
+    {
+        var transitions = fromStage.Stage.Transitions.ToList();
+
+        // Если только один переход — выбираем его
+        if (transitions.Count == 0)
+        {
+            return fromStage; // Нет куда идти
+        }
+
+        if (transitions.Count == 1)
+        {
+            // Находим BoardStage по имени
+            return _simulation.Board.Stages.First(s => s.Stage.Name == transitions[0].Stage.Name);
+        }
+
+        // Нормируем вероятности (сумма может быть != 1.0)
+        var totalProbability = transitions.Sum(t => t.Probability);
+        if (totalProbability <= 0)
+        {
+            // Все вероятности нулевые — выбираем первый переход
+            return _simulation.Board.Stages.First(s => s.Stage.Name == transitions[0].Stage.Name);
+        }
+
+        // Бросаем кубик в диапазоне [0, сумма вероятностей]
+        var roll = _simulation.Random.NextDouble() * totalProbability;
+        var cumulative = 0.0;
+
+        foreach (var transition in transitions)
+        {
+            cumulative += transition.Probability;
+            if (roll <= cumulative)
+            {
+                return _simulation.Board.Stages.First(s => s.Stage.Name == transition.Stage.Name);
+            }
+        }
+
+        // На случай ошибок округления — возвращаем последний переход
+        return _simulation.Board.Stages.First(s => s.Stage.Name == transitions[^1].Stage.Name);
     }
 
     /// <summary>
@@ -274,6 +268,12 @@ public sealed class TaskMovementService
 
             // Проверяем, готова ли задача к перемещению
             if (!IsTaskReadyForMove(task, fromStage))
+            {
+                continue;
+            }
+
+            // Проверяем, разрешён ли переход для этой задачи (вероятностные переходы)
+            if (!IsTransitionAllowed(fromStage, toStage, task))
             {
                 continue;
             }
@@ -420,14 +420,8 @@ public sealed class TaskMovementService
             }
         }
 
-        // Если задача требует конкретного воркера (AcceptableWorkers), но он недоступен — не возвращаем null,
-        // задача может переместиться в стадию и ждать
-        // Но если это буферная стадия после Work - задача не должна перемещаться без воркера
-        if (!string.IsNullOrEmpty(requiredWorkerLogin))
-        {
-            return null;
-        }
-
+        // Если ни один воркер не подошёл — возвращаем null
+        // Задача останется в текущей стадии до доступности воркера
         return null;
     }
 
@@ -451,6 +445,65 @@ public sealed class TaskMovementService
 
         // Проверяем пересечение: есть ли хотя бы один общий навык между задачей и стадией
         return task.Task.RequiredSkills.Any(skill => toStage.Stage.RequiredSkills.Contains(skill));
+    }
+
+    /// <summary>
+    ///     Назначает воркера на задачу: рассчитывает длительность, создаёт назначение, записывает событие WorkerTookTask.
+    ///     Вызывается в двух местах: TryAssignWorkersToWaitingTasks и MoveTask.
+    /// </summary>
+    private void AssignWorkerToTask(BoardWorker worker, BoardTask task, BoardStage stage)
+    {
+        // Рассчитываем длительность задачи один раз при взятии
+        var daysRequired = worker.Worker.GetDaysForTask(
+            stage.Stage,
+            task.Task.ShirtType,
+            _simulation.Config.UseVariability,
+            _simulation.Random
+        );
+
+        // Назначаем воркера на задачу
+        worker.RemoveTaskAssignment(task);
+        worker.Assignments.Add(new BoardTaskAssignment
+        {
+            Task = task,
+            Stage = stage,
+            DaysRequired = daysRequired,
+            DaysWorked = 0
+        });
+        task.Worker = worker;
+
+        // Записываем событие WorkerTookTask с CorrelationId для расчёта метрик
+        var correlationId = Guid.NewGuid();
+        _simulation.LogActivity(new HistoryActivity
+        {
+            Type = ActivityType.WorkerTookTask,
+            Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {stage.Stage.Name}",
+            Task = task,
+            Worker = worker,
+            Stage = stage,
+            WorkerLogin = worker.Worker.Login,
+            TaskKey = task.Task.Key,
+            StageName = stage.Stage.Name,
+            CorrelationId = correlationId
+        });
+
+        // Если задача была в ожидании — записываем событие возобновления
+        var waitingEvent = task.TransitionHistory
+            .OrderByDescending(h => h.Activity.DayNumber)
+            .FirstOrDefault(h => h.Activity.Type == ActivityType.TaskWaiting);
+
+        if (waitingEvent != null)
+        {
+            _simulation.LogActivity(new HistoryActivity
+            {
+                Type = ActivityType.TaskResumed,
+                Description = $"Задача {task.Task.Key} возобновлена после ожидания на стадии {stage.Stage.Name}",
+                Task = task,
+                Stage = stage,
+                TaskKey = task.Task.Key,
+                StageName = stage.Stage.Name
+            });
+        }
     }
 
     /// <summary>
@@ -569,8 +622,15 @@ public sealed class TaskMovementService
         // Обновляем текущую стадию задачи
         task.CurrentStage = toStage;
 
+        // Сбрасываем выбранную следующую стадию (ветка была использована)
+        task.SelectedNextStage = null;
+
         // Проверяем нужно ли записать событие LeadTimeStarted
-        if (toStage.Stage.IsLeadTimeStart && !task.TransitionHistory.Any())
+        // Событие пишется при первом входе задачи в стадию с IsLeadTimeStart=true
+        var leadTimeAlreadyStarted = task.TransitionHistory
+            .Any(h => h.ToStage.Stage.IsLeadTimeStart);
+
+        if (toStage.Stage.IsLeadTimeStart && !leadTimeAlreadyStarted)
         {
             _simulation.LogActivity(new HistoryActivity
             {
@@ -607,41 +667,8 @@ public sealed class TaskMovementService
         // Обновляем воркера
         if (worker is not null)
         {
-            // Рассчитываем длительность задачи один раз при взятии
-            var daysRequired = worker.Worker.GetDaysForTask(
-                toStage.Stage,
-                task.Task.ShirtType,
-                _simulation.Config.UseVariability,
-                _simulation.Random
-            );
-
-            worker.RemoveTaskAssignment(task);
-
-            // Добавляем новое назначение
-            worker.Assignments.Add(new BoardTaskAssignment
-            {
-                Task = task,
-                Stage = toStage,
-                DaysRequired = daysRequired,
-                DaysWorked = 0
-            });
-
-            task.Worker = worker;
-
-            // Записываем событие WorkerTookTask с CorrelationId для расчёта метрик
-            var correlationId = Guid.NewGuid();
-            _simulation.LogActivity(new HistoryActivity
-            {
-                Type = ActivityType.WorkerTookTask,
-                Description = $"Worker {worker.Worker.Login} взял задачу {task.Task.Key} на стадии {toStage.Stage.Name}",
-                Task = task,
-                Worker = worker,
-                Stage = toStage,
-                WorkerLogin = worker.Worker.Login,
-                TaskKey = task.Task.Key,
-                StageName = toStage.Stage.Name,
-                CorrelationId = correlationId
-            });
+            // Назначаем воркера на задачу (единая точка назначения)
+            AssignWorkerToTask(worker, task, toStage);
         }
         else
         {

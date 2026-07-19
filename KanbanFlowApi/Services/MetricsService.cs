@@ -1,6 +1,6 @@
+using System.Text.RegularExpressions;
 using KanbanFlowApi.Dtos.Metrics;
 using KanbanFlowSerivce.Dtos;
-using KanbanFlowSerivce.Dtos.Board;
 using KanbanFlowSerivce.Dtos.History;
 using KanbanFlowSerivce.Enums;
 
@@ -13,12 +13,10 @@ namespace KanbanFlowApi.Services;
 public sealed class MetricsService
 {
     private readonly Simulation _simulation;
-    private readonly string _leadTimeStartStageName;
 
-    public MetricsService(Simulation simulation, string leadTimeStartStageName = "Todo")
+    public MetricsService(Simulation simulation)
     {
         _simulation = simulation;
-        _leadTimeStartStageName = leadTimeStartStageName;
     }
 
     /// <summary>
@@ -119,7 +117,7 @@ public sealed class MetricsService
             return activity.TaskKey;
 
         // Пытаемся извлечь из описания (формат: "Задача TASK-1 перемещена...")
-        var match = System.Text.RegularExpressions.Regex.Match(activity.Description, @"TASK-\d+");
+        var match = Regex.Match(activity.Description, @"TASK-\d+");
         return match.Success ? match.Value : null;
     }
 

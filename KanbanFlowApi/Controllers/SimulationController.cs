@@ -162,14 +162,8 @@ public class SimulationController : ControllerBase
         // Восстанавливаем доменную симуляцию из DTO
         var simulation = ApiMapper.ToDomainSimulation(state);
 
-        // Определяем стадию начала расчёта Lead Time (isLeadTimeStart = true)
-        var leadTimeStartStage = simulation.Config.Workflow.Stages
-            .FirstOrDefault(s => s.IsLeadTimeStart);
-
-        var leadTimeStartStageName = leadTimeStartStage?.Name ?? "Todo";
-
         // Рассчитываем все метрики
-        var metricsService = new MetricsService(simulation, leadTimeStartStageName);
+        var metricsService = new MetricsService(simulation);
         var workerMetricsService = new WorkerMetricsService(simulation);
         var taskMetricsService = new TaskMetricsService(simulation);
 
