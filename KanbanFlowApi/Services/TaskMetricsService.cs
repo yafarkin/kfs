@@ -12,10 +12,12 @@ namespace KanbanFlowApi.Services;
 public sealed class TaskMetricsService
 {
     private readonly Simulation _simulation;
+    private readonly HashSet<string> _finalStageNames;
 
     public TaskMetricsService(Simulation simulation)
     {
         _simulation = simulation;
+        _finalStageNames = MetricsHelpers.GetFinalStageNames(simulation);
     }
 
     /// <summary>
@@ -136,43 +138,19 @@ public sealed class TaskMetricsService
     }
 
     /// <summary>
-    /// Рассчитать Lead Time задачи (от LeadTimeStarted или первого TaskMoved до Done/сейчас).
+    /// Рассчитать Lead Time задачи (от LeadTimeStarted до входа в финальную стадию).
+    /// Если LeadTimeStarted отсутствует — возвращает 0 (задача ещё не вошла в измеряемую зону).
     /// </summary>
     private decimal CalculateLeadTime(List<HistoryActivity> activities)
     {
-        if (activities.Count == 0)
-            return 0m;
-
-        // Найти начало Lead Time
-        var leadTimeStartEvent = activities
-            .FirstOrDefault(a => a.Type == ActivityType.LeadTimeStarted);
-
-        if (leadTimeStartEvent == null)
-        {
-            // Если нет явного события, берём первый TaskMoved
-            leadTimeStartEvent = activities
-                .FirstOrDefault(a => a.Type == ActivityType.TaskMoved);
-        }
-
-        if (leadTimeStartEvent == null)
-            return 0m;
-
-        var startDay = leadTimeStartEvent.DayNumber;
-
-        // Найти конец (Done или текущий день)
-        var doneActivity = activities
-            .FirstOrDefault(a => a.Type == ActivityType.TaskMoved && a.StageName == "Done");
-
-        var endDay = doneActivity?.DayNumber ?? _simulation.CurrentDay;
-
-        return (endDay - startDay);
+        return MetricsHelpers.CalculateLeadTimeFromStartEvent(activities, _finalStageNames, _simulation.CurrentDay) ?? 0m;
     }
 
     /// <summary>
     /// Рассчитать активное время и время ожидания для задачи.
     /// Active = время в Work стадиях (от входа до следующего перехода)
     /// Wait = время в Buffer стадиях (от входа до следующего перехода)
-    /// Стадия Done исключается из расчёта — задача завершена, время не считается.
+    /// Время считается только до входа в финальную стадию.
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
         List<HistoryActivity> activities)
@@ -189,20 +167,21 @@ public sealed class TaskMetricsService
         if (movements.Count == 0)
             return (0, 0);
 
-        // Проверяем, достигла ли задача Done
-        var doneMove = movements.FirstOrDefault(m => m.StageName == "Done");
-        var isCompleted = doneMove != null;
+        // Проверяем, достигла ли задача финальной стадии
+        var isCompleted = movements.Any(m => m.StageName != null && _finalStageNames.Contains(m.StageName));
 
-        // Если задача завершена, считаем только до перехода в Done (не включая Done)
+        // Если задача завершена, считаем только до входа в финальную стадию
         var movementsToProcess = isCompleted
-            ? movements.TakeWhile(m => m.StageName != "Done").ToList()
+            ? movements.TakeWhile(m => m.StageName == null || !_finalStageNames.Contains(m.StageName)).ToList()
             : movements;
 
         if (movementsToProcess.Count == 0)
             return (0, 0);
 
-        // День завершения (переход в Done) или текущий день если не завершена
-        var completionDay = isCompleted ? doneMove!.DayNumber : _simulation.CurrentDay;
+        // День завершения (вход в финальную стадию) или текущий день если не завершена
+        var completionDay = isCompleted
+            ? movements.First(m => m.StageName != null && _finalStageNames.Contains(m.StageName)).DayNumber
+            : _simulation.CurrentDay;
 
         // Проходим по всем переходам и считаем время в каждой стадии
         for (var i = 0; i < movementsToProcess.Count; i++)
@@ -245,7 +224,7 @@ public sealed class TaskMetricsService
         if (lastMove == null)
             return "Todo";
 
-        if (lastMove.StageName == "Done")
+        if (lastMove.StageName != null && _finalStageNames.Contains(lastMove.StageName))
             return "Done";
 
         // Проверить есть ли активная работа
@@ -262,25 +241,22 @@ public sealed class TaskMetricsService
 
     /// <summary>
     /// Извлечь ключ задачи из активности.
+    /// Возвращает TaskKey без regex-фоллбека.
     /// </summary>
     private static string? GetTaskKeyFromActivity(HistoryActivity activity)
     {
-        if (activity.TaskKey != null)
-            return activity.TaskKey;
-
-        var match = System.Text.RegularExpressions.Regex.Match(activity.Description, @"TASK-\d+");
-        return match.Success ? match.Value : null;
+        return activity.TaskKey;
     }
 
     /// <summary>
     /// Рассчитать агрегированные метрики по всем стадиям (P50, P85, P95, Avg, Max).
-    /// Стадия Done исключается — для неё метрики бессмысленны.
+    /// Финальные стадии (стоки) исключаются — для них метрики бессмысленны.
     /// </summary>
     public List<StageMetricsAggregatedDto> CalculateStageMetricsAggregated()
     {
         var allTaskMetrics = CalculateAllTasksMetrics();
 
-        // Группируем время по стадиям (исключая Done)
+        // Группируем время по стадиям (исключая финальные стадии)
         var stageTimes = new Dictionary<string, List<decimal>>();
         var stageTypes = new Dictionary<string, string>();
 
@@ -288,8 +264,8 @@ public sealed class TaskMetricsService
         {
             foreach (var stage in taskMetrics.Stages)
             {
-                // Пропускаем стадию Done
-                if (stage.StageName == "Done")
+                // Пропускаем финальные стадии
+                if (_finalStageNames.Contains(stage.StageName))
                     continue;
 
                 if (!stageTimes.ContainsKey(stage.StageName))
@@ -351,20 +327,15 @@ public sealed class TaskMetricsService
     }
 
     /// <summary>
-    /// Получить порядок стадии для сортировки.
+    /// Получить порядок стадии для сортировки на основе позиции в workflow.
     /// </summary>
     private int GetStageOrder(string stageName)
     {
-        return stageName switch
-        {
-            "Todo" => 0,
-            "Developing" => 1,
-            "Ready for Testing" => 2,
-            "Testing" => 3,
-            "Ready to Merge" => 4,
-            "Release Preparation" => 5,
-            "Done" => 6,
-            _ => 99
-        };
+        var stageIndex = _simulation.Board.Stages
+            .Select((s, index) => new { s.Stage.Name, Index = index })
+            .FirstOrDefault(s => s.Name == stageName)?
+            .Index ?? 99;
+
+        return stageIndex;
     }
 }

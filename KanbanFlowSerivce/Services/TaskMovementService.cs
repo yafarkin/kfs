@@ -209,10 +209,11 @@ public sealed class TaskMovementService
     {
         var transitions = fromStage.Stage.Transitions.ToList();
 
-        // Если только один переход — выбираем его
+        // Если нет переходов — это ошибка конфигурации
         if (transitions.Count == 0)
         {
-            return fromStage; // Нет куда идти
+            throw new InvalidOperationException(
+                $"Стадия {fromStage.Stage.Name} не имеет исходящих переходов — SelectNextStage не должен вызываться");
         }
 
         if (transitions.Count == 1)

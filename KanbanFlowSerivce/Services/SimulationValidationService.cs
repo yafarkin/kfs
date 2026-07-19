@@ -76,16 +76,16 @@ public class SimulationValidationService
                 return ValidationResult.Valid();
             }
 
-            // Если задача в Work и есть прогресс — можно продолжать работу
+            // Если задача в Work и ещё не завершена — можно продолжать работу
             if (currentStage.Stage.Type == StageType.Work &&
-                task.Progress < currentStage.Stage.StageProgressPercent)
+                !task.IsCompleted)
             {
                 return ValidationResult.Valid();
             }
 
-            // Если задача в Work и прогресс 100% — можно двигаться дальше
+            // Если задача в Work и завершена — можно двигаться дальше
             if (currentStage.Stage.Type == StageType.Work &&
-                task.Progress >= currentStage.Stage.StageProgressPercent &&
+                task.IsCompleted &&
                 currentStage.NextStages.Any())
             {
                 return ValidationResult.Valid();
@@ -99,7 +99,7 @@ public class SimulationValidationService
             var stage = t.CurrentStage;
             return stage == null || // Задача ещё не в воркфлоу (ждёт в Todo)
                    (stage.Stage.Type == StageType.Buffer && stage.NextStages.Any()) ||
-                   (t.Progress >= stage.Stage.StageProgressPercent && stage.NextStages.Any());
+                   (!t.IsCompleted && stage.NextStages.Any());
         });
 
         if (!hasPossibleMove)

@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using KanbanFlowApi.Dtos.Metrics;
 using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.History;
@@ -13,10 +12,12 @@ namespace KanbanFlowApi.Services;
 public sealed class MetricsService
 {
     private readonly Simulation _simulation;
+    private readonly HashSet<string> _finalStageNames;
 
     public MetricsService(Simulation simulation)
     {
         _simulation = simulation;
+        _finalStageNames = MetricsHelpers.GetFinalStageNames(simulation);
     }
 
     /// <summary>
@@ -74,51 +75,19 @@ public sealed class MetricsService
 
     /// <summary>
     /// Рассчитать Lead Time для задачи по истории активностей.
-    /// Lead Time считается от первого перехода задачи (из Todo) до перехода в Done.
-    /// Возвращает значение в днях (1 день = 24 тика).
+    /// Lead Time считается от события LeadTimeStarted до входа в финальную стадию.
+    /// Возвращает значение в днях.
     /// </summary>
     private decimal? CalculateTaskLeadTimeFromHistory(string taskKey)
     {
-        // Находим все активности TaskMoved для этой задачи
+        // Находим все активности для этой задачи
         var taskActivities = _simulation.History
             .SelectMany(d => d.Activities)
-            .Where(a => a.Type == ActivityType.TaskMoved && GetTaskKeyFromActivity(a) == taskKey)
+            .Where(a => MetricsHelpers.GetTaskKeyFromActivity(a) == taskKey)
             .OrderBy(a => a.DayNumber)
             .ToList();
 
-        if (taskActivities.Count == 0)
-        {
-            return null;
-        }
-
-        // Первый переход задачи - это начало Lead Time (выход из Todo)
-        var startDay = taskActivities.First().DayNumber;
-
-        // Находим переход в Done
-        var enterDoneActivity = taskActivities
-            .FirstOrDefault(a => a.StageName == "Done");
-
-        if (enterDoneActivity == null)
-        {
-            // Задача ещё не завершена
-            return null;
-        }
-
-        // Возвращаем разницу в днях
-        return (enterDoneActivity.DayNumber - startDay);
-    }
-
-    /// <summary>
-    /// Извлечь ключ задачи из активности (из TaskKey или из Description).
-    /// </summary>
-    private static string? GetTaskKeyFromActivity(HistoryActivity activity)
-    {
-        if (activity.TaskKey != null)
-            return activity.TaskKey;
-
-        // Пытаемся извлечь из описания (формат: "Задача TASK-1 перемещена...")
-        var match = Regex.Match(activity.Description, @"TASK-\d+");
-        return match.Success ? match.Value : null;
+        return MetricsHelpers.CalculateLeadTimeFromStartEvent(taskActivities, _finalStageNames, _simulation.CurrentDay);
     }
 
     /// <summary>
@@ -144,18 +113,13 @@ public sealed class MetricsService
 
     /// <summary>
     /// Рассчитать Throughput (пропускную способность).
-    /// Throughput считается по количеству задач, достигших финальной стадии (Done).
+    /// Throughput считается по количеству задач, достигших финальной стадии (любой из стоков).
     /// </summary>
     public ApiThroughputMetricsDto CalculateThroughput()
     {
         var dailyHistory = new List<ApiThroughputDayDto>();
-        
-        // Находим финальную стадию (у которой нет следующих стадий)
-        var finalStageName = _simulation.Board.Stages
-            .FirstOrDefault(s => s.NextStages.Count == 0)?
-            .Stage.Name;
 
-        if (finalStageName == null)
+        if (_finalStageNames.Count == 0)
         {
             // Если нет финальной стадии, возвращаем нули
             return new ApiThroughputMetricsDto
@@ -173,10 +137,11 @@ public sealed class MetricsService
         {
             var dailyCompleted = 0;
 
-            // Находим все TaskMoved в финальную стадию за этот день
+            // Находим все TaskMoved в любую финальную стадию за этот день
             var enteredFinalStage = day.Activities
-                .Where(a => a.Type == ActivityType.TaskMoved 
-                           && a.StageName == finalStageName
+                .Where(a => a.Type == ActivityType.TaskMoved
+                           && a.StageName != null
+                           && _finalStageNames.Contains(a.StageName)
                            && a.TaskKey != null);
 
             foreach (var activity in enteredFinalStage)
@@ -239,9 +204,9 @@ public sealed class MetricsService
 
     /// <summary>
     /// Рассчитать Active и Wait время для задачи по истории активностей.
-    /// Возвращает значения в днях (1 день = 24 тика).
-    /// Время считается только до перехода в финальную стадию (Done).
-    /// После Done время не накапливается — задача завершена.
+    /// Возвращает значения в днях.
+    /// Время считается только до входа в финальную стадию.
+    /// После входа в финальную стадию время не накапливается — задача завершена.
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateTaskFlowEfficiencyFromHistory(string taskKey)
     {
@@ -252,7 +217,7 @@ public sealed class MetricsService
         var taskActivities = _simulation.History
             .SelectMany(d => d.Activities)
             .Where(a => a.Type == ActivityType.TaskMoved &&
-                        GetTaskKeyFromActivity(a) == taskKey &&
+                        MetricsHelpers.GetTaskKeyFromActivity(a) == taskKey &&
                         a.StageName != null)
             .OrderBy(a => a.DayNumber)
             .ToList();
@@ -262,19 +227,15 @@ public sealed class MetricsService
             return (0, 0);
         }
 
-        // Проверяем, достигла ли задача стадии Done
-        var doneActivity = taskActivities.FirstOrDefault(a => a.StageName == "Done");
-        var isCompleted = doneActivity != null;
+        // Проверяем, достигла ли задача финальной стадии
+        var isCompleted = taskActivities.Any(a => a.StageName != null && _finalStageNames.Contains(a.StageName));
 
-        // Если задача завершена, берём все переходы включая переход в Done (как границу)
-        // Но считаем время только до перехода в Done
+        // Если задача завершена, считаем только до входа в финальную стадию
         var activitiesToProcess = isCompleted
-            ? taskActivities.TakeWhile(a => a.StageName != "Done")
-                .Concat(taskActivities.Where(a => a.StageName == "Done").Take(1))
-                .ToList()
+            ? taskActivities.TakeWhile(a => a.StageName == null || !_finalStageNames.Contains(a.StageName)).ToList()
             : taskActivities;
 
-        // Проходим по всем переходам задачи (до Done включительно как границы)
+        // Проходим по всем переходам задачи (до финальной стадии)
         for (var i = 0; i < activitiesToProcess.Count - 1; i++)
         {
             var currentActivity = activitiesToProcess[i];

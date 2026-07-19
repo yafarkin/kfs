@@ -13,10 +13,12 @@ namespace KanbanFlowApi.Services;
 public sealed class WorkerMetricsService
 {
     private readonly Simulation _simulation;
+    private readonly HashSet<string> _finalStageNames;
 
     public WorkerMetricsService(Simulation simulation)
     {
         _simulation = simulation;
+        _finalStageNames = MetricsHelpers.GetFinalStageNames(simulation);
     }
 
     /// <summary>
@@ -71,9 +73,9 @@ public sealed class WorkerMetricsService
         var avgLeadTime = leadTimes.Count > 0 ? leadTimes.Average() : 0m;
 
         // 5. Flow Efficiency: (Active Work Time) / (Total Simulation Days)
-        // Active Work Time = Σ(WorkerCompletedTask.DayNumber - WorkerTookTask.DayNumber) по всем парам
+        // Active Work Time = объединение интервалов работы (слияние перекрывающихся)
         // Total Simulation Days = количество дней симуляции
-        // Показывает реальную утилизацию работника за всё время симуляции
+        // Показывает реальную утилизацию работника за всё время симуляции (≤ 100%)
         var (activeTime, waitTime) = CalculateFlowEfficiencyTimes(allActivities, workerLogin);
         var efficiencyPercent = (activeTime / totalDays) * 100;
 
@@ -118,7 +120,7 @@ public sealed class WorkerMetricsService
                 activity.StageName != null &&
                 valuableStageNames.Contains(activity.StageName))
             {
-                var taskKey = GetTaskKeyFromActivity(activity);
+                var taskKey = MetricsHelpers.GetTaskKeyFromActivity(activity);
                 if (taskKey != null)
                 {
                     taskKeys.Add(taskKey);
@@ -130,78 +132,52 @@ public sealed class WorkerMetricsService
     }
 
     /// <summary>
-    /// Проверить, дошла ли задача до Done.
+    /// Проверить, дошла ли задача до финальной стадии.
     /// </summary>
     private bool IsTaskCompleted(string taskKey)
     {
         var activities = _simulation.History
             .SelectMany(d => d.Activities)
-            .Where(a => a.Type == ActivityType.TaskMoved && GetTaskKeyFromActivity(a) == taskKey)
+            .Where(a => a.Type == ActivityType.TaskMoved && MetricsHelpers.GetTaskKeyFromActivity(a) == taskKey)
             .OrderBy(a => a.DayNumber)
             .ToList();
 
-        return activities.Any(a => a.StageName == "Done");
+        return activities.Any(a => a.StageName != null && _finalStageNames.Contains(a.StageName));
     }
 
     /// <summary>
-    /// Рассчитать Lead Time задачи (от LeadTimeStarted или первого TaskMoved до Done/сейчас) в днях.
+    /// Рассчитать Lead Time задачи (от LeadTimeStarted до входа в финальную стадию) в днях.
+    /// Если LeadTimeStarted отсутствует — возвращает null.
     /// </summary>
     private decimal? CalculateTaskLeadTime(string taskKey)
     {
         var allTaskActivities = _simulation.History
             .SelectMany(d => d.Activities)
-            .Where(a => GetTaskKeyFromActivity(a) == taskKey)
+            .Where(a => MetricsHelpers.GetTaskKeyFromActivity(a) == taskKey)
             .OrderBy(a => a.DayNumber)
             .ToList();
 
-        if (allTaskActivities.Count == 0)
-            return null;
-
-        // Найти начало Lead Time (событие LeadTimeStarted или первый TaskMoved)
-        var leadTimeStartEvent = allTaskActivities
-            .FirstOrDefault(a => a.Type == ActivityType.LeadTimeStarted);
-
-        if (leadTimeStartEvent == null)
-        {
-            // Если нет явного события, берём первый TaskMoved
-            leadTimeStartEvent = allTaskActivities
-                .FirstOrDefault(a => a.Type == ActivityType.TaskMoved);
-        }
-
-        if (leadTimeStartEvent == null)
-            return null;
-
-        var startDay = leadTimeStartEvent.DayNumber;
-
-        // Найти конец (Done или текущий день)
-        var doneActivity = allTaskActivities
-            .FirstOrDefault(a => a.Type == ActivityType.TaskMoved && a.StageName == "Done");
-
-        var endDay = doneActivity?.DayNumber ?? _simulation.CurrentDay;
-
-        return (endDay - startDay);
+        return MetricsHelpers.CalculateLeadTimeFromStartEvent(allTaskActivities, _finalStageNames, _simulation.CurrentDay);
     }
 
     /// <summary>
     /// Рассчитать активное время работы и время ожидания для работника (в днях).
-    /// Active Time = Σ(WorkerCompletedTask.DayNumber - WorkerTookTask.DayNumber) по всем парам
-    /// Wait Time = время простоя между задачами (только если между завершением и началом следующей задачи прошло > 1 дня)
+    /// Active Time = объединение интервалов [tookDay, completedDay] (слияние перекрывающихся).
+    /// Wait Time = totalDays - activeTime(union).
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
         List<HistoryActivity> allActivities,
         string workerLogin)
     {
-        var activeTime = 0m;
-        var waitTime = 0m;
-
-        // Получить все события работника, отсортированные по дням
+        // Получить все события работника
         var workerEvents = allActivities
             .Where(a => a.WorkerLogin == workerLogin &&
                        (a.Type == ActivityType.WorkerTookTask || a.Type == ActivityType.WorkerCompletedTask))
             .OrderBy(a => a.DayNumber)
             .ToList();
 
-        // Рассчитать активное время по парам WorkerTookTask -> WorkerCompletedTask
+        // Собрать все интервалы [tookDay, completedDay]
+        var intervals = new List<(int Start, int End)>();
         var tookTasks = workerEvents
             .Where(a => a.Type == ActivityType.WorkerTookTask)
             .ToList();
@@ -214,71 +190,69 @@ public sealed class WorkerMetricsService
                     a.Type == ActivityType.WorkerCompletedTask &&
                     a.CorrelationId == tookTask.CorrelationId);
 
-            if (completedTask != null)
-            {
-                // Активное время = завершение - начало + 1 (включая оба дня)
-                // Пример: взял в День 1, завершил в День 1 = 1 день работы (а не 0)
-                var duration = (completedTask.DayNumber - tookTask.DayNumber + 1);
-                activeTime += duration;
-            }
-            else
-            {
-                // Задача ещё не завершена — считаем до текущего дня (включительно)
-                var duration = (_simulation.CurrentDay - tookTask.DayNumber + 1);
-                activeTime += duration;
-            }
+            var endDay = completedTask?.DayNumber ?? _simulation.CurrentDay;
+            intervals.Add((tookTask.DayNumber, endDay));
         }
 
-        // Рассчитать время ожидания (простой)
-        // Простой считается только если между завершением задачи и началом следующей прошло > 1 дня
-        // Формула: BufferDays = NextTookTask.DayNumber - CompletedTask.DayNumber - 1
-        // Если результат <= 0, то простоя не было (worker начал новую задачу на следующий день или в тот же день)
-        var completedTasks = workerEvents
-            .Where(a => a.Type == ActivityType.WorkerCompletedTask)
-            .OrderBy(a => a.DayNumber)
-            .ToList();
+        // Объединить перекрывающиеся интервалы
+        var mergedIntervals = MergeIntervals(intervals);
 
-        for (var i = 0; i < completedTasks.Count; i++)
-        {
-            var completedDay = completedTasks[i].DayNumber;
+        // Сумма длин слитых интервалов (включая оба конца)
+        var activeTime = mergedIntervals.Sum(i => i.End - i.Start + 1);
 
-            // Найти следующий WorkerTookTask
-            var nextTookTask = tookTasks
-                .FirstOrDefault(t => t.DayNumber > completedDay);
-
-            if (nextTookTask != null)
-            {
-                // Простой = разница в днях минус 1 (следующий день не считается простоем)
-                var waitDuration = (nextTookTask.DayNumber - completedDay - 1);
-                if (waitDuration > 0)
-                {
-                    waitTime += waitDuration;
-                }
-            }
-            else
-            {
-                // Если нет следующего WorkerTookTask — считаем до конца симуляции
-                // Но последний день тоже не считаем простоем (worker мог быть занят до конца дня)
-                var waitDuration = (_simulation.CurrentDay - completedDay - 1);
-                if (waitDuration > 0)
-                {
-                    waitTime += waitDuration;
-                }
-            }
-        }
+        // Wait Time = общее время симуляции - activeTime
+        var totalDays = _simulation.History.Count > 0 ? _simulation.History.Count : 1;
+        var waitTime = totalDays - activeTime;
 
         return (activeTime, waitTime);
     }
 
     /// <summary>
+    /// Объединить перекрывающиеся интервалы.
+    /// Пример: [1,3], [2,5] → [1,5]
+    /// </summary>
+    private static List<(int Start, int End)> MergeIntervals(List<(int Start, int End)> intervals)
+    {
+        if (intervals.Count == 0)
+            return [];
+
+        // Сортируем по началу интервала
+        var sorted = intervals.OrderBy(i => i.Start).ToList();
+        var merged = new List<(int Start, int End)>();
+
+        var currentStart = sorted[0].Start;
+        var currentEnd = sorted[0].End;
+
+        for (var i = 1; i < sorted.Count; i++)
+        {
+            var next = sorted[i];
+
+            if (next.Start <= currentEnd + 1)
+            {
+                // Интервалы перекрываются или соприкасаются — объединяем
+                currentEnd = Math.Max(currentEnd, next.End);
+            }
+            else
+            {
+                // Добавляем текущий интервал и начинаем новый
+                merged.Add((currentStart, currentEnd));
+                currentStart = next.Start;
+                currentEnd = next.End;
+            }
+        }
+
+        // Добавляем последний интервал
+        merged.Add((currentStart, currentEnd));
+
+        return merged;
+    }
+
+    /// <summary>
     /// Извлечь ключ задачи из активности.
+    /// Возвращает TaskKey без regex-фоллбека.
     /// </summary>
     private static string? GetTaskKeyFromActivity(HistoryActivity activity)
     {
-        if (activity.TaskKey != null)
-            return activity.TaskKey;
-
-        var match = System.Text.RegularExpressions.Regex.Match(activity.Description, @"TASK-\d+");
-        return match.Success ? match.Value : null;
+        return activity.TaskKey;
     }
 }
