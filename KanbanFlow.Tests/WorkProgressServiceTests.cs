@@ -165,7 +165,7 @@ public class WorkProgressServiceTests
     }
 
     [Fact]
-    public void SimulateWorkDay_Performance100_CompletesInMinDays()
+    public void SimulateWorkDay_Performance100_CompletesInAverageDays()
     {
         // Arrange
         var config = CreateConfigWithPerformance(100);
@@ -184,8 +184,9 @@ public class WorkProgressServiceTests
 
         var progressService = new WorkProgressService(simulation);
 
-        // Act & Assert - при performance 100% задача M (4-6 дней) должна завершиться за 4 дня
-        for (var day = 0; day < 4; day++)
+        // Act & Assert - при performance 100% задача M (4-6 дней, среднее 5) должна завершиться за ~5 дней
+        // Без вариативности: 100 / 5 = 20% в день → 5 дней
+        for (var day = 0; day < 5; day++)
         {
             simulation.StartNewDay();
             progressService.SimulateWorkDay();
@@ -214,15 +215,16 @@ public class WorkProgressServiceTests
 
         var progressService = new WorkProgressService(simulation);
 
-        // Act - симулируем 4 дня
-        for (var day = 0; day < 4; day++)
+        // Act - симулируем 5 дней (при performance 50% задача M должна занимать ~10 дней)
+        for (var day = 0; day < 5; day++)
         {
             simulation.StartNewDay();
             progressService.SimulateWorkDay();
         }
 
-        // Assert - при performance 50% прогресс должен быть примерно 50%
-        Assert.True(task.Progress >= 40 && task.Progress <= 60);
+        // Assert - при performance 50% (в 2 раза медленнее) прогресс за 5 дней должен быть ~50%
+        // M = 5 дней (среднее), performance 50% = 10 дней всего → 5/10 = 50%
+        Assert.True(task.Progress >= 40 && task.Progress <= 60, $"Progress {task.Progress}% should be around 50%");
     }
 
     [Fact]
@@ -524,6 +526,50 @@ public class WorkProgressServiceTests
             Tasks = [new() { Key = "TASK-1", ShirtType = TShirtType.XS, RequiredSkills = ["dev"] }],
             UseVariability = false
         };
+    }
+
+    [Fact]
+    public void SimulateWorkDay_MultipleTasks_SlowerProgress()
+    {
+        // Arrange
+        var config = CreateConfigWithPerformance(100);
+        var simulation = new Simulation();
+        simulation.InitFromConfig(config);
+
+        var worker = simulation.Board.Workers[0];
+        var task1 = simulation.Board.Tasks[0];
+        var task2 = new KanbanFlowSerivce.Dtos.Board.BoardTask
+        {
+            Task = new KanbanFlowSerivce.Dtos.Config.Task { Key = "TASK-2", ShirtType = TShirtType.M, RequiredSkills = ["dev"] },
+            Progress = 0,
+            TransitionHistory = []
+        };
+        
+        var stage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+
+        task1.CurrentStage = stage;
+        task2.CurrentStage = stage;
+        
+        stage.Tasks.Add(task1);
+        stage.Tasks.Add(task2);
+        
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task1, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task2, Stage = stage });
+        
+        task1.Worker = worker;
+        task2.Worker = worker;
+
+        var progressService = new WorkProgressService(simulation);
+
+        // Act - 1 день работы
+        simulation.StartNewDay();
+        progressService.SimulateWorkDay();
+
+        // Assert - при 2 задачах прогресс должен быть в 2 раза медленнее
+        // M = 5 дней (среднее), 100/5 = 20% в день для одной задачи
+        // С 2 задачами: 20% / 2 = 10% в день
+        Assert.True(task1.Progress >= 8 && task1.Progress <= 12, $"Progress {task1.Progress}% should be around 10%");
+        Assert.True(task2.Progress >= 8 && task2.Progress <= 12, $"Progress {task2.Progress}% should be around 10%");
     }
 
     #endregion

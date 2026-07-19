@@ -30,26 +30,28 @@ public static class ProcessPresetsFactory
     }
 
     /// <summary>
-    /// Простой процесс: Todo → Developing → Done (1 стадия работы).
+    /// Простой процесс: Planning → Todo → Developing → Done (1 стадия работы).
     /// </summary>
     private static ProcessPresetDto CreateSimpleProcess()
     {
         var stages = new List<ApiStageDto>
         {
-            new() { Name = "Todo", Type = StageType.Buffer, IsLeadTimeStart = true },
-            new() { Name = "Developing", Type = StageType.Work, StageProgressPercent = 100, CreatesValue = true, RequiredSkills = ["backend", "frontend", "qa"] },
+            new() { Name = "Planning", Type = StageType.Buffer },
+            new() { Name = "Todo", Type = StageType.Buffer, IsLeadTimeStart = true, WipLimit = 5 },
+            new() { Name = "Developing", Type = StageType.Work, StageProgressPercent = 100, CreatesValue = true, RequiredSkills = ["backend", "frontend"] },
             new() { Name = "Done", Type = StageType.Buffer }
         };
 
         // Устанавливаем переходы
-        stages[0].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Developing", Probability = 1.0 });
-        stages[1].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Done", Probability = 1.0 });
+        stages[0].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Todo", Probability = 1.0 });
+        stages[1].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Developing", Probability = 1.0 });
+        stages[2].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Done", Probability = 1.0 });
 
         return new ProcessPresetDto
         {
             Name = "simple-process",
             DisplayName = "Простой процесс",
-            Description = "3 стадии: Todo → Developing → Done. Подходит для обучения.",
+            Description = "4 стадии: Planning → Todo → Developing → Done. Подходит для обучения.",
             IsDefault = false,
             Workflow = new ApiWorkflowDto { Stages = stages }
         };
@@ -62,7 +64,8 @@ public static class ProcessPresetsFactory
     {
         var stages = new List<ApiStageDto>
         {
-            new() { Name = "Todo", Type = StageType.Buffer, IsLeadTimeStart = true },
+            new() { Name = "Planning", Type = StageType.Buffer },
+            new() { Name = "Todo", Type = StageType.Buffer, IsLeadTimeStart = true, WipLimit = 5 },
             new() { Name = "Developing", Type = StageType.Work, StageProgressPercent = 100, CreatesValue = true, RequiredSkills = ["backend", "frontend"] },
             new() { Name = "Ready for Testing", Type = StageType.Buffer },
             new() { Name = "Testing", Type = StageType.Work, StageProgressPercent = 30, CreatesValue = true, RequiredSkills = ["qa"] },
@@ -72,18 +75,19 @@ public static class ProcessPresetsFactory
         };
 
         // Устанавливаем переходы
-        stages[0].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Developing", Probability = 1.0 });
-        stages[1].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready for Testing", Probability = 1.0 });
-        stages[2].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Testing", Probability = 1.0 });
-        stages[3].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready to Merge", Probability = 1.0 });
-        stages[4].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Release Preparation", Probability = 1.0 });
-        stages[5].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Done", Probability = 1.0 });
+        stages[0].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Todo", Probability = 1.0 });
+        stages[1].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Developing", Probability = 1.0 });
+        stages[2].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready for Testing", Probability = 1.0 });
+        stages[3].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Testing", Probability = 1.0 });
+        stages[4].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Ready to Merge", Probability = 1.0 });
+        stages[5].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Release Preparation", Probability = 1.0 });
+        stages[6].Transitions.Add(new ApiStageTransitionDto { TargetStageName = "Done", Probability = 1.0 });
 
         return new ProcessPresetDto
         {
             Name = "kanban-software",
             DisplayName = "Kanban Software Dev",
-            Description = "7 стадий: Todo → Developing → Ready for Testing → Testing → Ready to Merge → Release Prep → Done",
+            Description = "8 стадий: Planning → Todo → Developing → Ready for Testing → Testing → Ready to Merge → Release Prep → Done",
             IsDefault = true,
             Workflow = new ApiWorkflowDto { Stages = stages }
         };
@@ -143,7 +147,7 @@ public static class ProcessPresetsFactory
         {
             Name = "twork-process",
             DisplayName = "TWork Process",
-            Description = "19 стадий: полный цикл TWork с Code Review, автоматизацией тестов",
+            Description = "19 стадий: Planning → To Do → полный цикл TWork с Code Review, автоматизацией тестов",
             IsDefault = false,
             Workflow = new ApiWorkflowDto { Stages = stages }
         };

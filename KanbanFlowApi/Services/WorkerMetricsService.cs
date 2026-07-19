@@ -216,14 +216,15 @@ public sealed class WorkerMetricsService
 
             if (completedTask != null)
             {
-                // Активное время = завершение - начало (в днях)
-                var duration = (completedTask.DayNumber - tookTask.DayNumber);
+                // Активное время = завершение - начало + 1 (включая оба дня)
+                // Пример: взял в День 1, завершил в День 1 = 1 день работы (а не 0)
+                var duration = (completedTask.DayNumber - tookTask.DayNumber + 1);
                 activeTime += duration;
             }
             else
             {
-                // Задача ещё не завершена — считаем до текущего дня
-                var duration = (_simulation.CurrentDay - tookTask.DayNumber);
+                // Задача ещё не завершена — считаем до текущего дня (включительно)
+                var duration = (_simulation.CurrentDay - tookTask.DayNumber + 1);
                 activeTime += duration;
             }
         }

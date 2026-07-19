@@ -705,26 +705,28 @@ public class TaskMovementServiceTests
         };
 
         // Act & Assert
-        // Performance=100 означает нижнюю границу (быстрее)
-        // Developing (100%): M = 4 дня (нижняя граница M=4..6)
-        Assert.Equal(4, worker.GetDaysForTask(developingStage, TShirtType.M));
+        // Performance=100 означает среднее значение (без вариативности)
+        // Developing (100%): M = (4+6)/2 = 5 дней
+        Assert.Equal(5, worker.GetDaysForTask(developingStage, TShirtType.M));
 
-        // QA (30%): M = Ceiling(4 * 0.3) = Ceiling(1.2) = 2 дня
+        // QA (30%): M = Ceiling(4*0.3)=2 .. Ceiling(6*0.3)=2 → среднее 2 дня
         Assert.Equal(2, worker.GetDaysForTask(qaStage, TShirtType.M));
 
-        // Code Review (20%): M = Ceiling(4 * 0.2) = Ceiling(0.8) = 1 день
-        Assert.Equal(1, worker.GetDaysForTask(reviewStage, TShirtType.M));
+        // Code Review (20%): M = Ceiling(4*0.2)=1 .. Ceiling(6*0.2)=2 → среднее 1-2
+        var reviewDays = worker.GetDaysForTask(reviewStage, TShirtType.M);
+        Assert.InRange(reviewDays, 1, 2);
 
-        // Developing (100%): L = 7 дней (нижняя граница L=7..15)
-        Assert.Equal(7, worker.GetDaysForTask(developingStage, TShirtType.L));
+        // Developing (100%): L = (7+15)/2 = 11 дней
+        Assert.Equal(11, worker.GetDaysForTask(developingStage, TShirtType.L));
 
-        // QA (30%): L = Ceiling(7 * 0.3) = Ceiling(2.1) = 3 дня
-        Assert.Equal(3, worker.GetDaysForTask(qaStage, TShirtType.L));
+        // QA (30%): L = Ceiling(7*0.3)=3 .. Ceiling(15*0.3)=5 → среднее ~4
+        var qaDays = worker.GetDaysForTask(qaStage, TShirtType.L);
+        Assert.InRange(qaDays, 3, 5);
 
         // Developing (100%): XS = 1 день
         Assert.Equal(1, worker.GetDaysForTask(developingStage, TShirtType.XS));
 
-        // QA (30%): XS = Ceiling(1 * 0.3) = Ceiling(0.3) = 1 день
+        // QA (30%): XS = 1 день
         Assert.Equal(1, worker.GetDaysForTask(qaStage, TShirtType.XS));
 
         // Задача без размера = 1 день

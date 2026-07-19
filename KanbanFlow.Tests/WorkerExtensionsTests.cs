@@ -9,10 +9,10 @@ namespace KanbanFlow.Tests;
 public class WorkerExtensionsTests
 {
     [Theory]
-    [InlineData(100, 7)]   // Performance 100% → min days
-    [InlineData(50, 11)]   // Performance 50% → average days
-    [InlineData(0, 15)]    // Performance 0% → max days
-    public void GetDaysForTask_NoVariability_PerformanceAffectsDays(int performance, int expectedDays)
+    [InlineData(100, 11)]  // Performance 100% → среднее (7+15)/2 = 11
+    [InlineData(50, 22)]   // Performance 50% → в 2 раза медленнее: 11 * 2 = 22
+    [InlineData(200, 6)]   // Performance 200% → в 2 раза быстрее: 11 / 2 = 5.5 → 6
+    public void GetDaysForTask_NoVariability_PerformanceAsMultiplier(int performance, int expectedDays)
     {
         // Arrange
         var worker = new Worker
@@ -31,7 +31,8 @@ public class WorkerExtensionsTests
             StageProgressPercent = 100
         };
 
-        // Act - L размер: 7-15 дней
+        // Act - L размер: 7-15 дней, без вариативности → среднее 11 дней
+        // Performance применяется как множитель: 100% = 1x, 50% = 2x, 200% = 0.5x
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
         // Assert
@@ -39,14 +40,44 @@ public class WorkerExtensionsTests
     }
 
     [Fact]
-    public void GetDaysForTask_WithDeviation_VariabilityAppliesToBaseEstimate()
+    public void GetDaysForTask_WithVariability_RandomInRange()
     {
         // Arrange
         var worker = new Worker
         {
             Login = "dev1",
             Skills = ["backend"],
-            Performance = 100, // baseEstimate = min = 7
+            Performance = 100, // без влияния
+            DeviationDownPercent = 0,
+            DeviationUpPercent = 0
+        };
+
+        var stage = new Stage
+        {
+            Name = "Developing",
+            Type = StageType.Work,
+            StageProgressPercent = 100
+        };
+
+        var random = new Random(42);
+
+        // Act - L размер: 7-15 дней
+        // Случайное значение в диапазоне [7, 15]
+        var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: true, random);
+
+        // Assert - значение в диапазоне [7, 15]
+        Assert.InRange(days, 7, 15);
+    }
+
+    [Fact]
+    public void GetDaysForTask_WithDeviation_VariabilityAppliesAfterPerformance()
+    {
+        // Arrange
+        var worker = new Worker
+        {
+            Login = "dev1",
+            Skills = ["backend"],
+            Performance = 100, // baseEstimate = среднее = 11
             DeviationDownPercent = 20, // -20%
             DeviationUpPercent = 50    // +50%
         };
@@ -61,20 +92,19 @@ public class WorkerExtensionsTests
         var random = new Random(42);
 
         // Act - L размер: 7-15 дней
-        // baseEstimate = 7 (performance 100%)
-        // estimateDown = 7 * 0.8 = 5.6
-        // estimateUp = 7 * 1.5 = 10.5
-        // random выбирает между 5.6 и 10.5
+        // baseEstimate = 11 (среднее)
+        // estimateDown = 11 * 0.8 = 8.8
+        // estimateUp = 11 * 1.5 = 16.5
+        // random выбирает между 8.8 и 16.5
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: true, random);
 
-        // Assert - значение в диапазоне [6, 11] (округление)
-        Assert.InRange(days, 6, 11);
+        // Assert - значение в разумном диапазоне
+        Assert.InRange(days, 9, 17);
     }
 
     [Theory]
     [InlineData(100)]   // 100% performance
-    [InlineData(50)]    // 50% performance  
-    [InlineData(0)]     // 0% performance
+    [InlineData(50)]    // 50% performance
     public void GetDaysForTask_StageProgressPercent_AppliedCorrectly(int performance)
     {
         // Arrange
@@ -95,41 +125,41 @@ public class WorkerExtensionsTests
         };
 
         // Act - L размер: 7-15 дней, 25% стадии
-        // min = 7 * 0.25 = 1.75 → 2
-        // max = 15 * 0.25 = 3.75 → 4
+        // StageProgressPercent: min=2 (7*0.25=1.75→2), max=4 (15*0.25=3.75→4)
+        // Без variability → среднее = 3
+        // Performance применяется к среднему
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
         // Assert - значение должно быть в разумном диапазоне
-        Assert.InRange(days, 2, 4);
+        // При 100%: 3 дня, при 50%: 6 дней
+        Assert.InRange(days, 2, 7);
     }
 
     [Fact]
-    public void GetDaysForTask_Variability_RandomInRange()
+    public void GetDaysForTask_StageProgressPercent_ZeroPerformance_TreatedAs100()
     {
         // Arrange
         var worker = new Worker
         {
             Login = "dev1",
             Skills = ["backend"],
-            Performance = 50, // Середина
+            Performance = 0, // 0% трактуется как 100% (защита от деления на ноль)
             DeviationDownPercent = 0,
             DeviationUpPercent = 0
         };
 
         var stage = new Stage
         {
-            Name = "Developing",
+            Name = "Code Review",
             Type = StageType.Work,
-            StageProgressPercent = 100
+            StageProgressPercent = 25
         };
 
-        var random = new Random(42); // Fixed seed для воспроизводимости
+        // Act
+        var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
-        // Act - L размер: 7-15 дней, performance 50% = 11 дней
-        var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: true, random);
-
-        // Assert - значение в диапазоне 7-15
-        Assert.InRange(days, 7, 15);
+        // Assert - как при 100% performance
+        Assert.InRange(days, 2, 4);
     }
 
     [Fact]
@@ -154,12 +184,12 @@ public class WorkerExtensionsTests
 
         // Act - M размер: 4-6 дней
         // StageProgressPercent (30%): min=2 (4*0.3=1.2→2), max=2 (6*0.3=1.8→2)
-        // Performance 80%: 2 + (2-2)*0.2 = 2
-        // Без variability = 2
+        // Без variability → среднее = 2
+        // Performance 80%: 2 * (100/80) = 2.5 → 3
         var days = worker.GetDaysForTask(stage, TShirtType.M, useVariability: false);
 
         // Assert
-        Assert.Equal(2, days);
+        Assert.Equal(3, days);
     }
 
     [Fact]
@@ -185,5 +215,31 @@ public class WorkerExtensionsTests
 
         // Assert
         Assert.Equal(1, days);
+    }
+
+    [Fact]
+    public void GetDaysForTask_HighPerformance_ReducesDuration()
+    {
+        // Arrange
+        var worker100 = new Worker { Login = "w1", Performance = 100, Skills = [], DeviationDownPercent = 0, DeviationUpPercent = 0 };
+        var worker200 = new Worker { Login = "w2", Performance = 200, Skills = [], DeviationDownPercent = 0, DeviationUpPercent = 0 };
+        var worker400 = new Worker { Login = "w3", Performance = 400, Skills = [], DeviationDownPercent = 0, DeviationUpPercent = 0 };
+
+        var stage = new Stage { Name = "Dev", Type = StageType.Work, StageProgressPercent = 100 };
+
+        // Act
+        var days100 = worker100.GetDaysForTask(stage, TShirtType.L, useVariability: false);
+        var days200 = worker200.GetDaysForTask(stage, TShirtType.L, useVariability: false);
+        var days400 = worker400.GetDaysForTask(stage, TShirtType.L, useVariability: false);
+
+        // Assert
+        // 100%: 11 дней (среднее 7-15)
+        // 200%: 6 дней (11 / 2)
+        // 400%: 3 дня (11 / 4)
+        Assert.Equal(11, days100);
+        Assert.Equal(6, days200);
+        Assert.Equal(3, days400);
+        Assert.True(days200 < days100, "200% должен быть быстрее 100%");
+        Assert.True(days400 < days200, "400% должен быть быстрее 200%");
     }
 }

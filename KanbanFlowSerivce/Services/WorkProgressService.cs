@@ -63,13 +63,19 @@ public sealed class WorkProgressService
                 }
 
                 // Прогресс за один день = 100% / количество дней
-                // С учётом производительности воркера
+                // daysRequired уже учитывает performance воркера (рассчитан в GetDaysForTask)
                 var progressPerDay = 100.0m / daysRequired;
-                var performanceMultiplier = (decimal)worker.Worker.Performance / 100.0m;
-                var actualProgress = progressPerDay * performanceMultiplier;
+
+                // Скорость выполнения падает пропорционально количеству задач в работе у воркера
+                // Если воркер работает над 2 задачами, каждая выполняется в 2 раза медленнее
+                var activeTasksCount = worker.Assignments.Count;
+                if (activeTasksCount > 1)
+                {
+                    progressPerDay /= activeTasksCount;
+                }
 
                 // Увеличиваем прогресс
-                var newProgress = Math.Min(100, task.Progress + (int)actualProgress);
+                var newProgress = Math.Min(100, task.Progress + (int)progressPerDay);
 
                 // Проверяем не завершилась ли задача
                 var wasCompleted = !task.IsCompleted && newProgress >= 99;

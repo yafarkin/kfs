@@ -28,14 +28,30 @@ public static class WorkerExtensions
         var minDays = baseDays.Item1;
         var maxDays = baseDays.Item2;
 
-        // 2. Применяем performance: 100% = min, 0% = max, 50% = середина
-        var performancePosition = 1.0 - (worker.Performance / 100.0);
-        var baseEstimate = minDays + (maxDays - minDays) * performancePosition;
-
-        // 3-4. Если включена вариативность — применяем отклонения и выбираем случайное значение
+        // 2. Бросаем кубик для определения базовой оценки в диапазоне [min, max]
+        double baseEstimate;
         if (useVariability && random != null)
         {
-            // Отклонения от базовой оценки
+            // Случайное значение в диапазоне [minDays, maxDays]
+            baseEstimate = random.NextDouble() * (maxDays - minDays) + minDays;
+        }
+        else
+        {
+            // Без вариативности — используем среднее значение
+            baseEstimate = (minDays + maxDays) / 2.0;
+        }
+
+        // 3. Применяем performance как множитель скорости
+        // performance = 100% → множитель 1.0 (без изменений)
+        // performance = 200% → множитель 0.5 (в 2 раза быстрее)
+        // performance = 50% → множитель 2.0 (в 2 раза медленнее)
+        // performance = 0% → множитель 1.0 (защита от деления на ноль, трактуем как 100%)
+        var performanceMultiplier = worker.Performance > 0 ? 100.0 / worker.Performance : 1.0;
+        baseEstimate *= performanceMultiplier;
+
+        // 4. Применяем отклонения (deviation) к итоговой оценке
+        if (useVariability && random != null && worker.DeviationDownPercent > 0 && worker.DeviationUpPercent > 0)
+        {
             var estimateWithDeviationDown = baseEstimate * (1.0 - worker.DeviationDownPercent / 100.0);
             var estimateWithDeviationUp = baseEstimate * (1.0 + worker.DeviationUpPercent / 100.0);
 

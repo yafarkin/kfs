@@ -200,6 +200,7 @@ function renderStages() {
         const stageProgressPercent = stage.stageProgressPercent ?? stage.StageProgressPercent ?? 100;
         const requiredSkills = stage.requiredSkills || stage.RequiredSkills || [];
         const requiredSkillsString = Array.isArray(requiredSkills) ? requiredSkills.join(', ') : '';
+        const createsValue = stage.createsValue ?? stage.CreatesValue ?? (stageType === 'Work');
 
         const stageTypeClass = stageType === 'Work' ? 'work' : 'buffer';
         const stageTypeLabel = stageType === 'Work' ? 'Рабочая' : 'Буфер';
@@ -250,6 +251,14 @@ function renderStages() {
                             <option value="false" ${!isLeadTimeStart ? 'selected' : ''}>Нет</option>
                             <option value="true" ${isLeadTimeStart ? 'selected' : ''}>Да</option>
                         </select>
+                    </div>
+                    <div class="config-field">
+                        <label>Создаёт ценность</label>
+                        <select onchange="updateStage(${index}, 'createsValue', this.value === 'true')" ${stageType === 'Buffer' ? 'disabled' : ''}>
+                            <option value="false" ${!createsValue ? 'selected' : ''}>Нет</option>
+                            <option value="true" ${createsValue ? 'selected' : ''}>Да</option>
+                        </select>
+                        ${stageType === 'Buffer' ? '<small class="text-muted">Буферные стадии не создают ценность</small>' : ''}
                     </div>
                     ${stageType === 'Work' ? `
                     <div class="config-field">
@@ -318,6 +327,7 @@ function addStage() {
         type: 'Buffer',
         wipLimit: null,
         isLeadTimeStart: false,
+        createsValue: false,  // Буферные стадии не создают ценность
         stageProgressPercent: 100,  // По умолчанию 100%
         requiredSkills: []  // По умолчанию нет требований к навыкам
     };
@@ -347,6 +357,12 @@ function deleteStage(index) {
 
 function updateStage(index, field, value) {
     configEditorData.workflow.stages[index][field] = value;
+    
+    // Если изменили тип стадии — автоматически сбрасываем createsValue для буферов
+    if (field === 'type' && value === 'Buffer') {
+        configEditorData.workflow.stages[index].createsValue = false;
+    }
+    
     renderStages();
 }
 
@@ -729,7 +745,7 @@ function renderTasks() {
         const key = task.key || '';
         const description = task.description || task.summary || '';
         const shirtType = task.shirtType || 'S';
-        const skillsArray = task.skills || [];
+        const skillsArray = task.requiredSkills || [];
         const skillsString = Array.isArray(skillsArray) ? skillsArray.join(', ') : (skillsArray || '');
 
         html += `
@@ -792,7 +808,7 @@ function addTask() {
         summary: 'Новая задача',
         description: 'Новая задача',
         shirtType: 'S',
-        skills: []
+        requiredSkills: []
     };
 
     configEditorData.tasks.push(newTask);
@@ -816,7 +832,7 @@ function updateTaskSkills(index, value) {
     const skills = value.split(',').map(s => s.trim()).filter(s => s);
     const task = configEditorData.tasks[index];
     if (task) {
-        task.skills = skills;
+        task.requiredSkills = skills;
     }
     renderTasks();
 }
@@ -981,7 +997,7 @@ function generateTasks() {
                     summary: `Задача ${requiredSkills.join('+')} #${generatedCount + 1}`,
                     description: `Задача ${requiredSkills.join('+')} #${generatedCount + 1}`,
                     shirtType: size,
-                    skills: [...requiredSkills]
+                    requiredSkills: [...requiredSkills]
                 };
 
                 newTasks.push(newTask);

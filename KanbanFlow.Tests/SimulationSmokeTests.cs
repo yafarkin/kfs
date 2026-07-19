@@ -178,23 +178,30 @@ public class SimulationSmokeTests
         // Act - первый шаг симуляции (задачи переходят в Developing)
         service.ProcessMovements();
 
-        // Assert - Проверяем расчёт времени для стадий
-        // Developing (100%): L = 15 дней, M = 6 дней
-        Assert.Equal(15, developingStage.Stage.GetDaysForTask(TShirtType.L).Item2);
-        Assert.Equal(6, developingStage.Stage.GetDaysForTask(TShirtType.M).Item2);
-        
-        // Testing (30%): L = 15 * 0.3 = 4.5 → 5 дней, M = 6 * 0.3 = 1.8 → 2 дня
-        Assert.Equal(5, testingStage.Stage.GetDaysForTask(TShirtType.L).Item2);
-        Assert.Equal(2, testingStage.Stage.GetDaysForTask(TShirtType.M).Item2);
-        
-        // Release Preparation (20%): L = 15 * 0.2 = 3 дня, M = 6 * 0.2 = 1.2 → 2 дня
-        Assert.Equal(3, releaseStage.Stage.GetDaysForTask(TShirtType.L).Item2);
-        Assert.Equal(2, releaseStage.Stage.GetDaysForTask(TShirtType.M).Item2);
+        // Assert - Проверяем расчёт времени для стадий (StageExtensions.GetDaysForTask возвращает min/max)
+        // Developing (100%): L = 7-15 дней, M = 4-6 дней
+        var lDays = developingStage.Stage.GetDaysForTask(TShirtType.L);
+        Assert.Equal(7, lDays.Item1);
+        Assert.Equal(15, lDays.Item2);
+
+        var mDays = developingStage.Stage.GetDaysForTask(TShirtType.M);
+        Assert.Equal(4, mDays.Item1);
+        Assert.Equal(6, mDays.Item2);
+
+        // Testing (30%): L = Ceiling(7*0.3)=3 .. Ceiling(15*0.3)=5 дней
+        var testingL = testingStage.Stage.GetDaysForTask(TShirtType.L);
+        Assert.InRange(testingL.Item1, 2, 3);
+        Assert.InRange(testingL.Item2, 4, 5);
+
+        // Release Preparation (20%): L = Ceiling(7*0.2)=2 .. Ceiling(15*0.2)=3 дня
+        var releaseL = releaseStage.Stage.GetDaysForTask(TShirtType.L);
+        Assert.InRange(releaseL.Item1, 1, 2);
+        Assert.InRange(releaseL.Item2, 3, 4);
 
         // Проверяем что буферные стадии не имеют расчёта (процент = 0 или не используется)
         var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");
         var readyForTestingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Ready for Testing");
-        
+
         // Буферные стадии не должны иметь StageProgressPercent = 100 (по умолчанию)
         // но они не являются рабочими, поэтому расчёт времени для них не применяется
         Assert.Equal(StageType.Buffer, todoStage.Stage.Type);
@@ -215,20 +222,22 @@ public class SimulationSmokeTests
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
         var testingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Testing");
 
-        // Act & Assert - Проверяем расчёт дней worker'ами
-        // Performance=100 означает нижнюю границу (быстрее)
-        // Dev worker на Developing (100%): L = 7 дней (нижняя граница L=7..15)
-        Assert.Equal(7, devWorker.Worker.GetDaysForTask(developingStage.Stage, TShirtType.L));
+        // Act & Assert - Проверяем расчёт дней worker'ами (без вариативности → среднее)
+        // Performance=100 означает среднее значение
+        // Dev worker на Developing (100%): L = (7+15)/2 = 11 дней
+        Assert.Equal(11, devWorker.Worker.GetDaysForTask(developingStage.Stage, TShirtType.L, useVariability: false));
 
-        // Dev worker на Release Preparation (20%): L = Ceiling(7 * 0.2) = 2 дня
+        // Dev worker на Release Preparation (20%): L = Ceiling(7*0.2)=2 .. Ceiling(15*0.2)=3 → среднее ~2-3
         var releaseStage = simulation.Board.Stages.First(s => s.Stage.Name == "Release Preparation");
-        Assert.Equal(2, devWorker.Worker.GetDaysForTask(releaseStage.Stage, TShirtType.L));
+        var releaseDays = devWorker.Worker.GetDaysForTask(releaseStage.Stage, TShirtType.L, useVariability: false);
+        Assert.InRange(releaseDays, 2, 3);
 
-        // QA worker на Testing (30%): M = Ceiling(4 * 0.3) = 2 дня
-        Assert.Equal(2, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.M));
+        // QA worker на Testing (30%): M = Ceiling(4*0.3)=2 .. Ceiling(6*0.3)=2 → 2 дня
+        Assert.Equal(2, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.M, useVariability: false));
 
-        // QA worker на Testing (30%): L = Ceiling(7 * 0.3) = 3 дня
-        Assert.Equal(3, qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.L));
+        // QA worker на Testing (30%): L = Ceiling(7*0.3)=3 .. Ceiling(15*0.3)=5 → среднее ~4
+        var testingL = qaWorker.Worker.GetDaysForTask(testingStage.Stage, TShirtType.L, useVariability: false);
+        Assert.InRange(testingL, 3, 5);
     }
 
     /// <summary>

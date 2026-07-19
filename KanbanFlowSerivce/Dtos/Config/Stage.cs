@@ -38,6 +38,7 @@ public sealed record Stage
     ///     Создаёт ли стадия ценность для бизнеса.
     ///     Например: Developing = true, Testing = true, Code Review = false.
     ///     Используется для расчёта метрик worker'ов (Throughput, Lead Time).
+    ///     По умолчанию false для буферных стадий, true для рабочих.
     /// </summary>
     public bool CreatesValue { get; set; } = true;
 

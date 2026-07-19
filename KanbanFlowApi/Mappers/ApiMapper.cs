@@ -6,6 +6,7 @@ using KanbanFlowSerivce.Dtos;
 using KanbanFlowSerivce.Dtos.Board;
 using KanbanFlowSerivce.Dtos.Config;
 using KanbanFlowSerivce.Dtos.History;
+using KanbanFlowSerivce.Enums;
 using DomainTask = KanbanFlowSerivce.Dtos.Config.Task;
 
 namespace KanbanFlowApi.Mappers;
@@ -44,6 +45,9 @@ public static class ApiMapper
         var stagesMap = new Dictionary<string, Stage>();
         foreach (var stageDto in dto.Workflow.Stages)
         {
+            // Принудительно сбрасываем CreatesValue для буферных стадий
+            var createsValue = stageDto.Type == StageType.Buffer ? false : stageDto.CreatesValue;
+            
             stagesMap[stageDto.Name] = new Stage
             {
                 Name = stageDto.Name,
@@ -54,7 +58,7 @@ public static class ApiMapper
                 RequiresDifferentResource = stageDto.RequiresDifferentResource,
                 RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
                 StageProgressPercent = stageDto.StageProgressPercent,
-                CreatesValue = stageDto.CreatesValue,
+                CreatesValue = createsValue,
                 Transitions = []
             };
         }
@@ -98,6 +102,9 @@ public static class ApiMapper
         var stagesMap = new Dictionary<string, Stage>();
         foreach (var stageDto in request.Workflow.Stages)
         {
+            // Принудительно сбрасываем CreatesValue для буферных стадий
+            var createsValue = stageDto.Type == StageType.Buffer ? false : stageDto.CreatesValue;
+            
             stagesMap[stageDto.Name] = new Stage
             {
                 Name = stageDto.Name,
@@ -108,7 +115,7 @@ public static class ApiMapper
                 RequiresDifferentResource = stageDto.RequiresDifferentResource,
                 RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
                 StageProgressPercent = stageDto.StageProgressPercent,
-                CreatesValue = stageDto.CreatesValue,
+                CreatesValue = createsValue,
                 Transitions = []
             };
         }
