@@ -20,9 +20,16 @@ public sealed record Simulation
     public int CurrentDay { get; private set; }
 
     /// <summary>
-    ///     Генератор случайных чисел для воспроизводимости (используется seed из конфига)
+    ///     Генератор случайных чисел для воспроизводимости (используется seed из конфига).
+    ///     Обёртка со счётчиком вызовов для детерминированной перемотки состояния.
     /// </summary>
-    public Random Random { get; private set; } = null!;
+    public CountingRandom Random { get; private set; } = null!;
+
+    /// <summary>
+    ///     Количество вызовов Random.NextDouble для сериализации состояния.
+    ///     Нужно для детерминированной перемотки Random при восстановлении.
+    /// </summary>
+    public int RandomCallCount => Random?.CallCount ?? 0;
 
     public void InitFromConfig(SimulationConfig config)
     {
@@ -30,7 +37,7 @@ public sealed record Simulation
         Board = BoardMapper.MapToBoard(config);
         History = [];
         CurrentDay = 0;
-        Random = new Random((int)config.Seed);
+        Random = new CountingRandom((int)config.Seed);
     }
 
     /// <summary>
@@ -60,8 +67,9 @@ public sealed record Simulation
     ///     Восстановить состояние симуляции (день) из сериализованных данных.
     ///     Используется при загрузке состояния для продолжения симуляции.
     /// </summary>
-    public void RestoreState(int currentDay)
+    public void RestoreState(int currentDay, int randomCallCount = 0)
     {
         CurrentDay = currentDay;
+        Random?.RewindTo(randomCallCount);
     }
 }

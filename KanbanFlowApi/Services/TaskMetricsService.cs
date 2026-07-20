@@ -148,69 +148,34 @@ public sealed class TaskMetricsService
 
     /// <summary>
     /// Рассчитать активное время и время ожидания для задачи.
-    /// Active = время в Work стадиях (от входа до следующего перехода)
-    /// Wait = время в Buffer стадиях (от входа до следующего перехода)
-    /// Время считается только до входа в финальную стадию.
+    /// Active = время в Work стадиях, Wait = время в Buffer стадиях.
+    /// Время считается до входа в финальную стадию (не включая её).
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateFlowEfficiencyTimes(
         List<HistoryActivity> activities)
     {
-        var activeTime = 0m;
-        var waitTime = 0m;
-
         // Получаем все переходы по стадиям в хронологическом порядке
         var movements = activities
             .Where(a => a.Type == ActivityType.TaskMoved && a.StageName != null)
             .OrderBy(a => a.DayNumber)
             .ToList();
 
-        if (movements.Count == 0)
-            return (0, 0);
-
-        // Проверяем, достигла ли задача финальной стадии
-        var isCompleted = movements.Any(m => m.StageName != null && _finalStageNames.Contains(m.StageName));
-
-        // Если задача завершена, считаем только до входа в финальную стадию
-        var movementsToProcess = isCompleted
-            ? movements.TakeWhile(m => m.StageName == null || !_finalStageNames.Contains(m.StageName)).ToList()
-            : movements;
-
-        if (movementsToProcess.Count == 0)
-            return (0, 0);
-
-        // День завершения (вход в финальную стадию) или текущий день если не завершена
-        var completionDay = isCompleted
-            ? movements.First(m => m.StageName != null && _finalStageNames.Contains(m.StageName)).DayNumber
-            : _simulation.CurrentDay;
-
-        // Проходим по всем переходам и считаем время в каждой стадии
-        for (var i = 0; i < movementsToProcess.Count; i++)
-        {
-            var currentMove = movementsToProcess[i];
-            var stageName = currentMove.StageName!;
-            var enterDay = currentMove.DayNumber;
-
-            // Выход из стадии - следующий переход или день завершения (не currentDay!)
-            var exitDay = (i < movementsToProcess.Count - 1)
-                ? movementsToProcess[i + 1].DayNumber
-                : completionDay;
-
-            var timeInStage = exitDay - enterDay;
-
-            // Определяем тип стадии
-            var stageType = GetStageTypeByName(stageName);
-
-            if (stageType == StageType.Work)
+        return MetricsHelpers.CalculateFlowEfficiencyTimes(
+            movements,
+            _finalStageNames,
+            _simulation.CurrentDay,
+            () =>
             {
-                activeTime += timeInStage;
-            }
-            else if (stageType == StageType.Buffer)
+                var boardTask = _simulation.Board.Tasks
+                    .FirstOrDefault(t => activities.Any(a => MetricsHelpers.GetTaskKeyFromActivity(a) == t.Task.Key));
+                return boardTask?.CurrentStage?.Stage.Name;
+            },
+            stageName =>
             {
-                waitTime += timeInStage;
-            }
-        }
-
-        return (activeTime, waitTime);
+                var stage = _simulation.Board.Stages
+                    .FirstOrDefault(s => s.Stage.Name == stageName);
+                return stage?.Stage.Type == StageType.Work;
+            });
     }
 
     /// <summary>

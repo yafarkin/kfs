@@ -48,6 +48,11 @@ public sealed record ApiBoardStageDto
     public List<string> NextStageNames { get; set; } = new();
 
     /// <summary>
+    /// Имя исключающей стадии (для RequiresDifferentResource).
+    /// </summary>
+    public string? ExcludedStageName { get; set; }
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
     public override string ToString() => $"{Name} ({WipCount}/{(WipLimit.HasValue ? WipLimit.Value.ToString() : "∞")})";

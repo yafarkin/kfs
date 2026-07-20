@@ -16,7 +16,7 @@ public static class WorkerExtensions
     /// <param name="shirtType">Размер задачи</param>
     /// <param name="useVariability">Использовать ли вариативность (random в диапазоне)</param>
     /// <param name="random">Генератор случайных чисел (для воспроизводимости)</param>
-    public static int GetDaysForTask(this Worker worker, Stage stage, TShirtType? shirtType, bool useVariability = true, Random? random = null)
+    public static int GetDaysForTask(this Worker worker, Stage stage, TShirtType? shirtType, bool useVariability = true, CountingRandom? random = null)
     {
         if (!shirtType.HasValue)
         {

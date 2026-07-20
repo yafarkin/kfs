@@ -63,11 +63,15 @@ public sealed class WorkProgressService
                 // Увеличиваем отработанное время
                 assignment.DaysWorked += share;
 
-                // Защита от деления на ноль: если DaysRequired не инициализировано, используем 1
-                var daysRequired = assignment.DaysRequired > 0 ? assignment.DaysRequired : 1;
+                // Жёсткая проверка: DaysRequired должно быть установлено при взятии задачи
+                if (assignment.DaysRequired <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"assignment восстановлен без DaysRequired — ошибка сериализации состояния (задача {task.Task.Key}, воркер {worker.Worker.Login})");
+                }
 
                 // Рассчитываем прогресс как процент от отработанного времени
-                task.Progress = (int)Math.Round(100.0m * assignment.DaysWorked / daysRequired);
+                task.Progress = (int)Math.Round(100.0m * assignment.DaysWorked / assignment.DaysRequired);
 
                 // Проверяем завершение задачи с допуском (эпсилон) для случаев деления не на степени 2/5
                 var wasCompleted = assignment.DaysWorked >= assignment.DaysRequired - CompletionEpsilon;

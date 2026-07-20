@@ -210,9 +210,6 @@ public sealed class MetricsService
     /// </summary>
     private (decimal ActiveTime, decimal WaitTime) CalculateTaskFlowEfficiencyFromHistory(string taskKey)
     {
-        var activeTime = 0m;
-        var waitTime = 0m;
-
         // Получаем все активности TaskMoved для конкретной задачи
         var taskActivities = _simulation.History
             .SelectMany(d => d.Activities)
@@ -222,85 +219,19 @@ public sealed class MetricsService
             .OrderBy(a => a.DayNumber)
             .ToList();
 
-        if (taskActivities.Count == 0)
-        {
-            return (0, 0);
-        }
-
-        // Проверяем, достигла ли задача финальной стадии
-        var isCompleted = taskActivities.Any(a => a.StageName != null && _finalStageNames.Contains(a.StageName));
-
-        // Если задача завершена, считаем только до входа в финальную стадию
-        var activitiesToProcess = isCompleted
-            ? taskActivities.TakeWhile(a => a.StageName == null || !_finalStageNames.Contains(a.StageName)).ToList()
-            : taskActivities;
-
-        // Проходим по всем переходам задачи (до финальной стадии)
-        for (var i = 0; i < activitiesToProcess.Count - 1; i++)
-        {
-            var currentActivity = activitiesToProcess[i];
-            var nextActivity = activitiesToProcess[i + 1];
-
-            // Разница в днях
-            var durationDays = (nextActivity.DayNumber - currentActivity.DayNumber);
-
-            // Определяем тип стадии по имени
-            if (currentActivity.StageName == null)
-                continue;
-
-            var stageType = GetStageTypeByName(currentActivity.StageName);
-
-            if (stageType == StageType.Work)
+        return MetricsHelpers.CalculateFlowEfficiencyTimes(
+            taskActivities,
+            _finalStageNames,
+            _simulation.CurrentDay,
+            () => _simulation.Board.Tasks
+                .FirstOrDefault(t => t.Task.Key == taskKey)?
+                .CurrentStage?.Stage.Name,
+            stageName =>
             {
-                activeTime += durationDays;
-            }
-            else if (stageType == StageType.Buffer)
-            {
-                waitTime += durationDays;
-            }
-        }
-
-        // Если задача ещё в процессе (не в Done), добавляем время до текущего дня
-        if (!isCompleted && activitiesToProcess.Count > 0)
-        {
-            var lastActivity = activitiesToProcess.LastOrDefault();
-            if (lastActivity != null)
-            {
-                var remainingDays = (_simulation.CurrentDay - lastActivity.DayNumber);
-                if (remainingDays > 0)
-                {
-                    // Определяем текущую стадию задачи
-                    var currentStageName = _simulation.Board.Tasks
-                        .FirstOrDefault(t => t.Task.Key == taskKey)?
-                        .CurrentStage?.Stage.Name;
-
-                    if (currentStageName != null)
-                    {
-                        var currentStageType = GetStageTypeByName(currentStageName);
-                        if (currentStageType == StageType.Work)
-                        {
-                            activeTime += remainingDays;
-                        }
-                        else if (currentStageType == StageType.Buffer)
-                        {
-                            waitTime += remainingDays;
-                        }
-                    }
-                }
-            }
-        }
-
-        return (activeTime, waitTime);
-    }
-
-    /// <summary>
-    /// Получить тип стадии по имени.
-    /// </summary>
-    private StageType GetStageTypeByName(string stageName)
-    {
-        var stage = _simulation.Board.Stages
-            .FirstOrDefault(s => s.Stage.Name == stageName);
-        return stage?.Stage.Type ?? StageType.Buffer;
+                var stage = _simulation.Board.Stages
+                    .FirstOrDefault(s => s.Stage.Name == stageName);
+                return stage?.Stage.Type == StageType.Work;
+            });
     }
 
     /// <summary>

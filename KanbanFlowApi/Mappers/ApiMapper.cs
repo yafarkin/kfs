@@ -166,7 +166,8 @@ public static class ApiMapper
             Config = configDto,
             Board = ToApiDto(simulation.Board),
             History = simulation.History.Select(ToApiDto).ToList(),
-            CurrentDay = simulation.CurrentDay
+            CurrentDay = simulation.CurrentDay,
+            RandomCallCount = simulation.RandomCallCount
         };
     }
 
@@ -187,8 +188,8 @@ public static class ApiMapper
         // Восстанавливаем историю из DTO (перезаписываем пустую)
         simulation.History = dto.History.Select(ToDomainHistoryDay).ToList();
 
-        // Восстанавливаем состояние (день)
-        simulation.RestoreState(dto.CurrentDay);
+        // Восстанавливаем состояние (день и random call count)
+        simulation.RestoreState(dto.CurrentDay, dto.RandomCallCount);
 
         return simulation;
     }
@@ -218,7 +219,8 @@ public static class ApiMapper
             WipCount = stage.WipCount,
             CanAcceptTasks = stage.CanAcceptTasks,
             TaskKeys = stage.Tasks.Select(t => t.Task.Key).ToList(),
-            NextStageNames = stage.NextStages.Select(s => s.Stage.Name).ToList()
+            NextStageNames = stage.NextStages.Select(s => s.Stage.Name).ToList(),
+            ExcludedStageName = stage.ExcludedStage?.Stage.Name
         };
     }
 
@@ -231,7 +233,14 @@ public static class ApiMapper
             WipLimit = worker.WipLimit,
             WipCount = worker.WipCount,
             IsAvailable = worker.IsAvailable,
-            AssignedTaskKeys = worker.Assignments.Select(a => a.Task.Task.Key).ToList()
+            AssignedTaskKeys = worker.Assignments.Select(a => a.Task.Task.Key).ToList(),
+            AssignedAssignments = worker.Assignments.Select(a => new ApiTaskAssignmentDto
+            {
+                TaskKey = a.Task.Task.Key,
+                StageName = a.Stage.Stage.Name,
+                DaysRequired = a.DaysRequired,
+                DaysWorked = a.DaysWorked
+            }).ToList()
         };
     }
 
@@ -240,7 +249,7 @@ public static class ApiMapper
         // Если CurrentStage null, но задача есть в stage.Tasks — используем стадию из задачи
         // Это может случиться после симуляции, когда задача не была взята в работу
         var currentStageName = task.CurrentStage?.Stage.Name;
-        
+
         return new ApiBoardTaskDto
         {
             Key = task.Task.Key,
@@ -249,7 +258,8 @@ public static class ApiMapper
             RequiredSkills = task.Task.RequiredSkills,
             Progress = task.Progress,
             WorkerLogin = task.Worker?.Worker.Login,
-            CurrentStageName = currentStageName
+            CurrentStageName = currentStageName,
+            SelectedNextStageName = task.SelectedNextStage?.Stage.Name
         };
     }
 
@@ -292,6 +302,12 @@ public static class ApiMapper
                 // Устанавливаем обратную связь: prevStage для nextStage
                 nextStage.PrevStages.Add(thisStage);
             }
+
+            // Восстанавливаем ExcludedStage
+            if (stageDto.ExcludedStageName != null && stagesMap.TryGetValue(stageDto.ExcludedStageName, out var excludedStage))
+            {
+                thisStage.ExcludedStage = excludedStage;
+            }
         }
 
         // Создаём воркеров
@@ -299,6 +315,13 @@ public static class ApiMapper
         foreach (var workerDto in dto.Workers)
         {
             var configWorker = config.Workers.Single(w => w.Login == workerDto.Login);
+
+            // Обновляем скиллы в конфигурации воркера (если были изменены в UI)
+            if (workerDto.Skills != null && workerDto.Skills.Count > 0)
+            {
+                configWorker.Skills = workerDto.Skills;
+            }
+
             workersMap[workerDto.Login] = new BoardWorker
             {
                 Worker = configWorker,
@@ -339,19 +362,49 @@ public static class ApiMapper
         foreach (var workerDto in dto.Workers)
         {
             var boardWorker = workersMap[workerDto.Login];
-            boardWorker.Assignments = workerDto.AssignedTaskKeys
-                .Select(key =>
+            
+            // Используем AssignedAssignments если есть (новый формат), иначе AssignedTaskKeys (старый формат)
+            if (workerDto.AssignedAssignments.Count > 0)
+            {
+                boardWorker.Assignments = workerDto.AssignedAssignments.Select(a =>
                 {
-                    var task = tasksMap[key];
+                    var task = tasksMap[a.TaskKey];
+                    var stage = stagesMap[a.StageName];
                     return new BoardTaskAssignment
                     {
                         Task = task,
-                        Stage = task.CurrentStage ?? workersMap[workerDto.Login].Assignments
-                                .FirstOrDefault()?.Stage
-                            ?? stagesMap.Values.Single(s => s.PrevStages.Count == 0)
+                        Stage = stage,
+                        DaysRequired = a.DaysRequired,
+                        DaysWorked = a.DaysWorked
                     };
-                })
-                .ToList();
+                }).ToList();
+            }
+            else
+            {
+                // Старый формат: только ключи задач
+                boardWorker.Assignments = workerDto.AssignedTaskKeys
+                    .Select(key =>
+                    {
+                        var task = tasksMap[key];
+                        return new BoardTaskAssignment
+                        {
+                            Task = task,
+                            Stage = task.CurrentStage ?? stagesMap.Values.Single(s => s.PrevStages.Count == 0),
+                            DaysRequired = 0, // Будет установлено при первом взятии задачи
+                            DaysWorked = 0
+                        };
+                    })
+                    .ToList();
+            }
+        }
+
+        // Восстанавливаем SelectedNextStage для задач
+        foreach (var taskDto in dto.Tasks)
+        {
+            if (taskDto.SelectedNextStageName != null && tasksMap.TryGetValue(taskDto.Key, out var task))
+            {
+                task.SelectedNextStage = stagesMap[taskDto.SelectedNextStageName];
+            }
         }
 
         return new Board

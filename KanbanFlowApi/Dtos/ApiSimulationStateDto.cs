@@ -31,6 +31,11 @@ public sealed record ApiSimulationStateDto
     public int CurrentDay { get; set; }
 
     /// <summary>
+    /// Количество вызовов Random.NextDouble для детерминированной перемотки.
+    /// </summary>
+    public int RandomCallCount { get; set; }
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
     public override string ToString() => $"Simulation Day {CurrentDay}";

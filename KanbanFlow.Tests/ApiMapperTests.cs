@@ -584,4 +584,221 @@ public class ApiMapperTests
     }
 
     #endregion
+
+    #region Worker Skills Mapping Tests
+
+    [Fact]
+    public void ToDomainBoard_BoardWorkerWithModifiedSkills_UpdatesSkillsFromDto()
+    {
+        // Arrange - создаём конфигурацию с воркером имеющим один скилл
+        var config = new SimulationConfig
+        {
+            Seed = 42,
+            Workers =
+            [
+                new() { Login = "dev1-be", Skills = ["backend"], Performance = 100 }
+            ],
+            Workflow = new Workflow
+            {
+                Stages =
+                [
+                    new()
+                    {
+                        Name = "Todo",
+                        Type = StageType.Buffer,
+                        IsLeadTimeStart = true,
+                        Transitions = []
+                    }
+                ]
+            },
+            Tasks =
+            [
+                new() { Key = "TASK-1", Summary = "Test", ShirtType = TShirtType.S, RequiredSkills = ["backend"] }
+            ]
+        };
+
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Модифицируем скиллы в API DTO (как будто пользователь изменил на UI)
+        var workerDto = apiState.Board.Workers.First(w => w.Login == "dev1-be");
+        workerDto.Skills = ["backend", "qa"]; // Добавили второй скилл
+
+        // Act - десериализуем обратно
+        var restoredSimulation = ApiMapper.ToDomainSimulation(apiState);
+        var restoredWorker = restoredSimulation.Board.Workers.First(w => w.Worker.Login == "dev1-be");
+
+        // Assert - скиллы должны обновиться из DTO
+        Assert.Contains("backend", restoredWorker.Worker.Skills);
+        Assert.Contains("qa", restoredWorker.Worker.Skills);
+        Assert.Equal(2, restoredWorker.Worker.Skills.Count);
+    }
+
+    [Fact]
+    public void ToDomainBoard_BoardWorkerWithEmptySkills_KeepsOriginalSkills()
+    {
+        // Arrange
+        var config = new SimulationConfig
+        {
+            Seed = 42,
+            Workers =
+            [
+                new() { Login = "dev1", Skills = ["backend", "frontend"], Performance = 100 }
+            ],
+            Workflow = new Workflow
+            {
+                Stages =
+                [
+                    new()
+                    {
+                        Name = "Todo",
+                        Type = StageType.Buffer,
+                        IsLeadTimeStart = true,
+                        Transitions = []
+                    }
+                ]
+            },
+            Tasks =
+            [
+                new() { Key = "TASK-1", Summary = "Test", ShirtType = TShirtType.S, RequiredSkills = ["backend"] }
+            ]
+        };
+
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Очищаем скиллы в DTO
+        var workerDto = apiState.Board.Workers.First();
+        workerDto.Skills = [];
+
+        // Act
+        var restoredSimulation = ApiMapper.ToDomainSimulation(apiState);
+        var restoredWorker = restoredSimulation.Board.Workers.First();
+
+        // Assert - при пустом списке скиллов должны сохраниться оригинальные
+        Assert.Contains("backend", restoredWorker.Worker.Skills);
+        Assert.Contains("frontend", restoredWorker.Worker.Skills);
+        Assert.Equal(2, restoredWorker.Worker.Skills.Count);
+    }
+
+    [Fact]
+    public void ToDomainBoard_BoardWorkerWithMultipleSkills_AllSkillsPreserved()
+    {
+        // Arrange - воркер с множеством скиллов
+        var config = new SimulationConfig
+        {
+            Seed = 42,
+            Workers =
+            [
+                new()
+                {
+                    Login = "fullstack-dev",
+                    Skills = ["backend", "frontend", "qa", "devops"],
+                    Performance = 100
+                }
+            ],
+            Workflow = new Workflow
+            {
+                Stages =
+                [
+                    new()
+                    {
+                        Name = "Todo",
+                        Type = StageType.Buffer,
+                        IsLeadTimeStart = true,
+                        Transitions = []
+                    }
+                ]
+            },
+            Tasks =
+            [
+                new() { Key = "TASK-1", Summary = "Test", ShirtType = TShirtType.S, RequiredSkills = ["backend"] }
+            ]
+        };
+
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Проверяем, что все скиллы передались в API DTO
+        var workerDto = apiState.Board.Workers.First();
+        Assert.Equal(4, workerDto.Skills.Count);
+        Assert.Contains("backend", workerDto.Skills);
+        Assert.Contains("frontend", workerDto.Skills);
+        Assert.Contains("qa", workerDto.Skills);
+        Assert.Contains("devops", workerDto.Skills);
+
+        // Act - десериализуем обратно
+        var restoredSimulation = ApiMapper.ToDomainSimulation(apiState);
+        var restoredWorker = restoredSimulation.Board.Workers.First();
+
+        // Assert - все скиллы должны сохраниться
+        Assert.Equal(4, restoredWorker.Worker.Skills.Count);
+        Assert.Contains("backend", restoredWorker.Worker.Skills);
+        Assert.Contains("frontend", restoredWorker.Worker.Skills);
+        Assert.Contains("qa", restoredWorker.Worker.Skills);
+        Assert.Contains("devops", restoredWorker.Worker.Skills);
+    }
+
+    [Fact]
+    public void ToDomainBoard_BoardWorkerSkills_ModifiedViaDtoAndRestored()
+    {
+        // Arrange - исходная конфигурация
+        var config = new SimulationConfig
+        {
+            Seed = 42,
+            Workers =
+            [
+                new() { Login = "dev1-be", Skills = ["backend"], Performance = 100 },
+                new() { Login = "dev2-fe", Skills = ["frontend"], Performance = 100 },
+                new() { Login = "qa1", Skills = ["qa"], Performance = 100 }
+            ],
+            Workflow = new Workflow
+            {
+                Stages =
+                [
+                    new()
+                    {
+                        Name = "Todo",
+                        Type = StageType.Buffer,
+                        IsLeadTimeStart = true,
+                        Transitions = []
+                    }
+                ]
+            },
+            Tasks =
+            [
+                new() { Key = "TASK-1", Summary = "Test", ShirtType = TShirtType.S, RequiredSkills = ["backend"] }
+            ]
+        };
+
+        var simulation = new KanbanFlowSerivce.Dtos.Simulation();
+        simulation.InitFromConfig(config);
+        var apiState = ApiMapper.ToApiDto(simulation);
+
+        // Пользователь добавил qa к dev1-be через JSON на UI
+        var dev1Dto = apiState.Board.Workers.First(w => w.Login == "dev1-be");
+        dev1Dto.Skills = ["backend", "qa"];
+
+        // Act
+        var restoredSimulation = ApiMapper.ToDomainSimulation(apiState);
+
+        // Assert - проверяем всех воркеров
+        var restoredDev1 = restoredSimulation.Board.Workers.First(w => w.Worker.Login == "dev1-be");
+        var restoredDev2 = restoredSimulation.Board.Workers.First(w => w.Worker.Login == "dev2-fe");
+        var restoredQa1 = restoredSimulation.Board.Workers.First(w => w.Worker.Login == "qa1");
+
+        // dev1-be получил новый скилл
+        Assert.Contains("backend", restoredDev1.Worker.Skills);
+        Assert.Contains("qa", restoredDev1.Worker.Skills);
+        Assert.Equal(2, restoredDev1.Worker.Skills.Count);
+
+        // Остальные воркеры не изменились
+        Assert.Equal(["frontend"], restoredDev2.Worker.Skills);
+        Assert.Equal(["qa"], restoredQa1.Worker.Skills);
+    }
+
+    #endregion
 }

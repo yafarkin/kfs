@@ -156,12 +156,39 @@ function saveConfigTemplateToStorage() {
     }
 }
 
-// Сброс конфигурации (очистка localStorage, но не текущей симуляции)
+// Сброс конфигурации (полный сброс: настройки + симуляция)
 function resetConfigTemplate() {
-    if (confirm('Вы уверены, что хотите сбросить сохранённую конфигурацию? Текущая симуляция не пострадает.')) {
+    if (confirm('Вы уверены, что хотите сбросить конфигурацию? Текущая симуляция и все настройки будут удалены.')) {
+        // Очищаем localStorage
         localStorage.removeItem(STORAGE_KEYS.CONFIG_TEMPLATE);
-        configTemplate = {};
-        showToast('Конфигурация сброшена', 'success');
+        localStorage.removeItem(STORAGE_KEYS.SIMULATION);
+
+        // Сбрасываем переменные
+        configTemplate = null;
+        simulationState = null;
+        currentAllMetrics = null;
+
+        // Очищаем UI
+        const boardContainer = document.getElementById('kanbanBoard');
+        const workersGrid = document.getElementById('workersGrid');
+        const historyList = document.getElementById('historyList');
+        const metricsGrid = document.getElementById('metricsGrid');
+        const workerMetricsGrid = document.getElementById('workerMetricsGrid');
+        const taskMetricsTable = document.getElementById('taskMetricsTable');
+        const stageMetricsTable = document.getElementById('stageMetricsTable');
+
+        if (boardContainer) boardContainer.innerHTML = '';
+        if (workersGrid) workersGrid.innerHTML = '';
+        if (historyList) historyList.innerHTML = '';
+        if (metricsGrid) metricsGrid.innerHTML = '';
+        if (workerMetricsGrid) workerMetricsGrid.innerHTML = '';
+        if (taskMetricsTable) taskMetricsTable.innerHTML = '';
+        if (stageMetricsTable) stageMetricsTable.innerHTML = '';
+
+        // Обновляем UI
+        updateControls();
+
+        showToast('Конфигурация полностью сброшена', 'success');
     }
 }
 
@@ -912,7 +939,63 @@ function importJson() {
             throw new Error('Неверный формат: отсутствуют config или board');
         }
 
+        // Сохраняем состояние симуляции
         simulationState = data;
+        
+        // Обновляем configTemplate из импортированных данных
+        // Преобразуем workflow.transitions (внутри стадий) в плоский список transitions
+        const allTransitions = [];
+        data.config.workflow.stages.forEach(stage => {
+            if (stage.transitions && stage.transitions.length > 0) {
+                stage.transitions.forEach(t => {
+                    allTransitions.push({
+                        fromStageName: stage.name,
+                        toStageName: t.targetStageName,
+                        probability: t.probability
+                    });
+                });
+            }
+        });
+        
+        configTemplate = {
+            seed: data.config.seed,
+            useVariability: data.config.useVariability,
+            workflow: {
+                stages: data.config.workflow.stages.map(s => ({
+                    name: s.name,
+                    type: s.type,
+                    isLeadTimeStart: s.isLeadTimeStart,
+                    wipLimit: s.wipLimit,
+                    requiredSkills: s.requiredSkills || [],
+                    requiresDifferentResource: s.requiresDifferentResource || false,
+                    requiresDifferentResourceFromStage: s.requiresDifferentResourceFromStage,
+                    stageProgressPercent: s.stageProgressPercent || 0,
+                    createsValue: s.createsValue !== undefined ? s.createsValue : (s.type === 'Work')
+                })),
+                transitions: allTransitions
+            },
+            workers: data.config.workers.map(w => ({
+                login: w.login,
+                skills: w.skills || [],
+                wipLimit: w.wipLimit,
+                performance: w.performance || 100,
+                deviationDownPercent: w.deviationDownPercent || 0,
+                deviationUpPercent: w.deviationUpPercent || 0
+            })),
+            tasks: data.config.tasks.map(t => ({
+                key: t.key,
+                summary: t.summary,
+                shirtType: t.shirtType,
+                requiredSkills: t.requiredSkills || [],
+                children: t.children,
+                acceptableWorkers: t.acceptableWorkers
+            }))
+        };
+        
+        // Сохраняем в localStorage
+        saveConfigTemplateToStorage();
+        saveSimulationToStorage();
+        
         renderBoard();
         renderWorkers();
         renderHistory();

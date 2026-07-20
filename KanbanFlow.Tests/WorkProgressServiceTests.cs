@@ -30,7 +30,7 @@ public class WorkProgressServiceTests
         task.Progress = 0;
         stage.Tasks.Add(task);
 
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -59,7 +59,8 @@ public class WorkProgressServiceTests
         task.Progress = 90; // Почти завершено
         stage.Tasks.Add(task);
 
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        // DaysWorked = 4.5 из 5 = 90% прогресса
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 4.5m });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -88,7 +89,7 @@ public class WorkProgressServiceTests
         task.Progress = 0;
         stage.Tasks.Add(task);
 
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         simulation.StartNewDay();
@@ -139,7 +140,7 @@ public class WorkProgressServiceTests
             CorrelationId = correlationId
         });
 
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         simulation.StartNewDay();
@@ -179,7 +180,7 @@ public class WorkProgressServiceTests
         task.CurrentStage = stage;
         task.Progress = 0;
         stage.Tasks.Add(task);
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -242,7 +243,7 @@ public class WorkProgressServiceTests
         task.CurrentStage = stage;
         task.Progress = 95; // Почти завершено
         stage.Tasks.Add(task);
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -275,7 +276,7 @@ public class WorkProgressServiceTests
         task.Progress = 100; // Уже завершено
         // IsCompleted вычисляется на основе Progress >= 100
         stage.Tasks.Add(task);
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -328,7 +329,7 @@ public class WorkProgressServiceTests
         task.CurrentStage = stage;
         task.Progress = 0;
         stage.Tasks.Add(task);
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         var progressService = new WorkProgressService(simulation);
@@ -356,7 +357,7 @@ public class WorkProgressServiceTests
         task.CurrentStage = stage;
         task.Progress = 80; // Достаточно высокий прогресс
         stage.Tasks.Add(task);
-        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage });
+        worker.Assignments.Add(new BoardTaskAssignment { Task = task, Stage = stage, DaysRequired = 5, DaysWorked = 0 });
         task.Worker = worker;
 
         simulation.StartNewDay();

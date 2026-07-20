@@ -59,7 +59,7 @@ public class WorkerExtensionsTests
             StageProgressPercent = 100
         };
 
-        var random = new Random(42);
+        var random = new CountingRandom(42);
 
         // Act - L размер: 7-15 дней
         // Случайное значение в диапазоне [7, 15]
@@ -89,7 +89,7 @@ public class WorkerExtensionsTests
             StageProgressPercent = 100
         };
 
-        var random = new Random(42);
+        var random = new CountingRandom(42);
 
         // Act - L размер: 7-15 дней
         // baseEstimate = 11 (среднее)

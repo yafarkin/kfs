@@ -43,6 +43,11 @@ public sealed record ApiBoardTaskDto
     public string? CurrentStageName { get; set; }
 
     /// <summary>
+    /// Имя выбранной следующей стадии (для вероятностных переходов).
+    /// </summary>
+    public string? SelectedNextStageName { get; set; }
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
     public override string ToString() => $"{Key}: {CurrentStageName ?? "unassigned"} ({Progress}%)";
