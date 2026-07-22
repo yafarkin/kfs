@@ -26,9 +26,13 @@ public sealed record BoardWorker
 
     /// <summary>
     ///     Текущее количество задач в работе (WIP).
-    ///     Только в рабочих статусах - буфферные не считаются что по ним ведётся активная работа. 
+    ///     Только в рабочих статусах - буфферные не считаются что по ним ведётся активная работа.
+    ///     Завершённые задачи (Progress = 100%) не считаются — воркер считается свободным для новой работы.
     /// </summary>
-    public int WipCount => Assignments.Count(x => x.Stage.Stage.Type == StageType.Work);
+    public int WipCount => Assignments.Count(x => 
+        x.Stage.Stage.Type == StageType.Work && 
+        !x.Task.IsCompleted
+    );
 
     /// <summary>
     ///     Доступен ли воркер для взятия новых задач (с учётом WIP лимита)
