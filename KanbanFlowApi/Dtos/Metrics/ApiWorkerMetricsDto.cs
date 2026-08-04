@@ -39,4 +39,24 @@ public sealed record ApiWorkerMetricsDto
     /// Время ожидания (на Buffer стадиях) в днях.
     /// </summary>
     public decimal BufferTimeDays { get; set; }
+
+    /// <summary>
+    /// Стоимость дня работы исполнителя (в условных единицах).
+    /// </summary>
+    public int CostPerDay { get; set; }
+
+    /// <summary>
+    /// Общая стоимость работы исполнителя (WorkCost + BufferCost).
+    /// </summary>
+    public decimal TotalCost { get; set; }
+
+    /// <summary>
+    /// Стоимость полезной работы (Work-стадии).
+    /// </summary>
+    public decimal WorkCost { get; set; }
+
+    /// <summary>
+    /// Стоимость простоя (Buffer-стадии).
+    /// </summary>
+    public decimal BufferCost { get; set; }
 }

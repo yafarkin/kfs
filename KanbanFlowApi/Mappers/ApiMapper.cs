@@ -508,7 +508,8 @@ public static class ApiMapper
             WipLimit = worker.WipLimit,
             Performance = worker.Performance,
             DeviationDownPercent = worker.DeviationDownPercent,
-            DeviationUpPercent = worker.DeviationUpPercent
+            DeviationUpPercent = worker.DeviationUpPercent,
+            CostPerDay = worker.CostPerDay
         };
     }
 
@@ -534,7 +535,8 @@ public static class ApiMapper
             WipLimit = dto.WipLimit,
             Performance = dto.Performance,
             DeviationDownPercent = dto.DeviationDownPercent,
-            DeviationUpPercent = dto.DeviationUpPercent
+            DeviationUpPercent = dto.DeviationUpPercent,
+            CostPerDay = dto.CostPerDay
         };
     }
 

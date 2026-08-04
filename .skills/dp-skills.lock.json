@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "ref": {
+        "kind": "agent-skill",
+        "id": "skl_v1_a8bbea33da8420864584605350bebded2d530bbcb911b5da90e1fd7fdaa6b27b"
+      },
+      "address": "ads/tech-docs",
+      "revision": 1,
+      "skillId": "skl_v1_a8bbea33da8420864584605350bebded2d530bbcb911b5da90e1fd7fdaa6b27b",
+      "artifactId": "art_v1_169553dc301aeeb5f2c071734ec75486345f3392285c8be7416a3922df8df719",
+      "contentDigest": "sha256:347b8cf50def0641293983dc03e0381fe6a8609a7dc6d6b1c9e69e6b6c7139d7",
+      "name": "tech-docs",
+      "pinned": false,
+      "projections": [
+        {
+          "agent": "nessy",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

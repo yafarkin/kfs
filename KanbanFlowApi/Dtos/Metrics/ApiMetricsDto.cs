@@ -24,4 +24,19 @@ public sealed record ApiMetricsDto
     /// Частотная метрика (распределение задач по времени).
     /// </summary>
     public ApiFrequencyMetricsDto Frequency { get; set; } = new();
+
+    /// <summary>
+    /// Общая стоимость проекта (сумма по всем воркерам).
+    /// </summary>
+    public decimal TotalCost { get; set; }
+
+    /// <summary>
+    /// Стоимость полезной работы (сумма по всем воркерам).
+    /// </summary>
+    public decimal WorkCost { get; set; }
+
+    /// <summary>
+    /// Стоимость простоя (сумма по всем воркерам).
+    /// </summary>
+    public decimal BufferCost { get; set; }
 }

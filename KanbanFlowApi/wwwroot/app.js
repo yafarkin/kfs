@@ -1074,7 +1074,7 @@ function renderMetrics(metrics) {
     const currentDay = simulationState?.currentDay || 0;
 
     metricsGrid.innerHTML = `
-        ${renderCurrentDayCard(currentDay)}
+        ${renderCurrentDayCard(currentDay, metrics)}
         ${renderLeadTimeCard(metrics.leadTime)}
         ${renderThroughputCard(metrics.throughput)}
         ${renderFlowEfficiencyCard(metrics.flowEfficiency)}
@@ -1085,8 +1085,12 @@ function renderMetrics(metrics) {
     initMetricTooltips();
 }
 
-// Карточка текущего дня
-function renderCurrentDayCard(currentDay) {
+// Карточка текущего дня с метриками стоимости
+function renderCurrentDayCard(currentDay, metrics) {
+    const totalCost = Math.round(metrics?.totalCost ?? 0);
+    const workCost = Math.round(metrics?.workCost ?? 0);
+    const bufferCost = Math.round(metrics?.bufferCost ?? 0);
+
     return `
         <div class="metric-card current-day">
             <div class="metric-title">
@@ -1096,6 +1100,25 @@ function renderCurrentDayCard(currentDay) {
             </div>
             <div class="metric-value">${currentDay}</div>
             <div class="metric-subvalue">день симуляции</div>
+            <hr style="margin: 10px 0; border: none; border-top: 1px solid #e0e0e0;">
+            <div class="metric-title" style="margin-bottom: 8px;">
+                <i class="bi bi-currency-exchange"></i>
+                <span>Стоимость проекта</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center;">
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #fd7e14;">${totalCost} ¤</div>
+                    <div style="font-size: 0.7rem; color: #888;">Всего</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #20c997;">${workCost} ¤</div>
+                    <div style="font-size: 0.7rem; color: #888;">Работа</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #6c757d;">${bufferCost} ¤</div>
+                    <div style="font-size: 0.7rem; color: #888;">Простой</div>
+                </div>
+            </div>
             <div class="metric-tooltip" id="tooltip-current-day">
                 <div class="metric-tooltip-title">Текущий день симуляции</div>
                 <div class="metric-tooltip-text">
@@ -1104,6 +1127,19 @@ function renderCurrentDayCard(currentDay) {
                 <div class="metric-tooltip-formula">
                     День 0 = начальное состояние<br>
                     День N = после N симуляций
+                </div>
+            </div>
+            <div class="metric-tooltip" id="tooltip-cost">
+                <div class="metric-tooltip-title">Стоимость проекта</div>
+                <div class="metric-tooltip-text">
+                    <b>Всего:</b> общая стоимость всех дней симуляции по всем воркерам<br>
+                    <b>Работа:</b> стоимость дней, когда у воркеров были назначены задачи<br>
+                    <b>Простой:</b> стоимость дней, когда у воркеров не было задач
+                </div>
+                <div class="metric-tooltip-formula">
+                    Total = Work + Buffer<br>
+                    Work = Σ (WorkDays × CostPerDay)<br>
+                    Buffer = Σ (BufferDays × CostPerDay)
                 </div>
             </div>
         </div>
@@ -1334,6 +1370,23 @@ function renderWorkerMetrics(workerMetrics) {
                 <div class="worker-metric-row small-text">
                     <span class="worker-metric-label">Ценных задач:</span>
                     <span class="worker-metric-value">${w.valuableTasksCount}</span>
+                </div>
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #e0e0e0;">
+                <div class="worker-metric-row">
+                    <span class="worker-metric-label">Ставка/день:</span>
+                    <span class="worker-metric-value">${w.costPerDay} ¤</span>
+                </div>
+                <div class="worker-metric-row small-text">
+                    <span class="worker-metric-label">Работа:</span>
+                    <span class="worker-metric-value">${Math.round(w.workCost)} ¤</span>
+                </div>
+                <div class="worker-metric-row small-text">
+                    <span class="worker-metric-label">Простой:</span>
+                    <span class="worker-metric-value">${Math.round(w.bufferCost)} ¤</span>
+                </div>
+                <div class="worker-metric-row">
+                    <span class="worker-metric-label"><strong>Всего:</strong></span>
+                    <span class="worker-metric-value"><strong>${Math.round(w.totalCost)} ¤</strong></span>
                 </div>
             </div>
         </div>

@@ -450,6 +450,7 @@ function renderWorkersEditor() {
         const performance = worker.performance ?? 100;
         const deviationDown = worker.deviationDownPercent ?? 0;
         const deviationUp = worker.deviationUpPercent ?? 0;
+        const costPerDay = worker.costPerDay ?? worker.CostPerDay ?? 100;
 
         html += `
             <div class="config-item" data-worker-index="${index}">
@@ -494,6 +495,11 @@ function renderWorkersEditor() {
                     <div class="config-field">
                         <label>Отклонение вверх (%)</label>
                         <input type="number" value="${deviationUp}" min="0" max="100" onchange="updateWorker(${index}, 'deviationUpPercent', parseInt(this.value) || 0)">
+                    </div>
+                    <div class="config-field">
+                        <label>Стоимость дня (¤)</label>
+                        <input type="number" value="${costPerDay}" min="0" onchange="updateWorker(${index}, 'costPerDay', parseInt(this.value) || 0)">
+                        <small class="text-muted">Стоимость одного дня работы воркера в условных единицах</small>
                     </div>
                 </div>
             </div>
@@ -550,7 +556,8 @@ async function loadWorkerTemplate(presetName) {
                 wipLimit: w.wipLimit ?? w.WipLimit ?? 1,
                 performance: w.performance ?? w.Performance ?? 100,
                 deviationDownPercent: w.deviationDownPercent ?? w.DeviationDownPercent ?? 0,
-                deviationUpPercent: w.deviationUpPercent ?? w.DeviationUpPercent ?? 0
+                deviationUpPercent: w.deviationUpPercent ?? w.DeviationUpPercent ?? 0,
+                costPerDay: w.costPerDay ?? w.CostPerDay ?? 100
             }));
             renderWorkersEditor();
             

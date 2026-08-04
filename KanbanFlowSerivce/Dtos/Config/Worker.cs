@@ -37,4 +37,9 @@ public sealed record Worker
     ///     Например, 50 означает что задача может выполняться на 50% дольше базовой оценки.
     /// </summary>
     public double DeviationUpPercent { get; set; }
+
+    /// <summary>
+    /// Стоимость дня работы воркера (в условных единицах).
+    /// </summary>
+    public int CostPerDay { get; set; } = 100;
 }

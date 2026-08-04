@@ -36,6 +36,11 @@ public sealed record ApiWorkerDto
     public double DeviationUpPercent { get; set; }
 
     /// <summary>
+    /// Стоимость дня работы исполнителя (в условных единицах).
+    /// </summary>
+    public int CostPerDay { get; set; } = 100;
+
+    /// <summary>
     /// Краткое представление для отладки.
     /// </summary>
     public override string ToString() => $"{Login} ({string.Join(", ", Skills)})";

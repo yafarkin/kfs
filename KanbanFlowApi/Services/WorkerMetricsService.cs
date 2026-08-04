@@ -73,11 +73,19 @@ public sealed class WorkerMetricsService
         var avgLeadTime = leadTimes.Count > 0 ? leadTimes.Average() : 0m;
 
         // 5. Flow Efficiency: (Active Work Time) / (Total Simulation Days)
-        // Active Work Time = объединение интервалов работы (слияние перекрывающихся)
+        // Active Time = объединение интервалов [tookDay, completedDay] (слияние перекрывающихся)
         // Total Simulation Days = количество дней симуляции
         // Показывает реальную утилизацию работника за всё время симуляции (≤ 100%)
         var (activeTime, waitTime) = CalculateFlowEfficiencyTimes(allActivities, workerLogin);
         var efficiencyPercent = (activeTime / totalDays) * 100;
+
+        // 6. Cost metrics: workDays = дни с назначенной задачей, bufferDays = остальные дни
+        var costPerDay = boardWorker.Worker.CostPerDay;
+        var workDays = CalculateWorkDays(allActivities, workerLogin);
+        var bufferDays = totalDays - workDays;
+        var workCost = workDays * costPerDay;
+        var bufferCost = bufferDays * costPerDay;
+        var totalCost = workCost + bufferCost;
 
         return new ApiWorkerMetricsDto
         {
@@ -87,7 +95,11 @@ public sealed class WorkerMetricsService
             ValuableTasksCount = valuableTaskKeys.Count,
             EfficiencyPercent = Math.Round(efficiencyPercent, 1),
             WorkTimeDays = Math.Round(activeTime, 1),
-            BufferTimeDays = Math.Round(waitTime, 1)
+            BufferTimeDays = Math.Round(waitTime, 1),
+            CostPerDay = costPerDay,
+            WorkCost = workCost,
+            BufferCost = bufferCost,
+            TotalCost = totalCost
         };
     }
 
@@ -254,5 +266,52 @@ public sealed class WorkerMetricsService
     private static string? GetTaskKeyFromActivity(HistoryActivity activity)
     {
         return activity.TaskKey;
+    }
+
+    /// <summary>
+    /// Рассчитать количество дней, когда у работника была назначена задача (Work-стадии).
+    /// Проверяет каждый день симуляции: была ли у воркера задача в этот день.
+    /// </summary>
+    private int CalculateWorkDays(List<HistoryActivity> allActivities, string workerLogin)
+    {
+        var totalDays = _simulation.History.Count > 0 ? _simulation.History.Count : 1;
+
+        // Собираем все интервалы работы воркера [tookDay, completedDay]
+        var workerEvents = allActivities
+            .Where(a => a.WorkerLogin == workerLogin &&
+                       (a.Type == ActivityType.WorkerTookTask || a.Type == ActivityType.WorkerCompletedTask))
+            .OrderBy(a => a.DayNumber)
+            .ToList();
+
+        var intervals = new List<(int Start, int End)>();
+        var tookTasks = workerEvents
+            .Where(a => a.Type == ActivityType.WorkerTookTask)
+            .ToList();
+
+        foreach (var tookTask in tookTasks)
+        {
+            var completedTask = workerEvents
+                .FirstOrDefault(a =>
+                    a.Type == ActivityType.WorkerCompletedTask &&
+                    a.CorrelationId == tookTask.CorrelationId);
+
+            var endDay = completedTask?.DayNumber ?? totalDays;
+            intervals.Add((tookTask.DayNumber, endDay));
+        }
+
+        // Объединяем перекрывающиеся интервалы
+        var mergedIntervals = MergeIntervals(intervals);
+
+        // Считаем количество уникальных дней в объединённых интервалах
+        var workDaysSet = new HashSet<int>();
+        foreach (var interval in mergedIntervals)
+        {
+            for (var day = interval.Start; day <= interval.End; day++)
+            {
+                workDaysSet.Add(day);
+            }
+        }
+
+        return workDaysSet.Count;
     }
 }

@@ -25,12 +25,18 @@ public sealed class MetricsService
     /// </summary>
     public ApiMetricsDto CalculateAllMetrics()
     {
+        var workerMetricsService = new WorkerMetricsService(_simulation);
+        var workerMetrics = workerMetricsService.CalculateAllWorkersMetrics();
+
         return new ApiMetricsDto
         {
             LeadTime = CalculateLeadTime(),
             Throughput = CalculateThroughput(),
             FlowEfficiency = CalculateFlowEfficiency(),
-            Frequency = CalculateFrequency()
+            Frequency = CalculateFrequency(),
+            TotalCost = workerMetrics.Sum(w => w.TotalCost),
+            WorkCost = workerMetrics.Sum(w => w.WorkCost),
+            BufferCost = workerMetrics.Sum(w => w.BufferCost)
         };
     }
 

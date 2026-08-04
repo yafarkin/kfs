@@ -48,7 +48,8 @@ public static class WorkerPoolPresetsFactory
                     WipLimit = 1,
                     Performance = 100,
                     DeviationDownPercent = 20,
-                    DeviationUpPercent = 50
+                    DeviationUpPercent = 50,
+                    CostPerDay = 100
                 }
             }
         };
@@ -74,7 +75,8 @@ public static class WorkerPoolPresetsFactory
                     WipLimit = 1,
                     Performance = 100,
                     DeviationDownPercent = 20,
-                    DeviationUpPercent = 50
+                    DeviationUpPercent = 50,
+                    CostPerDay = 100
                 },
                 new()
                 {
@@ -83,7 +85,8 @@ public static class WorkerPoolPresetsFactory
                     WipLimit = 1,
                     Performance = 100,
                     DeviationDownPercent = 20,
-                    DeviationUpPercent = 50
+                    DeviationUpPercent = 50,
+                    CostPerDay = 100
                 },
                 new()
                 {
@@ -92,7 +95,8 @@ public static class WorkerPoolPresetsFactory
                     WipLimit = 1,
                     Performance = 100,
                     DeviationDownPercent = 30,
-                    DeviationUpPercent = 40
+                    DeviationUpPercent = 40,
+                    CostPerDay = 100
                 }
             }
         };
@@ -111,13 +115,13 @@ public static class WorkerPoolPresetsFactory
             IsDefault = false,
             Workers = new List<ApiWorkerDto>
             {
-                new() { Login = "be-dev-1", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
-                new() { Login = "be-dev-2", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
-                new() { Login = "be-dev-3", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
-                new() { Login = "be-dev-4", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
-                new() { Login = "fe-dev-1", Skills = ["frontend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50 },
-                new() { Login = "qa-eng-1", Skills = ["qa"], WipLimit = 1, Performance = 100, DeviationDownPercent = 30, DeviationUpPercent = 40 },
-                new() { Login = "qa-eng-2", Skills = ["qa"], WipLimit = 1, Performance = 100, DeviationDownPercent = 30, DeviationUpPercent = 40 }
+                new() { Login = "be-dev-1", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50, CostPerDay = 100 },
+                new() { Login = "be-dev-2", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50, CostPerDay = 100 },
+                new() { Login = "be-dev-3", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50, CostPerDay = 100 },
+                new() { Login = "be-dev-4", Skills = ["backend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50, CostPerDay = 100 },
+                new() { Login = "fe-dev-1", Skills = ["frontend"], WipLimit = 1, Performance = 100, DeviationDownPercent = 20, DeviationUpPercent = 50, CostPerDay = 100 },
+                new() { Login = "qa-eng-1", Skills = ["qa"], WipLimit = 1, Performance = 100, DeviationDownPercent = 30, DeviationUpPercent = 40, CostPerDay = 100 },
+                new() { Login = "qa-eng-2", Skills = ["qa"], WipLimit = 1, Performance = 100, DeviationDownPercent = 30, DeviationUpPercent = 40, CostPerDay = 100 }
             }
         };
     }
