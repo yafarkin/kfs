@@ -490,6 +490,11 @@ function animateBoardTransition(prevSnapshot) {
         const moved = Math.abs(dx) > 1 || Math.abs(dy) > 1;
 
         if (moved) {
+            // Прячем настоящую (уже отрисованную на новом месте) карточку на время полёта —
+            // иначе она видна сразу в колонке назначения, а призрак долетает и накладывается
+            // поверх уже стоящей там карточки. Показываем её обратно ровно в момент посадки.
+            card.style.visibility = 'hidden';
+
             const ghost = prev.clone;
             ghost.style.position = 'fixed';
             ghost.style.margin = '0';
@@ -506,7 +511,10 @@ function animateBoardTransition(prevSnapshot) {
             requestAnimationFrame(() => {
                 ghost.style.transition = 'transform 450ms cubic-bezier(0.4, 0, 0.2, 1)';
                 ghost.style.transform = `translate(${dx}px, ${dy}px)`;
-                ghost.addEventListener('transitionend', () => ghost.remove(), { once: true });
+                ghost.addEventListener('transitionend', () => {
+                    ghost.remove();
+                    card.style.visibility = '';
+                }, { once: true });
             });
         }
 
