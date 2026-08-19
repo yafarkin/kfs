@@ -93,62 +93,9 @@ public static class ApiMapper
         };
     }
 
-    /// <summary>
-    ///     Конвертирует StartSimulationRequestDto в доменную конфигурацию.
-    /// </summary>
-    public static SimulationConfig ToDomainConfig(StartSimulationRequestDto request)
-    {
-        // Сначала создаём все стадии без переходов
-        var stagesMap = new Dictionary<string, Stage>();
-        foreach (var stageDto in request.Workflow.Stages)
-        {
-            // Принудительно сбрасываем CreatesValue для буферных стадий
-            var createsValue = stageDto.Type == StageType.Buffer ? false : stageDto.CreatesValue;
-            
-            stagesMap[stageDto.Name] = new Stage
-            {
-                Name = stageDto.Name,
-                Type = stageDto.Type,
-                IsLeadTimeStart = stageDto.IsLeadTimeStart,
-                WipLimit = stageDto.WipLimit,
-                RequiredSkills = stageDto.RequiredSkills,
-                RequiresDifferentResource = stageDto.RequiresDifferentResource,
-                RequiresDifferentResourceFromStage = stageDto.RequiresDifferentResourceFromStage,
-                StageProgressPercent = stageDto.StageProgressPercent,
-                CreatesValue = createsValue,
-                Transitions = []
-            };
-        }
-
-        // Затем устанавливаем переходы с вероятностями
-        foreach (var stageDto in request.Workflow.Stages)
-        {
-            var stage = stagesMap[stageDto.Name];
-            foreach (var transition in stageDto.Transitions)
-            {
-                if (stagesMap.TryGetValue(transition.TargetStageName, out var targetStage))
-                {
-                    stage.Transitions.Add(new StageTransition
-                    {
-                        Stage = targetStage,
-                        Probability = transition.Probability
-                    });
-                }
-            }
-        }
-
-        return new SimulationConfig
-        {
-            Seed = request.Seed,
-            UseVariability = request.UseVariability,
-            Workers = request.Workers.Select(ToDomainWorker).ToList(),
-            Workflow = new Workflow
-            {
-                Stages = stagesMap.Values.ToList()
-            },
-            Tasks = request.Tasks.Select(ToDomainTask).ToList()
-        };
-    }
+    // StartSimulationRequestDto наследуется от ApiSimulationConfigDto (тот же набор полей
+    // конфигурации + DaysToSimulate), поэтому отдельная перегрузка ToDomainConfig не нужна —
+    // ToDomainConfig(ApiSimulationConfigDto dto) выше принимает и его тоже.
 
     #endregion
 

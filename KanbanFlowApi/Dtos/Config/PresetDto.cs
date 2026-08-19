@@ -1,9 +1,11 @@
 namespace KanbanFlowApi.Dtos.Config;
 
 /// <summary>
-/// DTO для пресета задач — содержит набор задач для симуляции.
+/// Общая часть для всех DTO системных пресетов (процесс, пул воркеров) —
+/// имя/отображаемое название/описание/признак пресета по умолчанию.
+/// Конкретный payload (Workflow+Tasks, Workers, ...) добавляет наследник.
 /// </summary>
-public sealed record TaskPresetDto
+public abstract record PresetDto
 {
     /// <summary>
     /// Уникальное имя пресета (ключ для загрузки).
@@ -16,14 +18,9 @@ public sealed record TaskPresetDto
     public string DisplayName { get; set; } = null!;
 
     /// <summary>
-    /// Описание пресета (количество задач, типы).
+    /// Описание пресета.
     /// </summary>
     public string Description { get; set; } = null!;
-
-    /// <summary>
-    /// Список задач в пресете.
-    /// </summary>
-    public List<ApiTaskDto> Tasks { get; set; } = new();
 
     /// <summary>
     /// Является ли этот пресет пресетом по умолчанию.

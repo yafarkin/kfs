@@ -3,34 +3,13 @@ namespace KanbanFlowApi.Dtos.Config;
 /// <summary>
 /// DTO для запроса на запуск симуляции с полной конфигурацией.
 /// Backend stateless — конфигурация передаётся полностью с клиента.
+/// Набор полей конфигурации (Seed/UseVariability/Workflow/Workers/Tasks) наследуется от
+/// <see cref="ApiSimulationConfigDto"/> — это та же конфигурация, что живёт внутри состояния
+/// запущенной симуляции, плюс одноразовая инструкция DaysToSimulate. JSON-формат при этом не
+/// меняется: System.Text.Json сериализует унаследованные свойства в тот же плоский объект.
 /// </summary>
-public sealed record StartSimulationRequestDto
+public sealed record StartSimulationRequestDto : ApiSimulationConfigDto
 {
-    /// <summary>
-    /// Seed для генератора случайных чисел (воспроизводимость симуляции).
-    /// </summary>
-    public long Seed { get; set; }
-
-    /// <summary>
-    /// Использовать ли вариативность при расчёте времени выполнения задач.
-    /// </summary>
-    public bool UseVariability { get; set; } = true;
-
-    /// <summary>
-    /// Воркфлоу (стадии и переходы).
-    /// </summary>
-    public ApiWorkflowDto Workflow { get; set; } = null!;
-
-    /// <summary>
-    /// Список исполнителей (воркеров).
-    /// </summary>
-    public List<ApiWorkerDto> Workers { get; set; } = new();
-
-    /// <summary>
-    /// Список задач для симуляции.
-    /// </summary>
-    public List<ApiTaskDto> Tasks { get; set; } = new();
-
     /// <summary>
     /// Количество дней для симуляции (опционально).
     /// Если null - симуляция выполняется на 1 день.

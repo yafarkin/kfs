@@ -3,8 +3,11 @@ namespace KanbanFlowApi.Dtos.Config;
 /// <summary>
 /// DTO для конфигурации симуляции (без циклических ссылок).
 /// Используется для описания параметров симуляции: воркфлоу, воркеры, задачи.
+/// Базовый тип для <see cref="StartSimulationRequestDto"/> — набор полей конфигурации один и тот
+/// же что при запуске, что внутри состояния запущенной симуляции, отличается только тем,
+/// что запрос на запуск дополнительно несёт одноразовую инструкцию DaysToSimulate.
 /// </summary>
-public sealed record ApiSimulationConfigDto
+public record ApiSimulationConfigDto
 {
     /// <summary>
     /// Seed для генератора случайных чисел (воспроизводимость симуляции).
