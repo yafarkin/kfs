@@ -398,7 +398,7 @@ async function simulateDay() {
         isLoading = false;
         updateLoadingIndicator();
 
-        // Просто обновляем доску без анимации
+        // Обновляем доску (карточки/прогресс плавно анимируются к новому состоянию — см. updateBoard)
         updateBoard(simulationState);
 
         // Проверка завершения симуляции
@@ -424,11 +424,117 @@ async function simulateDay() {
 
 // Обновление состояния без анимации
 function updateBoard(newState) {
+    // Снимаем состояние ДО перерисовки — нужно для FLIP-анимации карточек и прогресс-баров
+    const boardSnapshot = captureBoardSnapshot();
+    const workerSnapshot = captureWorkerSnapshot();
+
     renderBoard();
+    animateBoardTransition(boardSnapshot);
+
     renderWorkers();
+    animateWorkerTransition(workerSnapshot);
+
     renderHistory();
     updateControls();
     calculateAllMetrics();
+}
+
+// Снимок текущих позиций и прогресса карточек на доске (для FLIP-анимации при следующем рендере)
+function captureBoardSnapshot() {
+    const snapshot = new Map();
+    document.querySelectorAll('.task-card').forEach(card => {
+        const key = card.dataset.taskKey;
+        if (!key) return;
+        const progressBar = card.querySelector('.progress-bar');
+        snapshot.set(key, {
+            rect: card.getBoundingClientRect(),
+            progress: progressBar ? parseFloat(progressBar.style.width) || 0 : 0
+        });
+    });
+    return snapshot;
+}
+
+// Анимация перехода доски: карточки "перелетают" на новую позицию (в т.ч. между колонками),
+// а прогресс-бар плавно доезжает до нового значения. Приём FLIP: карточка уже отрисована на
+// новом месте — мы откатываем её transform'ом на старое место, форсируем reflow и отпускаем
+// с CSS-переходом, браузер анимирует разницу.
+function animateBoardTransition(prevSnapshot) {
+    if (!prevSnapshot || prevSnapshot.size === 0) return;
+
+    document.querySelectorAll('.task-card').forEach(card => {
+        const key = card.dataset.taskKey;
+        const prev = prevSnapshot.get(key);
+        if (!prev) return; // новая карточка — появляется как есть, без анимации перелёта
+
+        const newRect = card.getBoundingClientRect();
+        const dx = prev.rect.left - newRect.left;
+        const dy = prev.rect.top - newRect.top;
+        const moved = Math.abs(dx) > 1 || Math.abs(dy) > 1;
+
+        const progressBar = card.querySelector('.progress-bar');
+        const targetWidth = progressBar ? progressBar.style.width : null;
+
+        // Invert: откатываем карточку на старую позицию, прогресс-бар — на старое значение
+        if (moved) {
+            card.style.transition = 'none';
+            card.style.transform = `translate(${dx}px, ${dy}px)`;
+            card.style.zIndex = '5';
+        }
+        if (progressBar && targetWidth) {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = `${prev.progress}%`;
+        }
+
+        // Форсируем reflow — фиксируем стартовое состояние перед включением перехода
+        void card.offsetWidth;
+
+        // Play: включаем переход и отпускаем к целевым значениям
+        requestAnimationFrame(() => {
+            if (moved) {
+                card.style.transition = 'transform 450ms cubic-bezier(0.4, 0, 0.2, 1)';
+                card.style.transform = '';
+                card.addEventListener('transitionend', () => {
+                    card.style.transition = '';
+                    card.style.zIndex = '';
+                }, { once: true });
+            }
+            if (progressBar && targetWidth) {
+                progressBar.style.transition = ''; // возвращаем штатный CSS-переход width 0.5s ease
+                progressBar.style.width = targetWidth;
+            }
+        });
+    });
+}
+
+// Снимок текущей заполненности WIP-баров воркеров (для плавной анимации при следующем рендере)
+function captureWorkerSnapshot() {
+    const snapshot = new Map();
+    document.querySelectorAll('.wip-fill').forEach(fill => {
+        const login = fill.dataset.workerLogin;
+        if (login) snapshot.set(login, parseFloat(fill.style.width) || 0);
+    });
+    return snapshot;
+}
+
+// Плавное обновление WIP-баров воркеров после рендера — тот же приём, что и для прогресса задач
+function animateWorkerTransition(prevSnapshot) {
+    if (!prevSnapshot || prevSnapshot.size === 0) return;
+
+    document.querySelectorAll('.wip-fill').forEach(fill => {
+        const login = fill.dataset.workerLogin;
+        if (!login || !prevSnapshot.has(login)) return;
+
+        const targetWidth = fill.style.width;
+        fill.style.transition = 'none';
+        fill.style.width = `${prevSnapshot.get(login)}%`;
+
+        void fill.offsetWidth;
+
+        requestAnimationFrame(() => {
+            fill.style.transition = '';
+            fill.style.width = targetWidth;
+        });
+    });
 }
 
 // Рендеринг канбан-доски
@@ -584,7 +690,7 @@ function renderWorkers() {
                 <div class="worker-wip">
                     <span>Задач: ${worker.wipCount}/${worker.wipLimit}</span>
                     <div class="wip-bar">
-                        <div class="wip-fill" style="width: ${wipPercent}%"></div>
+                        <div class="wip-fill" data-worker-login="${worker.login}" style="width: ${wipPercent}%"></div>
                     </div>
                 </div>
                 ${workerTasks.length > 0 ? `

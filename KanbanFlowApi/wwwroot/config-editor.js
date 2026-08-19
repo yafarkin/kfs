@@ -1020,7 +1020,7 @@ function generateTasks() {
     });
 
     if (generatedCount === 0) {
-        alert('Укажите количество задач хотя бы для одной строки');
+        showToast('Укажите количество задач хотя бы для одной строки', 'warning');
         return;
     }
 
@@ -1039,7 +1039,7 @@ function generateTasks() {
     closeTaskGenerator();
     renderTasks();
 
-    alert(`✅ Сгенерировано ${generatedCount} задач(и) (перемешаны)`);
+    showToast(`Сгенерировано ${generatedCount} задач(и) (перемешаны)`, 'success');
 }
 
 // Перемешивание массива (Fisher-Yates)
