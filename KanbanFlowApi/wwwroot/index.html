@@ -2092,7 +2092,7 @@
 
         <!-- Раскрывающаяся панель воркеров (перенесена вверх) -->
         <div class="workers-panel collapsed" id="workersPanel">
-            <div class="workers-header" onclick="toggleWorkersPanel()">
+            <div class="workers-header" onclick="togglePanel('workersPanel')">
                 <div class="workers-title">
                     <i class="bi bi-people"></i>
                     <span>Воркеры</span>
@@ -2106,7 +2106,7 @@
 
         <!-- Раскрывающаяся панель доски задач -->
         <div class="kanban-board-panel" id="kanbanBoardPanel">
-            <div class="board-header" onclick="toggleKanbanBoardPanel()">
+            <div class="board-header" onclick="togglePanel('kanbanBoardPanel')">
                 <div class="board-title">
                     <i class="bi bi-kanban"></i>
                     <span>Доска задач</span>
@@ -2120,7 +2120,7 @@
 
         <!-- Раскрывающаяся панель метрик -->
         <div class="metrics-panel" id="metricsPanel">
-            <div class="metrics-header" onclick="toggleMetricsPanel()">
+            <div class="metrics-header" onclick="togglePanel('metricsPanel')">
                 <div class="metrics-title">
                     <i class="bi bi-graph-up"></i>
                     <span>Метрики</span>
@@ -2136,7 +2136,7 @@
 
         <!-- Раскрывающаяся панель метрик работников -->
         <div class="metrics-panel" id="workerMetricsPanel">
-            <div class="metrics-header" onclick="toggleWorkerMetricsPanel()">
+            <div class="metrics-header" onclick="togglePanel('workerMetricsPanel')">
                 <div class="metrics-title">
                     <i class="bi bi-people"></i>
                     <span>Метрики работников</span>
@@ -2152,7 +2152,7 @@
 
         <!-- Раскрывающаяся панель метрик задач -->
         <div class="metrics-panel" id="taskMetricsPanel">
-            <div class="metrics-header" onclick="toggleTaskMetricsPanel()">
+            <div class="metrics-header" onclick="togglePanel('taskMetricsPanel')">
                 <div class="metrics-title">
                     <i class="bi bi-kanban"></i>
                     <span>Метрики задач</span>
@@ -2168,7 +2168,7 @@
 
         <!-- Раскрывающаяся панель метрик стадий -->
         <div class="metrics-panel" id="stageMetricsPanel">
-            <div class="metrics-header" onclick="toggleStageMetricsPanel()">
+            <div class="metrics-header" onclick="togglePanel('stageMetricsPanel')">
                 <div class="metrics-title">
                     <i class="bi bi-bar-chart"></i>
                     <span>Метрики стадий (P50, P85)</span>
@@ -2184,7 +2184,7 @@
 
         <!-- Раскрывающаяся панель Cumulative Flow Diagram -->
         <div class="metrics-panel" id="cfdPanel">
-            <div class="metrics-header" onclick="toggleCfdPanel()">
+            <div class="metrics-header" onclick="togglePanel('cfdPanel')">
                 <div class="metrics-title">
                     <i class="bi bi-graph-up"></i>
                     <span>Cumulative Flow Diagram (CFD)</span>
@@ -2200,7 +2200,7 @@
 
         <!-- Раскрывающаяся панель истории событий (в самом низу) -->
         <div class="history-panel collapsed" id="historyPanel">
-            <div class="history-header" onclick="toggleHistoryPanel()">
+            <div class="history-header" onclick="togglePanel('historyPanel')">
                 <div class="history-title">
                     <i class="bi bi-clock-history"></i>
                     <span>История событий</span>

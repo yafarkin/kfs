@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettingsPanel();
     restoreConfigTemplateFromStorage();
     restoreSimulationFromStorage();
-    loadTasksFromEditor(); // Загружаем задачи из редактора если есть
     updateControls(); // Обновляем состояние кнопок после восстановления
 
     // Обработчики событий для сохранения seed и useVariability в configTemplate
@@ -39,51 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         variabilityToggle.addEventListener('change', saveSelectionToStorage);
     }
 });
-
-// Загрузка пользовательских пресетов из LocalStorage
-function getUserPresets(storageKey) {
-    try {
-        const saved = localStorage.getItem(storageKey);
-        if (!saved) return [];
-        const presets = JSON.parse(saved);
-        return Array.isArray(presets) ? presets : [];
-    } catch (error) {
-        console.error(`Error loading user presets from ${storageKey}:`, error);
-        return [];
-    }
-}
-
-// Сохранение пользовательского пресета в LocalStorage
-function saveUserPreset(storageKey, preset) {
-    try {
-        const existing = getUserPresets(storageKey);
-        // Проверяем, есть ли пресет с таким именем — если да, обновляем
-        const existingIndex = existing.findIndex(p => p.name === preset.name);
-        if (existingIndex >= 0) {
-            existing[existingIndex] = preset;
-        } else {
-            existing.push(preset);
-        }
-        localStorage.setItem(storageKey, JSON.stringify(existing));
-        return true;
-    } catch (error) {
-        console.error(`Error saving user preset to ${storageKey}:`, error);
-        return false;
-    }
-}
-
-// Удаление пользовательского пресета из LocalStorage
-function deleteUserPreset(storageKey, presetName) {
-    try {
-        const existing = getUserPresets(storageKey);
-        const filtered = existing.filter(p => p.name !== presetName);
-        localStorage.setItem(storageKey, JSON.stringify(filtered));
-        return true;
-    } catch (error) {
-        console.error(`Error deleting user preset from ${storageKey}:`, error);
-        return false;
-    }
-}
 
 // Очистка всего LocalStorage (пользовательские пресеты и настройки)
 function clearAllLocalStorage() {
@@ -226,17 +180,33 @@ function initSettingsPanel() {
     
     if (header) {
         header.addEventListener('click', (e) => {
-            toggleSettingsPanel();
+            togglePanel('settingsPanel');
         });
     }
 }
 
-// Переключение панели настроек
-function toggleSettingsPanel() {
-    const panel = document.getElementById('settingsPanel');
+// Переключение сворачиваемой панели по id (используется для всех collapsible-панелей)
+function togglePanel(panelId) {
+    const panel = document.getElementById(panelId);
     if (panel) {
         panel.classList.toggle('collapsed');
     }
+}
+
+// Преобразует stage.transitions (вложенные в стадии, формат backend API) обратно в плоский список
+// workflow.transitions — обратная операция к buildWorkflowForBackend
+function flattenStageTransitions(stages) {
+    const flat = [];
+    stages.forEach(stage => {
+        (stage.transitions || []).forEach(t => {
+            flat.push({
+                fromStageName: stage.name,
+                toStageName: t.targetStageName,
+                probability: t.probability
+            });
+        });
+    });
+    return flat;
 }
 
 // Обновление индикатора загрузки
@@ -258,69 +228,77 @@ function updateLoadingIndicator() {
 }
 
 // Запуск симуляции из configTemplate
+// Преобразует workflow.transitions (плоский список) в stage.transitions (вложенные в стадии) — формат backend API
+function buildWorkflowForBackend(workflow) {
+    const allTransitions = workflow.transitions || [];
+    return {
+        stages: workflow.stages.map(stage => ({
+            ...stage,
+            transitions: allTransitions
+                .filter(t => t.fromStageName === stage.name)
+                .map(t => ({
+                    targetStageName: t.toStageName,
+                    probability: t.probability
+                }))
+        }))
+    };
+}
+
+// Синхронизирует seed/useVariability из UI в configTemplate и сохраняет в localStorage
+function syncConfigTemplateFromUi() {
+    const seedInput = document.getElementById('seedInput');
+    const variabilityToggle = document.getElementById('variabilityToggle');
+
+    if (configTemplate) {
+        configTemplate.seed = parseInt(seedInput?.value) || 42;
+        configTemplate.useVariability = variabilityToggle?.checked ?? true;
+        saveConfigTemplateToStorage();
+    }
+}
+
+// Проверяет configTemplate и запрашивает у backend новое состояние симуляции (day 0, если daysToSimulate = null)
+async function requestSimulationStart(daysToSimulate) {
+    syncConfigTemplateFromUi();
+
+    if (!configTemplate || !configTemplate.workflow || !configTemplate.workers) {
+        throw new Error('Сначала настройте конфигурацию (команда, процесс, задачи)');
+    }
+    if (!configTemplate.tasks || configTemplate.tasks.length === 0) {
+        throw new Error('Сначала сгенерируйте задачи');
+    }
+
+    const request = {
+        seed: configTemplate.seed || 42,
+        useVariability: configTemplate.useVariability ?? true,
+        workflow: buildWorkflowForBackend(configTemplate.workflow),
+        workers: configTemplate.workers,
+        tasks: configTemplate.tasks,
+        daysToSimulate
+    };
+
+    const response = await fetch('/api/simulation/start', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+}
+
+// Запуск симуляции из configTemplate
 async function startSimulation(daysToSimulate = null) {
     isLoading = true;
     updateLoadingIndicator();
 
     try {
-        // Обновляем seed и useVariability из UI
-        const seedInput = document.getElementById('seedInput');
-        const variabilityToggle = document.getElementById('variabilityToggle');
-        
-        if (configTemplate) {
-            configTemplate.seed = parseInt(seedInput?.value) || 42;
-            configTemplate.useVariability = variabilityToggle?.checked ?? true;
-            saveConfigTemplateToStorage();
-        }
-
-        // Проверяем, что configTemplate заполнен
-        if (!configTemplate || !configTemplate.workflow || !configTemplate.workers) {
-            throw new Error('Сначала настройте конфигурацию (команда, процесс, задачи)');
-        }
-
-        // Проверяем, что задачи сгенерированы
-        if (!configTemplate.tasks || configTemplate.tasks.length === 0) {
-            throw new Error('Сначала сгенерируйте задачи');
-        }
-
-        // Собираем полную конфигурацию для отправки на backend
-        // Преобразуем workflow.transitions (отдельный список) в stage.transitions (внутри стадий)
-        const allTransitions = configTemplate.workflow.transitions || [];
-        const workflowForBackend = {
-            stages: configTemplate.workflow.stages.map(stage => ({
-                ...stage,
-                transitions: allTransitions
-                    .filter(t => t.fromStageName === stage.name)
-                    .map(t => ({
-                        targetStageName: t.toStageName,
-                        probability: t.probability
-                    }))
-            }))
-        };
-
-        const request = {
-            seed: configTemplate.seed || 42,
-            useVariability: configTemplate.useVariability ?? true,
-            workflow: workflowForBackend,
-            workers: configTemplate.workers,
-            tasks: configTemplate.tasks,
-            daysToSimulate
-        };
-
-        const response = await fetch('/api/simulation/start', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(request)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        simulationState = await response.json();
+        simulationState = await requestSimulationStart(daysToSimulate);
 
         // Сохраняем в localStorage
         saveSimulationToStorage();
@@ -354,12 +332,6 @@ async function startSimulation(daysToSimulate = null) {
 
 // Быстрая симуляция до конца (кнопка "Рассчитать до конца")
 async function simulateToEnd() {
-    // Обновляем variabilitу из toggle перед запуском
-    const variabilityToggle = document.getElementById('variabilityToggle');
-    if (configTemplate) {
-        configTemplate.useVariability = variabilityToggle?.checked ?? true;
-        saveConfigTemplateToStorage();
-    }
     await startSimulation(0);
 }
 
@@ -369,64 +341,7 @@ async function reloadConfig() {
     updateLoadingIndicator();
 
     try {
-        // Обновляем seed и useVariability из UI
-        const seedInput = document.getElementById('seedInput');
-        const variabilityToggle = document.getElementById('variabilityToggle');
-        
-        if (configTemplate) {
-            configTemplate.seed = parseInt(seedInput?.value) || 42;
-            configTemplate.useVariability = variabilityToggle?.checked ?? true;
-            saveConfigTemplateToStorage();
-        }
-
-        // Проверяем, что configTemplate заполнен
-        if (!configTemplate || !configTemplate.workflow || !configTemplate.workers) {
-            throw new Error('Сначала настройте конфигурацию (команда, процесс, задачи)');
-        }
-
-        // Проверяем, что задачи сгенерированы
-        if (!configTemplate.tasks || configTemplate.tasks.length === 0) {
-            throw new Error('Сначала сгенерируйте задачи');
-        }
-
-        // Собираем полную конфигурацию для отправки на backend (daysToSimulate = null для сброса к дню 0)
-        // Преобразуем workflow.transitions (отдельный список) в stage.transitions (внутри стадий)
-        const allTransitions = configTemplate.workflow.transitions || [];
-        const workflowForBackend = {
-            stages: configTemplate.workflow.stages.map(stage => ({
-                ...stage,
-                transitions: allTransitions
-                    .filter(t => t.fromStageName === stage.name)
-                    .map(t => ({
-                        targetStageName: t.toStageName,
-                        probability: t.probability
-                    }))
-            }))
-        };
-
-        const request = {
-            seed: configTemplate.seed || 42,
-            useVariability: configTemplate.useVariability ?? true,
-            workflow: workflowForBackend,
-            workers: configTemplate.workers,
-            tasks: configTemplate.tasks,
-            daysToSimulate: null
-        };
-
-        const response = await fetch('/api/simulation/start', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(request)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        simulationState = await response.json();
+        simulationState = await requestSimulationStart(null);
 
         // Сохраняем в localStorage
         saveSimulationToStorage();
@@ -445,38 +360,6 @@ async function reloadConfig() {
         isLoading = false;
         updateLoadingIndicator();
     }
-}
-
-// Получение задач из редактора (вызывается после генерации)
-function loadTasksFromEditor() {
-    try {
-        const saved = localStorage.getItem('kanbanflow_task_editor');
-        if (saved) {
-            const editorData = JSON.parse(saved);
-            if (editorData && Array.isArray(editorData.tasks)) {
-                // Инициализируем configTemplate если пустой
-                if (!configTemplate) {
-                    configTemplate = {};
-                }
-
-                // Сохраняем задачи в configTemplate
-                configTemplate.tasks = editorData.tasks;
-
-                // Сохраняем в LocalStorage
-                saveConfigTemplateToStorage();
-
-                // Восстанавливаем UI
-                restoreConfigTemplateFromStorage();
-
-                showToast(`Загружено ${editorData.tasks.length} задач из редактора`, 'success');
-                return true;
-            }
-        }
-    } catch (error) {
-        console.error('Error loading tasks from editor:', error);
-        showToast('Ошибка загрузки задач: ' + error.message, 'danger');
-    }
-    return false;
 }
 
 // Симуляция одного дня
@@ -546,37 +429,6 @@ function updateBoard(newState) {
     renderHistory();
     updateControls();
     calculateAllMetrics();
-}
-
-// Анимация прогресса задачи
-async function animateTaskProgress(taskKey, progress) {
-    const taskCard = document.querySelector(`.task-card[data-task-key="${taskKey}"]`);
-    if (!taskCard) return;
-    
-    const progressBar = taskCard.querySelector('.progress-bar');
-    const progressText = taskCard.querySelector('.progress-value');
-    
-    if (progressBar) {
-        progressBar.style.transition = 'width 0.3s ease';
-        progressBar.style.width = `${progress}%`;
-    }
-    if (progressText) {
-        progressText.textContent = `${progress}%`;
-    }
-}
-
-// Анимация завершения задачи воркером — просто мигание
-async function animateWorkerCompleteTask(workerLogin, taskKey) {
-    const taskCard = document.querySelector(`.task-card[data-task-key="${taskKey}"]`);
-    if (taskCard) {
-        taskCard.animate([
-            { background: '#d4edda' },
-            { background: '#ffffff' }
-        ], {
-            duration: 300,
-            easing: 'ease-out'
-        });
-    }
 }
 
 // Рендеринг канбан-доски
@@ -869,10 +721,6 @@ function removeToast(toastId) {
     }
 }
 
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 // Модальное окно для импорта/экспорта
 let modalMode = 'export'; // 'export' или 'import'
 
@@ -944,19 +792,8 @@ function importJson() {
         
         // Обновляем configTemplate из импортированных данных
         // Преобразуем workflow.transitions (внутри стадий) в плоский список transitions
-        const allTransitions = [];
-        data.config.workflow.stages.forEach(stage => {
-            if (stage.transitions && stage.transitions.length > 0) {
-                stage.transitions.forEach(t => {
-                    allTransitions.push({
-                        fromStageName: stage.name,
-                        toStageName: t.targetStageName,
-                        probability: t.probability
-                    });
-                });
-            }
-        });
-        
+        const allTransitions = flattenStageTransitions(data.config.workflow.stages);
+
         configTemplate = {
             seed: data.config.seed,
             useVariability: data.config.useVariability,
@@ -1025,46 +862,6 @@ document.addEventListener('keydown', (e) => {
         closeJsonModal();
     }
 });
-
-// Переключение панели метрик
-function toggleMetricsPanel() {
-    const panel = document.getElementById('metricsPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
-// Расчёт всех метрик через единый API
-async function calculateAllMetrics() {
-    if (!simulationState) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/simulation/all-metrics', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(simulationState)
-        });
-
-        if (!response.ok) {
-            console.error('Error calculating all metrics:', response.status);
-            return;
-        }
-
-        currentAllMetrics = await response.json();
-        
-        // Рендерим все секции метрик
-        renderMetrics(currentAllMetrics.simulationMetrics);
-        renderWorkerMetrics(currentAllMetrics.workerMetrics);
-        renderTaskMetrics(currentAllMetrics.taskMetrics);
-        renderStageMetrics(currentAllMetrics.stageMetrics);
-    } catch (error) {
-        console.error('Error calculating all metrics:', error);
-    }
-}
 
 // Рендеринг метрик
 function renderMetrics(metrics) {
@@ -1268,38 +1065,6 @@ function renderFrequencyCard(frequency) {
     `;
 }
 
-// Переключение панели воркеров
-function toggleWorkersPanel() {
-    const panel = document.getElementById('workersPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
-// Переключение панели истории
-function toggleHistoryPanel() {
-    const panel = document.getElementById('historyPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
-// Переключение панели доски задач
-function toggleKanbanBoardPanel() {
-    const panel = document.getElementById('kanbanBoardPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
-// Переключение панели метрик работников
-function toggleWorkerMetricsPanel() {
-    const panel = document.getElementById('workerMetricsPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
 // Инициализация всплывающих подсказок для метрик
 function initMetricTooltips() {
     // Удаляем старые обработчики (если есть)
@@ -1393,14 +1158,6 @@ function renderWorkerMetrics(workerMetrics) {
     `).join('');
 }
 
-// Переключение панели метрик задач
-function toggleTaskMetricsPanel() {
-    const panel = document.getElementById('taskMetricsPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
 // Рендеринг метрик задач
 function renderTaskMetrics(taskMetrics) {
     const grid = document.getElementById('taskMetricsGrid');
@@ -1481,22 +1238,6 @@ function toggleTaskStages(headerElement) {
     if (content && toggle) {
         content.classList.toggle('collapsed');
         toggle.classList.toggle('collapsed');
-    }
-}
-
-// Переключение панели метрик стадий
-function toggleStageMetricsPanel() {
-    const panel = document.getElementById('stageMetricsPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
-// Переключение панели CFD
-function toggleCfdPanel() {
-    const panel = document.getElementById('cfdPanel');
-    if (panel) {
-        panel.classList.toggle('collapsed');
     }
 }
 
