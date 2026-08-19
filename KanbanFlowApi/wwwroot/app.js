@@ -501,6 +501,14 @@ function animateBoardTransition(prevSnapshot) {
             // Прячем настоящую (уже отрисованную на новом месте) карточку на время полёта —
             // иначе она видна сразу в колонке назначения, а призрак долетает и накладывается
             // поверх уже стоящей там карточки. Показываем её обратно ровно в момент посадки.
+            //
+            // У .task-card в CSS задан transition: all 0.3s ease. visibility — "дискретное"
+            // свойство: если оно попадает под transition, браузер держит старое значение
+            // (visible) весь переход и переключает на hidden только в самом конце. Поэтому
+            // сначала явно выключаем transition на самой карточке — иначе visibility:hidden
+            // применится не сразу, а с задержкой в 0.3s, и настоящая карточка успевает
+            // мелькнуть рядом с летящим призраком.
+            card.style.transition = 'none';
             card.style.visibility = 'hidden';
 
             const ghost = prev.clone;
@@ -521,7 +529,10 @@ function animateBoardTransition(prevSnapshot) {
                 ghost.style.transform = `translate(${dx}px, ${dy}px)`;
                 ghost.addEventListener('transitionend', () => {
                     ghost.remove();
+                    // transition остаётся 'none' на момент возврата visibility — снова без
+                    // задержки; штатный transition: all возвращаем следующим тактом
                     card.style.visibility = '';
+                    card.style.transition = '';
                 }, { once: true });
             });
         }
