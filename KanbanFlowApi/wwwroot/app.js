@@ -817,7 +817,8 @@ function importJson() {
                 wipLimit: w.wipLimit,
                 performance: w.performance || 100,
                 deviationDownPercent: w.deviationDownPercent || 0,
-                deviationUpPercent: w.deviationUpPercent || 0
+                deviationUpPercent: w.deviationUpPercent || 0,
+                costPerDay: w.costPerDay ?? 100
             })),
             tasks: data.config.tasks.map(t => ({
                 key: t.key,

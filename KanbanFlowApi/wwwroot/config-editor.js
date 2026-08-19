@@ -640,14 +640,20 @@ async function loadProcessTemplate(presetName) {
         
         if (stagesData.length > 0) {
             // Заменяем текущий workflow на шаблон — используем только один формат полей (как в API)
-            const stages = stagesData.map(s => ({
-                name: s.name || s.Name,
-                type: s.type || s.Type,
-                wipLimit: s.wipLimit ?? s.WipLimit,
-                isLeadTimeStart: s.isLeadTimeStart ?? s.IsLeadTimeStart ?? false,
-                stageProgressPercent: s.stageProgressPercent ?? s.StageProgressPercent ?? 100,
-                requiredSkills: s.requiredSkills || s.RequiredSkills || []
-            }));
+            const stages = stagesData.map(s => {
+                const type = s.type || s.Type;
+                return {
+                    name: s.name || s.Name,
+                    type: type,
+                    wipLimit: s.wipLimit ?? s.WipLimit,
+                    isLeadTimeStart: s.isLeadTimeStart ?? s.IsLeadTimeStart ?? false,
+                    stageProgressPercent: s.stageProgressPercent ?? s.StageProgressPercent ?? 100,
+                    requiredSkills: s.requiredSkills || s.RequiredSkills || [],
+                    createsValue: s.createsValue ?? s.CreatesValue ?? (type === 'Work'),
+                    requiresDifferentResource: s.requiresDifferentResource ?? s.RequiresDifferentResource ?? false,
+                    requiresDifferentResourceFromStage: s.requiresDifferentResourceFromStage ?? s.RequiresDifferentResourceFromStage ?? null
+                };
+            });
             
             // Гарантируем, что только одна стадия имеет isLeadTimeStart = true
             let hasLeadTimeStart = false;
