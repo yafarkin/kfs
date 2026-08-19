@@ -431,7 +431,10 @@ function updateBoard(newState) {
     calculateAllMetrics();
 }
 
-// Снимок текущих позиций и прогресса карточек на доске (для FLIP-анимации при следующем рендере)
+// Снимок текущих позиций, прогресса и внешнего вида карточек на доске — нужен для анимации
+// перелёта при следующем рендере. Клонируем DOM-узел карточки (clone), а не только rect: сама
+// карточка будет уничтожена при renderBoard() (innerHTML пересоздаётся с нуля), а клон
+// используется как "призрак", который реально летит по экрану.
 function captureBoardSnapshot() {
     const snapshot = new Map();
     document.querySelectorAll('.task-card').forEach(card => {
@@ -440,18 +443,41 @@ function captureBoardSnapshot() {
         const progressBar = card.querySelector('.progress-bar');
         snapshot.set(key, {
             rect: card.getBoundingClientRect(),
-            progress: progressBar ? parseFloat(progressBar.style.width) || 0 : 0
+            progress: progressBar ? parseFloat(progressBar.style.width) || 0 : 0,
+            clone: card.cloneNode(true)
         });
     });
     return snapshot;
 }
 
-// Анимация перехода доски: карточки "перелетают" на новую позицию (в т.ч. между колонками),
-// а прогресс-бар плавно доезжает до нового значения. Приём FLIP: карточка уже отрисована на
-// новом месте — мы откатываем её transform'ом на старое место, форсируем reflow и отпускаем
-// с CSS-переходом, браузер анимирует разницу.
+// Слой для "летящих" карточек: position: fixed поверх всей страницы. Колонки (.task-cards)
+// сами скроллятся (overflow-y: auto; overflow-x: hidden) — если анимировать transform на самой
+// карточке внутри её нового родителя, любой сдвиг за пределы новой колонки будет обрезан этим
+// overflow, и вместо перелёта видно "карточка исчезла и въехала". Клон на fixed-слое живёт вне
+// колонок, поэтому обрезки нет и полёт виден целиком, как в пасьянсе.
+function getCardFlightLayer() {
+    let layer = document.getElementById('cardFlightLayer');
+    if (!layer) {
+        layer = document.createElement('div');
+        layer.id = 'cardFlightLayer';
+        layer.style.position = 'fixed';
+        layer.style.inset = '0';
+        layer.style.pointerEvents = 'none';
+        layer.style.zIndex = '9999';
+        document.body.appendChild(layer);
+    }
+    layer.innerHTML = ''; // убираем "зависшие" клоны от прерванной предыдущей анимации
+    return layer;
+}
+
+// Анимация перехода доски: клон карточки летит поверх борда от старой позиции к новой (в т.ч.
+// между колонками), настоящая (новая) карточка при этом уже спокойно стоит на месте. Прогресс-
+// бар на новой карточке плавно доезжает до нового значения — тут никакого перелёта нет, только
+// смена width, обрезка колонки её не касается.
 function animateBoardTransition(prevSnapshot) {
     if (!prevSnapshot || prevSnapshot.size === 0) return;
+
+    const flightLayer = getCardFlightLayer();
 
     document.querySelectorAll('.task-card').forEach(card => {
         const key = card.dataset.taskKey;
@@ -459,42 +485,43 @@ function animateBoardTransition(prevSnapshot) {
         if (!prev) return; // новая карточка — появляется как есть, без анимации перелёта
 
         const newRect = card.getBoundingClientRect();
-        const dx = prev.rect.left - newRect.left;
-        const dy = prev.rect.top - newRect.top;
+        const dx = newRect.left - prev.rect.left;
+        const dy = newRect.top - prev.rect.top;
         const moved = Math.abs(dx) > 1 || Math.abs(dy) > 1;
 
+        if (moved) {
+            const ghost = prev.clone;
+            ghost.style.position = 'fixed';
+            ghost.style.margin = '0';
+            ghost.style.left = `${prev.rect.left}px`;
+            ghost.style.top = `${prev.rect.top}px`;
+            ghost.style.width = `${prev.rect.width}px`;
+            ghost.style.transition = 'none';
+            ghost.style.pointerEvents = 'none';
+            flightLayer.appendChild(ghost);
+
+            // Форсируем reflow — фиксируем стартовую позицию перед включением перехода
+            void ghost.offsetWidth;
+
+            requestAnimationFrame(() => {
+                ghost.style.transition = 'transform 450ms cubic-bezier(0.4, 0, 0.2, 1)';
+                ghost.style.transform = `translate(${dx}px, ${dy}px)`;
+                ghost.addEventListener('transitionend', () => ghost.remove(), { once: true });
+            });
+        }
+
+        // Прогресс-бар — на реальной новой карточке, она никуда не летит, обрезка ни при чём
         const progressBar = card.querySelector('.progress-bar');
         const targetWidth = progressBar ? progressBar.style.width : null;
-
-        // Invert: откатываем карточку на старую позицию, прогресс-бар — на старое значение
-        if (moved) {
-            card.style.transition = 'none';
-            card.style.transform = `translate(${dx}px, ${dy}px)`;
-            card.style.zIndex = '5';
-        }
         if (progressBar && targetWidth) {
             progressBar.style.transition = 'none';
             progressBar.style.width = `${prev.progress}%`;
-        }
-
-        // Форсируем reflow — фиксируем стартовое состояние перед включением перехода
-        void card.offsetWidth;
-
-        // Play: включаем переход и отпускаем к целевым значениям
-        requestAnimationFrame(() => {
-            if (moved) {
-                card.style.transition = 'transform 450ms cubic-bezier(0.4, 0, 0.2, 1)';
-                card.style.transform = '';
-                card.addEventListener('transitionend', () => {
-                    card.style.transition = '';
-                    card.style.zIndex = '';
-                }, { once: true });
-            }
-            if (progressBar && targetWidth) {
+            void progressBar.offsetWidth;
+            requestAnimationFrame(() => {
                 progressBar.style.transition = ''; // возвращаем штатный CSS-переход width 0.5s ease
                 progressBar.style.width = targetWidth;
-            }
-        });
+            });
+        }
     });
 }
 
