@@ -437,7 +437,12 @@ function updateBoard(newState) {
 // используется как "призрак", который реально летит по экрану.
 function captureBoardSnapshot() {
     const snapshot = new Map();
-    document.querySelectorAll('.task-card').forEach(card => {
+    const boardContainer = document.getElementById('kanbanBoard');
+    if (!boardContainer) return snapshot;
+    // Ищем только внутри доски — иначе, если предыдущий призрак-клон в #cardFlightLayer
+    // ещё не долетел/не удалился, document.querySelectorAll('.task-card') подцепит и его
+    // тоже (у клона тот же класс и data-task-key).
+    boardContainer.querySelectorAll('.task-card').forEach(card => {
         const key = card.dataset.taskKey;
         if (!key) return;
         const progressBar = card.querySelector('.progress-bar');
@@ -478,8 +483,11 @@ function animateBoardTransition(prevSnapshot) {
     if (!prevSnapshot || prevSnapshot.size === 0) return;
 
     const flightLayer = getCardFlightLayer();
+    const boardContainer = document.getElementById('kanbanBoard');
+    if (!boardContainer) return;
 
-    document.querySelectorAll('.task-card').forEach(card => {
+    // Только карточки самой доски — не призраки, которые могли остаться в flightLayer
+    boardContainer.querySelectorAll('.task-card').forEach(card => {
         const key = card.dataset.taskKey;
         const prev = prevSnapshot.get(key);
         if (!prev) return; // новая карточка — появляется как есть, без анимации перелёта
