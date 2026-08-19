@@ -96,11 +96,34 @@ function restoreConfigTemplateFromStorage() {
     try {
         configTemplate = JSON.parse(saved);
         if (configTemplate) {
+            migrateFlatTransitionsToStages(configTemplate);
             showToast('Конфигурация восстановлена из localStorage', 'info');
         }
     } catch (error) {
         console.error('Error restoring config template:', error);
     }
+}
+
+// Миграция старого формата configTemplate: раньше workflow.transitions хранился отдельным
+// плоским списком {fromStageName, toStageName, probability}, теперь переходы лежат внутри
+// каждой стадии (stage.transitions, формат backend API). Разово переносит их при первой
+// загрузке старого сохранённого шаблона из localStorage.
+function migrateFlatTransitionsToStages(template) {
+    const flatTransitions = template?.workflow?.transitions;
+    if (!Array.isArray(flatTransitions) || flatTransitions.length === 0) {
+        return;
+    }
+
+    const stagesByName = new Map((template.workflow.stages || []).map(s => [s.name, s]));
+    flatTransitions.forEach(t => {
+        const stage = stagesByName.get(t.fromStageName);
+        if (!stage) return;
+        if (!stage.transitions) stage.transitions = [];
+        stage.transitions.push({ targetStageName: t.toStageName, probability: t.probability });
+    });
+
+    delete template.workflow.transitions;
+    saveConfigTemplateToStorage();
 }
 
 // Сохранение configTemplate в LocalStorage
@@ -193,22 +216,6 @@ function togglePanel(panelId) {
     }
 }
 
-// Преобразует stage.transitions (вложенные в стадии, формат backend API) обратно в плоский список
-// workflow.transitions — обратная операция к buildWorkflowForBackend
-function flattenStageTransitions(stages) {
-    const flat = [];
-    stages.forEach(stage => {
-        (stage.transitions || []).forEach(t => {
-            flat.push({
-                fromStageName: stage.name,
-                toStageName: t.targetStageName,
-                probability: t.probability
-            });
-        });
-    });
-    return flat;
-}
-
 // Обновление индикатора загрузки
 function updateLoadingIndicator() {
     const gear = document.getElementById('loadingGear');
@@ -225,23 +232,6 @@ function updateLoadingIndicator() {
     if (btnSimulate) btnSimulate.disabled = isLoading;
     if (btnSimulateToEnd) btnSimulateToEnd.disabled = isLoading;
     if (btnAutoPlay) btnAutoPlay.disabled = isLoading;
-}
-
-// Запуск симуляции из configTemplate
-// Преобразует workflow.transitions (плоский список) в stage.transitions (вложенные в стадии) — формат backend API
-function buildWorkflowForBackend(workflow) {
-    const allTransitions = workflow.transitions || [];
-    return {
-        stages: workflow.stages.map(stage => ({
-            ...stage,
-            transitions: allTransitions
-                .filter(t => t.fromStageName === stage.name)
-                .map(t => ({
-                    targetStageName: t.toStageName,
-                    probability: t.probability
-                }))
-        }))
-    };
 }
 
 // Синхронизирует seed/useVariability из UI в configTemplate и сохраняет в localStorage
@@ -267,10 +257,12 @@ async function requestSimulationStart(daysToSimulate) {
         throw new Error('Сначала сгенерируйте задачи');
     }
 
+    // configTemplate.workflow уже хранится в формате backend API (transitions вложены в стадии),
+    // отдельного преобразования не требуется.
     const request = {
         seed: configTemplate.seed || 42,
         useVariability: configTemplate.useVariability ?? true,
-        workflow: buildWorkflowForBackend(configTemplate.workflow),
+        workflow: configTemplate.workflow,
         workers: configTemplate.workers,
         tasks: configTemplate.tasks,
         daysToSimulate
@@ -896,10 +888,9 @@ function importJson() {
         // Сохраняем состояние симуляции
         simulationState = data;
         
-        // Обновляем configTemplate из импортированных данных
-        // Преобразуем workflow.transitions (внутри стадий) в плоский список transitions
-        const allTransitions = flattenStageTransitions(data.config.workflow.stages);
-
+        // Обновляем configTemplate из импортированных данных.
+        // data.config.workflow уже в формате backend API (transitions вложены в стадии) —
+        // configTemplate хранит его в том же виде, преобразование не требуется.
         configTemplate = {
             seed: data.config.seed,
             useVariability: data.config.useVariability,
@@ -913,9 +904,12 @@ function importJson() {
                     requiresDifferentResource: s.requiresDifferentResource || false,
                     requiresDifferentResourceFromStage: s.requiresDifferentResourceFromStage,
                     stageProgressPercent: s.stageProgressPercent || 0,
-                    createsValue: s.createsValue !== undefined ? s.createsValue : (s.type === 'Work')
-                })),
-                transitions: allTransitions
+                    createsValue: s.createsValue !== undefined ? s.createsValue : (s.type === 'Work'),
+                    transitions: (s.transitions || []).map(t => ({
+                        targetStageName: t.targetStageName,
+                        probability: t.probability
+                    }))
+                }))
             },
             workers: data.config.workers.map(w => ({
                 login: w.login,

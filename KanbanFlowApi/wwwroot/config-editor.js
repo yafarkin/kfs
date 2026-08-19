@@ -46,8 +46,10 @@ function switchConfigTab(tabName) {
 // ============================================================================
 // Глобальные переменные
 // ============================================================================
+// workflow.stages — переходы хранятся внутри каждой стадии (stage.transitions), в том же
+// формате, что и backend API (ApiStageDto.Transitions) — отдельного плоского списка нет.
 let configEditorData = {
-    workflow: { stages: [], transitions: [] },
+    workflow: { stages: [] },
     workers: [],
     tasks: []
 };
@@ -75,12 +77,11 @@ function openConfigEditor() {
     }
 
 
-    // Глубокое копирование для редактирования
+    // Глубокое копирование для редактирования (переходы уже вложены в стадии)
     configEditorData = {
         workflow: workflow ? {
-            stages: workflow.stages ? JSON.parse(JSON.stringify(workflow.stages)) : [],
-            transitions: workflow.transitions ? JSON.parse(JSON.stringify(workflow.transitions)) : []
-        } : { stages: [], transitions: [] },
+            stages: workflow.stages ? JSON.parse(JSON.stringify(workflow.stages)) : []
+        } : { stages: [] },
         workers: workers ? JSON.parse(JSON.stringify(workers)) : [],
         tasks: tasks ? JSON.parse(JSON.stringify(tasks)) : []
     };
@@ -183,7 +184,6 @@ function renderStages() {
     }
 
     const stages = configEditorData.workflow.stages || [];
-    const transitions = configEditorData.workflow.transitions || [];
 
     if (stages.length === 0) {
         container.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-inbox me-2"></i>Нет стадий. Добавьте первую стадию.</div>';
@@ -204,11 +204,9 @@ function renderStages() {
 
         const stageTypeClass = stageType === 'Work' ? 'work' : 'buffer';
         const stageTypeLabel = stageType === 'Work' ? 'Рабочая' : 'Буфер';
-        
-        // Фильтруем переходы для этой стадии
-        const stageTransitions = transitions.filter(t => 
-            (t.fromStageName || t.FromStageName) === stageName
-        );
+
+        // Переходы хранятся внутри самой стадии
+        const stageTransitions = stage.transitions || stage.Transitions || [];
 
         html += `
             <div class="config-item" data-stage-index="${index}">
@@ -298,18 +296,13 @@ function renderTransitions(transitions, stageIndex) {
 
     let html = '<div class="d-flex flex-wrap gap-2">';
     transitions.forEach((t, idx) => {
-        // API возвращает lowercase: fromStageName, toStageName, probability
-        const fromStageName = t.fromStageName || t.FromStageName || '';
-        const toStageName = t.toStageName || t.ToStageName || '';
+        // API возвращает lowercase: targetStageName, probability
+        const targetStageName = t.targetStageName || t.TargetStageName || '';
         const probability = t.probability ?? t.Probability ?? 1;
-        
-        const transitionIdx = configEditorData.workflow.transitions.findIndex(
-            tr => (tr.fromStageName || tr.FromStageName) === fromStageName && 
-                  (tr.toStageName || tr.ToStageName) === toStageName
-        );
+
         html += `
-            <div class="skill-badge" style="cursor: pointer;" onclick="deleteTransition(${transitionIdx})" title="Удалить переход">
-                <i class="bi bi-arrow-right"></i> ${toStageName} (${(probability * 100).toFixed(0)}%)
+            <div class="skill-badge" style="cursor: pointer;" onclick="deleteTransition(${stageIndex}, ${idx})" title="Удалить переход">
+                <i class="bi bi-arrow-right"></i> ${targetStageName} (${(probability * 100).toFixed(0)}%)
             </div>
         `;
     });
@@ -329,7 +322,8 @@ function addStage() {
         isLeadTimeStart: false,
         createsValue: false,  // Буферные стадии не создают ценность
         stageProgressPercent: 100,  // По умолчанию 100%
-        requiredSkills: []  // По умолчанию нет требований к навыкам
+        requiredSkills: [],  // По умолчанию нет требований к навыкам
+        transitions: []
     };
 
     configEditorData.workflow.stages.push(newStage);
@@ -338,19 +332,13 @@ function addStage() {
 
 function deleteStage(index) {
     const stage = configEditorData.workflow.stages[index];
+    const stageName = stage.name;
 
-    // Удаляем переходы из этой стадии
-    configEditorData.workflow.transitions = configEditorData.workflow.transitions.filter(
-        t => t.fromStageName !== stage.name
-    );
-
-    // Удаляем переходы в эту стадию
-    configEditorData.workflow.transitions = configEditorData.workflow.transitions.filter(
-        t => t.toStageName !== stage.name
-    );
-
-    // Удаляем стадию
+    // Удаляем саму стадию (вместе с её переходами) и переходы В неё из остальных стадий
     configEditorData.workflow.stages.splice(index, 1);
+    configEditorData.workflow.stages.forEach(s => {
+        s.transitions = (s.transitions || []).filter(t => t.targetStageName !== stageName);
+    });
 
     renderStages();
 }
@@ -392,32 +380,31 @@ function moveStageDown(index) {
 
 function addTransition(stageIndex) {
     const fromStage = configEditorData.workflow.stages[stageIndex];
-
-    if (!configEditorData.workflow.transitions) {
-        configEditorData.workflow.transitions = [];
+    if (!fromStage.transitions) {
+        fromStage.transitions = [];
     }
 
     // Создаём переход к следующей стадии (если есть)
-    let toStageName = '';
+    let targetStageName = '';
     if (stageIndex < configEditorData.workflow.stages.length - 1) {
-        toStageName = configEditorData.workflow.stages[stageIndex + 1].name;
+        targetStageName = configEditorData.workflow.stages[stageIndex + 1].name;
     } else {
-        toStageName = 'Done';
+        targetStageName = 'Done';
     }
 
-    const newTransition = {
-        fromStageName: fromStage.name,
-        toStageName: toStageName,
+    fromStage.transitions.push({
+        targetStageName: targetStageName,
         probability: 1.0
-    };
+    });
 
-    configEditorData.workflow.transitions.push(newTransition);
     renderStages();
 }
 
-function deleteTransition(index) {
-    if (index >= 0 && index < configEditorData.workflow.transitions.length) {
-        configEditorData.workflow.transitions.splice(index, 1);
+function deleteTransition(stageIndex, transitionIndex) {
+    const stage = configEditorData.workflow.stages[stageIndex];
+    const transitions = stage?.transitions || [];
+    if (transitionIndex >= 0 && transitionIndex < transitions.length) {
+        transitions.splice(transitionIndex, 1);
         renderStages();
     }
 }
@@ -615,33 +602,15 @@ async function loadProcessTemplate(presetName) {
             return;
         }
         
-        // стадии могут быть в workflow.stages или workflow.Stages
+        // стадии могут быть в workflow.stages или workflow.Stages; переходы — внутри
+        // каждой стадии (stage.transitions), как и в остальном приложении
         const stagesData = workflowData.stages || workflowData.Stages || [];
-        
-        // Переходы могут быть:
-        // 1. Отдельным списком: workflow.transitions
-        // 2. Внутри каждой стадии: stage.transitions (нужно собрать)
-        let transitionsData = workflowData.transitions || workflowData.Transitions || [];
-        
-        // Если переходов нет отдельным списком, собираем их из стадий
-        if (transitionsData.length === 0 && stagesData.length > 0) {
-            stagesData.forEach(stage => {
-                const stageTransitions = stage.transitions || stage.Transitions || [];
-                stageTransitions.forEach(t => {
-                    transitionsData.push({
-                        fromStageName: stage.name || stage.Name,
-                        toStageName: t.targetStageName || t.TargetStageName,
-                        probability: t.probability ?? t.Probability ?? 1
-                    });
-                });
-            });
-        }
-        
-        
+
         if (stagesData.length > 0) {
             // Заменяем текущий workflow на шаблон — используем только один формат полей (как в API)
             const stages = stagesData.map(s => {
                 const type = s.type || s.Type;
+                const stageTransitions = s.transitions || s.Transitions || [];
                 return {
                     name: s.name || s.Name,
                     type: type,
@@ -651,10 +620,14 @@ async function loadProcessTemplate(presetName) {
                     requiredSkills: s.requiredSkills || s.RequiredSkills || [],
                     createsValue: s.createsValue ?? s.CreatesValue ?? (type === 'Work'),
                     requiresDifferentResource: s.requiresDifferentResource ?? s.RequiresDifferentResource ?? false,
-                    requiresDifferentResourceFromStage: s.requiresDifferentResourceFromStage ?? s.RequiresDifferentResourceFromStage ?? null
+                    requiresDifferentResourceFromStage: s.requiresDifferentResourceFromStage ?? s.RequiresDifferentResourceFromStage ?? null,
+                    transitions: stageTransitions.map(t => ({
+                        targetStageName: t.targetStageName || t.TargetStageName,
+                        probability: t.probability ?? t.Probability ?? 1
+                    }))
                 };
             });
-            
+
             // Гарантируем, что только одна стадия имеет isLeadTimeStart = true
             let hasLeadTimeStart = false;
             stages.forEach(s => {
@@ -666,15 +639,8 @@ async function loadProcessTemplate(presetName) {
                     }
                 }
             });
-            
-            configEditorData.workflow = {
-                stages: stages,
-                transitions: transitionsData.map(t => ({
-                    fromStageName: t.fromStageName || t.FromStageName,
-                    toStageName: t.toStageName || t.ToStageName,
-                    probability: t.probability ?? t.Probability ?? 1
-                }))
-            };
+
+            configEditorData.workflow = { stages };
             renderStages();
             
             // Сбрасываем селектор
