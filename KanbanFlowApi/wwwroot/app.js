@@ -216,14 +216,8 @@ function togglePanel(panelId) {
     }
 }
 
-// Обновление индикатора загрузки
+// Обновление состояния UI во время загрузки
 function updateLoadingIndicator() {
-    const gear = document.getElementById('loadingGear');
-    if (gear) {
-        gear.style.opacity = isLoading ? '1' : '0.3';
-        gear.style.animation = isLoading ? 'spin 1s linear infinite' : 'none';
-    }
-
     // Блокировка кнопок во время загрузки
     const btnSimulate = document.getElementById('btnSimulateDay');
     const btnSimulateToEnd = document.getElementById('btnSimulateToEnd');
@@ -904,6 +898,47 @@ function openImportModal() {
 function closeJsonModal() {
     document.getElementById('jsonModal').classList.remove('show');
 }
+
+// Модальное окно "Как играть" (правила и метрики)
+function openHelpModal() {
+    document.getElementById('helpModal').classList.add('show');
+}
+
+function closeHelpModal() {
+    document.getElementById('helpModal').classList.remove('show');
+}
+
+// Модальное окно "Как настраивать конфигурацию" (пресеты и т.д.)
+function openConfigHelpModal() {
+    document.getElementById('configHelpModal').classList.add('show');
+}
+
+function closeConfigHelpModal() {
+    document.getElementById('configHelpModal').classList.remove('show');
+}
+
+// Закрытие открытого модального окна по Esc.
+// Порядок важен: сначала окна, которые могут открываться поверх других
+// (например, генератор задач поверх редактора конфигурации).
+const MODAL_CLOSE_HANDLERS = [
+    ['helpModal', closeHelpModal],
+    ['configHelpModal', closeConfigHelpModal],
+    ['jsonModal', closeJsonModal],
+    ['taskGeneratorModal', closeTaskGenerator],
+    ['configEditorModal', closeConfigEditor]
+];
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+
+    for (const [modalId, closeFn] of MODAL_CLOSE_HANDLERS) {
+        const modal = document.getElementById(modalId);
+        if (modal && modal.classList.contains('show')) {
+            closeFn();
+            break;
+        }
+    }
+});
 
 async function copyToClipboard() {
     const textarea = document.getElementById('jsonTextarea');

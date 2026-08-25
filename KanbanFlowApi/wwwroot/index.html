@@ -46,6 +46,34 @@
             font-size: 1.8rem;
         }
 
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-help-icon {
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 1.4rem;
+            line-height: 1;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-help-icon:hover {
+            color: #764ba2;
+            transform: scale(1.15);
+        }
+
+        .modal-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .day-counter {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -725,26 +753,6 @@
             top: 20px;
             right: 20px;
             z-index: 10000;
-        }
-
-        /* Индикатор загрузки (шестерёнка) */
-        .loading-indicator {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 999;
-            opacity: 0.3;
-            transition: opacity 0.3s ease;
-        }
-
-        .loading-indicator i {
-            font-size: 1.5rem;
-            color: #667eea;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
         }
 
         /* Модальное окно */
@@ -1875,14 +1883,60 @@
             border-radius: 6px;
             border-left: 4px solid #667eea;
         }
+
+        /* Модальные окна помощи */
+        .help-modal {
+            max-width: 900px;
+            max-height: 85vh;
+        }
+
+        .help-modal-body {
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 25px;
+            align-content: start;
+        }
+
+        .help-section {
+            margin-bottom: 4px;
+        }
+
+        .help-section.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .help-section h4 {
+            font-size: 0.95rem;
+            color: #667eea;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .help-section p,
+        .help-section li {
+            font-size: 0.85rem;
+            color: #444;
+            line-height: 1.5;
+        }
+
+        .help-section ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        .help-section li {
+            margin-bottom: 4px;
+        }
+
+        .help-section li b {
+            color: #333;
+        }
     </style>
 </head>
 <body>
-    <!-- Индикатор загрузки -->
-    <div class="loading-indicator" id="loadingGear">
-        <i class="bi bi-gear"></i>
-    </div>
-
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Модальное окно для импорта/экспорта -->
@@ -1915,7 +1969,12 @@
         <div class="modal-content config-editor-modal">
             <div class="modal-header">
                 <h3><i class="bi bi-sliders me-2"></i>Настройка конфигурации</h3>
-                <button class="modal-close" onclick="closeConfigEditor()">&times;</button>
+                <div class="modal-header-actions">
+                    <button class="btn-help-icon" onclick="openConfigHelpModal()" title="Как задавать конфигурацию и выбирать пресеты">
+                        <i class="bi bi-question-circle"></i>
+                    </button>
+                    <button class="modal-close" onclick="closeConfigEditor()">&times;</button>
+                </div>
             </div>
             <div class="modal-body config-editor-body">
                 <!-- Вкладки -->
@@ -1999,7 +2058,12 @@
 
     <div class="simulation-container">
         <div class="header">
-            <h1><i class="bi bi-kanban me-2"></i>KanbanFlow Simulation</h1>
+            <div class="header-title">
+                <h1><i class="bi bi-kanban me-2"></i>KanbanFlow Simulation</h1>
+                <button class="btn-help-icon" onclick="openHelpModal()" title="Как играть и какие есть метрики">
+                    <i class="bi bi-question-circle"></i>
+                </button>
+            </div>
             <div class="day-counter">
                 <i class="bi bi-calendar3 me-2"></i>День: <span id="currentDay">0</span>
             </div>
@@ -2248,8 +2312,104 @@
         </div>
     </div>
 
+    <!-- Модальное окно: как играть и метрики -->
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal-content help-modal">
+            <div class="modal-header">
+                <h3><i class="bi bi-question-circle me-2"></i>Как играть</h3>
+                <button class="modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+            <div class="modal-body help-modal-body">
+                <div class="help-section">
+                    <h4><i class="bi bi-play-circle"></i>Суть симуляции</h4>
+                    <p>Задачи двигаются по доске через стадии работы и буферы. Воркеры со своими навыками
+                        забирают задачи в работу с учётом лимитов WIP. Симуляция считается день за днём.</p>
+                </div>
+
+                <div class="help-section">
+                    <h4><i class="bi bi-controller"></i>Управление</h4>
+                    <ul>
+                        <li><b>Следующий день</b> — просчитать один день симуляции.</li>
+                        <li><b>Рассчитать до конца</b> — прогнать все дни разом.</li>
+                        <li><b>Авто-режим</b> — просчитывать дни автоматически по таймеру.</li>
+                        <li><b>Перезагрузить</b> — сбросить симуляцию к исходному состоянию текущей конфигурации.</li>
+                    </ul>
+                </div>
+
+                <div class="help-section full-width">
+                    <h4><i class="bi bi-graph-up"></i>Какие есть метрики</h4>
+                    <ul>
+                        <li><b>Метрики</b> — Lead Time, Throughput, Flow Efficiency и распределение времени выполнения задач.</li>
+                        <li><b>Метрики работников</b> — загрузка (WIP), число завершённых задач и эффективность по каждому воркеру.</li>
+                        <li><b>Метрики задач</b> — по каждой задаче: сколько времени она провела на каждой стадии.</li>
+                        <li><b>Метрики стадий (P50, P85)</b> — перцентили длительности прохождения каждой стадии.</li>
+                        <li><b>Cumulative Flow Diagram (CFD)</b> — график накопленного количества задач по стадиям во времени; наведите курсор на область графика или кликните по легенде, чтобы выделить конкретную стадию.</li>
+                    </ul>
+                </div>
+
+                <div class="help-section full-width">
+                    <h4><i class="bi bi-lightbulb"></i>Советы</h4>
+                    <ul>
+                        <li>Любая панель (доска, воркеры, метрики, история) сворачивается и разворачивается кликом по её заголовку.</li>
+                        <li>Наведите курсор на значок <i class="bi bi-info-circle"></i> рядом с названием метрики — появится подсказка с формулой расчёта.</li>
+                        <li>История событий внизу страницы показывает лог всех перемещений задач и действий воркеров.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: как задавать конфигурацию и выбирать пресеты -->
+    <div class="modal-overlay" id="configHelpModal">
+        <div class="modal-content help-modal">
+            <div class="modal-header">
+                <h3><i class="bi bi-question-circle me-2"></i>Как настраивать конфигурацию</h3>
+                <button class="modal-close" onclick="closeConfigHelpModal()">&times;</button>
+            </div>
+            <div class="modal-body help-modal-body">
+                <div class="help-section">
+                    <h4><i class="bi bi-sliders"></i>Вкладка «Процесс»</h4>
+                    <p>Список стадий доски (рабочие и буферные), их лимиты WIP и требуемые навыки. Кнопка
+                        «Добавить стадию» создаёт новую, порядок стадий задаёт порядок колонок на доске.</p>
+                </div>
+
+                <div class="help-section">
+                    <h4><i class="bi bi-people"></i>Вкладка «Команда»</h4>
+                    <p>Список воркеров: их навыки и максимальная одновременная нагрузка. Кнопка «Добавить
+                        воркера» добавляет нового исполнителя в команду.</p>
+                </div>
+
+                <div class="help-section full-width">
+                    <h4><i class="bi bi-magic"></i>Вкладка «Задачи»</h4>
+                    <p>Список задач для симуляции. Их можно добавлять по одной или пакетно через
+                        <b>«Генератор задач»</b> — задайте нужные навыки и количество задач для каждого
+                        размера (t-shirt size), и генератор создаст их автоматически.</p>
+                </div>
+
+                <div class="help-section">
+                    <h4><i class="bi bi-collection"></i>Как выбрать пресет</h4>
+                    <p>На вкладках «Процесс» и «Команда» есть выпадающий список
+                        «— Выбрать шаблон —» в правом верхнем углу секции. Выбор пункта загружает готовый
+                        набор стадий или воркеров вместо текущего списка — после загрузки его можно
+                        доработать вручную.</p>
+                </div>
+
+                <div class="help-section">
+                    <h4><i class="bi bi-arrow-repeat"></i>Экспорт, импорт и сброс</h4>
+                    <ul>
+                        <li><b>Экспорт / Импорт</b> — сохранить или загрузить всю конфигурацию целиком в виде JSON.</li>
+                        <li><b>Сбросить конфигурацию</b> — вернуть конфигурацию к значениям по умолчанию.</li>
+                        <li><b>Сброс LocalStorage</b> — удалить все сохранённые в браузере настройки и пресеты.</li>
+                        <li><b>Seed и Вариативность</b> — seed фиксирует случайность симуляции, а
+                            вариативность включает случайные отклонения на каждом шаге.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="config-editor.js?v=37"></script>
-    <script src="app.js?v=50"></script>
+    <script src="app.js?v=53"></script>
 </body>
 </html>
