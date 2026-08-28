@@ -156,9 +156,8 @@ dotnet test /p:CollectCoverage=true
 PORT=5200 ./build-macos.sh       # порт веб-сервера (по умолчанию 5200)
 ```
 
-Запуск: в Finder открыть папку и дважды кликнуть `KanbanFlow.command`
-(при первом запуске — правый клик → «Открыть»). Веб-интерфейс откроется в
-браузере сам на `http://localhost:5200`.
+Запуск: `~/Applications/KanbanFlow/run.sh`. Веб-интерфейс откроется в браузере
+сам на `http://localhost:5200`.
 
 **Raspberry Pi (Debian / Raspberry Pi OS):**
 

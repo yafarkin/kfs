@@ -8,8 +8,7 @@
 #   2. Публикует KanbanFlowApi как self-contained приложение: нужный .NET runtime
 #      уже вшит внутрь, отдельно ничего ставить не надо.
 #   3. Кладёт готовое приложение в отдельную папку (по умолчанию
-#      ~/Applications/KanbanFlow) и создаёт ярлык-запускалку KanbanFlow.command,
-#      который можно запускать двойным кликом из Finder.
+#      ~/Applications/KanbanFlow) и создаёт запускалку run.sh.
 #
 # Использование:
 #   ./build-macos.sh                 # публикация в ~/Applications/KanbanFlow
@@ -113,13 +112,12 @@ APP_BIN="$OUTPUT_DIR/KanbanFlowApi"
 chmod +x "$APP_BIN"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Ярлык-запускалка для Finder
+# Запускалка
 # ─────────────────────────────────────────────────────────────────────────────
-LAUNCHER="$OUTPUT_DIR/${APP_NAME}.command"
+LAUNCHER="$OUTPUT_DIR/run.sh"
 cat > "$LAUNCHER" <<LAUNCHER_EOF
 #!/usr/bin/env bash
-# Запуск KanbanFlow. Двойной клик в Finder открывает этот файл в Терминале.
-# Закрыть приложение: Ctrl+C в окне Терминала или просто закрыть окно.
+# Запуск KanbanFlow. Останов: Ctrl+C.
 set -e
 cd "\$(dirname "\$0")"
 
@@ -151,9 +149,5 @@ xattr -dr com.apple.quarantine "$OUTPUT_DIR" 2>/dev/null || true
 info "Готово!"
 echo
 echo "  Приложение:  $OUTPUT_DIR"
-echo "  Запуск:      открой в Finder «$OUTPUT_DIR» и дважды кликни «${APP_NAME}.command»"
-echo "               (или из терминала:  \"$LAUNCHER\")"
+echo "  Запуск:      $LAUNCHER"
 echo "  Веб-интерфейс: http://localhost:${PORT}  (откроется в браузере сам)"
-echo
-echo "  Первый запуск .command: если macOS ругается «неопознанный разработчик» —"
-echo "  правый клик по файлу → «Открыть» → «Открыть»."
