@@ -140,6 +140,45 @@ dotnet test /p:CollectCoverage=true
 - **UI**: http://localhost:5000
 - **Swagger**: http://localhost:5000/swagger
 
+### Автономная сборка (без установленного .NET)
+
+Скрипты собирают **self-contained** приложение — нужный .NET runtime вшивается
+внутрь, на целевой машине ничего ставить не нужно. Если на машине сборки нет
+.NET SDK 9, скрипт скачает и поставит его **локально** в `./.dotnet`, не трогая
+систему. Готовое приложение кладётся в отдельную папку (по умолчанию
+`~/Applications/KanbanFlow`) вместе с запускалкой.
+
+**macOS:**
+
+```bash
+./build-macos.sh                 # публикация в ~/Applications/KanbanFlow
+./build-macos.sh -o /путь/куда   # своя папка назначения
+PORT=5200 ./build-macos.sh       # порт веб-сервера (по умолчанию 5200)
+```
+
+Запуск: в Finder открыть папку и дважды кликнуть `KanbanFlow.command`
+(при первом запуске — правый клик → «Открыть»). Веб-интерфейс откроется в
+браузере сам на `http://localhost:5200`.
+
+**Raspberry Pi (Debian / Raspberry Pi OS):**
+
+```bash
+./build-raspberrypi.sh                 # публикация в ~/Applications/KanbanFlow
+./build-raspberrypi.sh --install-deps  # доустановить системные пакеты (apt, sudo)
+./build-raspberrypi.sh --service       # + systemd-сервис (автозапуск при загрузке)
+HOST=127.0.0.1 ./build-raspberrypi.sh  # только localhost (по умолчанию 0.0.0.0 — виден в сети)
+```
+
+Определяет архитектуру автоматически (`linux-arm64` / `linux-arm` / `linux-x64`).
+Запуск: двойной клик по `KanbanFlow.desktop` (или пункт «KanbanFlow» в меню
+приложений), либо `run.sh` из терминала. По умолчанию сервер слушает `0.0.0.0`,
+поэтому доступен из сети по `http://<ip-пи>:5200` и `http://<hostname>.local:5200`.
+С флагом `--service` приложение поднимается при загрузке; управление —
+`systemctl --user {status,restart} kanbanflow`, логи — `journalctl --user -u kanbanflow -f`.
+
+> Сборка выполняется под архитектуру машины, на которой запущен скрипт
+> (кросс-компиляции между платформами нет) — запускайте его на целевом железе.
+
 ## API
 
 ### Endpoint'ы пресетов
