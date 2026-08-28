@@ -121,6 +121,11 @@ cat > "$LAUNCHER" <<LAUNCHER_EOF
 set -e
 cd "\$(dirname "\$0")"
 
+# Каталог мог прилететь архивом/AirDrop — снимаем карантин macOS и чиним права,
+# иначе Gatekeeper заблокирует запуск.
+xattr -dr com.apple.quarantine "\$(pwd)" 2>/dev/null || true
+chmod +x ./KanbanFlowApi 2>/dev/null || true
+
 PORT="\${PORT:-$PORT}"
 URL="http://localhost:\${PORT}"
 
