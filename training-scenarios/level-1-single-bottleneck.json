@@ -57,7 +57,7 @@
       "costPerDay": 100
     },
     {
-      "login": "eng-fe",
+      "login": "dev-fe",
       "skills": ["frontend"],
       "wipLimit": 1,
       "performance": 100,
@@ -66,7 +66,7 @@
       "costPerDay": 100
     },
     {
-      "login": "eng-qa",
+      "login": "qa",
       "skills": ["qa"],
       "wipLimit": 1,
       "performance": 100,
@@ -76,13 +76,13 @@
     }
   ],
   "tasks": [
-    { "key": "TASK-1", "summary": "Крупная фича A", "shirtType": "L", "requiredSkills": [] },
-    { "key": "TASK-2", "summary": "Крупная фича B", "shirtType": "L", "requiredSkills": [] },
-    { "key": "TASK-3", "summary": "Средняя задача A", "shirtType": "M", "requiredSkills": [] },
-    { "key": "TASK-4", "summary": "Средняя задача B", "shirtType": "M", "requiredSkills": [] },
-    { "key": "TASK-5", "summary": "Средняя задача C", "shirtType": "M", "requiredSkills": [] },
-    { "key": "TASK-6", "summary": "Мелкая задача A", "shirtType": "S", "requiredSkills": [] },
-    { "key": "TASK-7", "summary": "Мелкая задача B", "shirtType": "S", "requiredSkills": [] },
-    { "key": "TASK-8", "summary": "Мелкая задача C", "shirtType": "S", "requiredSkills": [] }
+    { "key": "TASK-1", "summary": "[BE] Крупная фича A", "shirtType": "L", "requiredSkills": [] },
+    { "key": "TASK-2", "summary": "[BE] Крупная фича B", "shirtType": "L", "requiredSkills": [] },
+    { "key": "TASK-3", "summary": "[BE] Средняя задача A", "shirtType": "M", "requiredSkills": [] },
+    { "key": "TASK-4", "summary": "[BE] Средняя задача B", "shirtType": "M", "requiredSkills": [] },
+    { "key": "TASK-5", "summary": "[BE] Средняя задача C", "shirtType": "M", "requiredSkills": [] },
+    { "key": "TASK-6", "summary": "[BE] Мелкая задача A", "shirtType": "S", "requiredSkills": [] },
+    { "key": "TASK-7", "summary": "[BE] Мелкая задача B", "shirtType": "S", "requiredSkills": [] },
+    { "key": "TASK-8", "summary": "[BE] Мелкая задача C", "shirtType": "S", "requiredSkills": [] }
   ]
 }

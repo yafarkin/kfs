@@ -960,7 +960,10 @@ async function pasteFromClipboard() {
         textarea.value = text;
         showToast('JSON вставлен из буфера обмена', 'success');
     } catch (err) {
-        showToast('Не удалось вставить из буфера обмена', 'danger');
+        // navigator.clipboard.readText() недоступен вне защищённого контекста
+        // (не https/localhost) или без разрешения браузера — вставьте вручную (Cmd/Ctrl+V).
+        textarea.focus();
+        showToast('Нет доступа к буферу обмена — вставьте в поле вручную (Cmd/Ctrl+V)', 'warning');
     }
 }
 
@@ -969,22 +972,32 @@ function importJson() {
     try {
         const data = JSON.parse(textarea.value);
 
-        // Простая валидация
-        if (!data.config || !data.board) {
-            throw new Error('Неверный формат: отсутствуют config или board');
+        // Поддерживаются два формата:
+        // 1. Экспорт полного состояния симуляции — { config, board, ... } (кнопка «Экспорт»).
+        // 2. Плоский конфиг-запрос — { seed, useVariability, workflow, workers, tasks }
+        //    (файлы training-scenarios, тело запроса /api/simulation/start).
+        const isFullState = data.config && data.board;
+        const isFlatConfig = !isFullState && data.workflow && data.workers && data.tasks;
+
+        if (!isFullState && !isFlatConfig) {
+            throw new Error('Неверный формат: ожидается либо { config, board }, либо { workflow, workers, tasks }');
         }
 
-        // Сохраняем состояние симуляции
-        simulationState = data;
-        
+        // Источник полей конфигурации: config для полного состояния, сам объект — для плоского.
+        const cfg = isFullState ? data.config : data;
+
+        // Для полного состояния сразу восстанавливаем симуляцию; для плоского конфига
+        // состояния (board) нет — пользователь запускает симуляцию кнопкой «Запустить».
+        simulationState = isFullState ? data : simulationState;
+
         // Обновляем configTemplate из импортированных данных.
-        // data.config.workflow уже в формате backend API (transitions вложены в стадии) —
+        // cfg.workflow уже в формате backend API (transitions вложены в стадии) —
         // configTemplate хранит его в том же виде, преобразование не требуется.
         configTemplate = {
-            seed: data.config.seed,
-            useVariability: data.config.useVariability,
+            seed: cfg.seed,
+            useVariability: cfg.useVariability,
             workflow: {
-                stages: data.config.workflow.stages.map(s => ({
+                stages: cfg.workflow.stages.map(s => ({
                     name: s.name,
                     type: s.type,
                     isLeadTimeStart: s.isLeadTimeStart,
@@ -1000,7 +1013,7 @@ function importJson() {
                     }))
                 }))
             },
-            workers: data.config.workers.map(w => ({
+            workers: cfg.workers.map(w => ({
                 login: w.login,
                 skills: w.skills || [],
                 wipLimit: w.wipLimit,
@@ -1009,7 +1022,7 @@ function importJson() {
                 deviationUpPercent: w.deviationUpPercent || 0,
                 costPerDay: w.costPerDay ?? 100
             })),
-            tasks: data.config.tasks.map(t => ({
+            tasks: cfg.tasks.map(t => ({
                 key: t.key,
                 summary: t.summary,
                 shirtType: t.shirtType,
@@ -1019,20 +1032,36 @@ function importJson() {
             }))
         };
         
+        // Синхронизируем поля seed/вариативности в панели настроек с импортированным конфигом.
+        const seedInput = document.getElementById('seedInput');
+        const variabilityToggle = document.getElementById('variabilityToggle');
+        if (seedInput && configTemplate.seed != null) seedInput.value = configTemplate.seed;
+        if (variabilityToggle && configTemplate.useVariability != null) {
+            variabilityToggle.checked = configTemplate.useVariability;
+        }
+
         // Сохраняем в localStorage
         saveConfigTemplateToStorage();
-        saveSimulationToStorage();
-        
-        renderBoard();
-        renderWorkers();
-        renderHistory();
-        updateControls();
-        closeJsonModal();
 
-        // Расчёт всех метрик после импорта
-        calculateAllMetrics();
+        if (isFullState) {
+            saveSimulationToStorage();
 
-        showToast('Конфигурация импортирована', 'success');
+            renderBoard();
+            renderWorkers();
+            renderHistory();
+            updateControls();
+            closeJsonModal();
+
+            // Расчёт всех метрик после импорта
+            calculateAllMetrics();
+
+            showToast('Конфигурация импортирована', 'success');
+        } else {
+            // Плоский конфиг: симуляции ещё нет, запускаем через «Запустить».
+            updateControls();
+            closeJsonModal();
+            showToast('Конфигурация загружена. Нажмите «Запустить» для старта симуляции.', 'success');
+        }
     } catch (err) {
         showToast('Ошибка JSON: ' + err.message, 'danger');
     }

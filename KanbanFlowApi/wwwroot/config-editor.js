@@ -144,6 +144,19 @@ function saveConfigFromEditor() {
             return;
         }
 
+        // Ключи задач должны быть уникальны и непустыми — иначе backend падает
+        // (ApiMapper.ToDomainBoard ищет задачу по ключу через .Single).
+        const taskKeys = configEditorData.tasks.map(t => (t.key || '').trim());
+        if (taskKeys.some(k => !k)) {
+            showToast('У всех задач должен быть ключ', 'danger');
+            return;
+        }
+        const dupKey = taskKeys.find((k, i) => taskKeys.indexOf(k) !== i);
+        if (dupKey) {
+            showToast(`Дублирующийся ключ задачи: ${dupKey}. Ключи должны быть уникальны.`, 'danger');
+            return;
+        }
+
         // Сохраняем в configTemplate
         if (!configTemplate) {
             configTemplate = {};
@@ -777,13 +790,24 @@ function renderTasks() {
     container.innerHTML = html;
 }
 
+// Следующий свободный номер для ключа TASK-N: максимум существующего суффикса + 1.
+// Нельзя опираться на длину массива — после удаления задач она расходится с номерами,
+// и новые ключи начинают конфликтовать с уже существующими (backend падает на .Single).
+function nextTaskKeyNumber() {
+    const nums = (configEditorData.tasks || []).map(t => {
+        const m = /^TASK-(\d+)$/.exec((t.key || '').trim());
+        return m ? parseInt(m[1], 10) : 0;
+    });
+    return (nums.length ? Math.max(...nums) : 0) + 1;
+}
+
 function addTask() {
     if (!configEditorData.tasks) {
         configEditorData.tasks = [];
     }
 
     const newTask = {
-        key: `TASK-${configEditorData.tasks.length + 1}`,
+        key: `TASK-${nextTaskKeyNumber()}`,
         summary: 'Новая задача',
         description: 'Новая задача',
         shirtType: 'S',
@@ -942,7 +966,7 @@ function updateGeneratorTotal() {
 
 function generateTasks() {
     const rows = document.querySelectorAll('.generator-row');
-    let taskKeyCounter = configEditorData.tasks.length + 1;
+    let taskKeyCounter = nextTaskKeyNumber();
     let generatedCount = 0;
     const newTasks = [];
 
@@ -993,10 +1017,11 @@ function generateTasks() {
     // Перемешиваем задачи перед добавлением
     const shuffledTasks = shuffleArray(newTasks);
 
-    // Обновляем номера TASK-N после перемешивания
+    // Присваиваем ключи после перемешивания, продолжая нумерацию от текущего максимума
+    // (не от длины массива — иначе после удалений ключи столкнутся с существующими).
+    const keyBase = nextTaskKeyNumber();
     shuffledTasks.forEach((task, index) => {
-        const newKey = `TASK-${configEditorData.tasks.length + index + 1}`;
-        task.key = newKey;
+        task.key = `TASK-${keyBase + index}`;
     });
 
     // Добавляем перемешанные задачи
