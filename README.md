@@ -21,6 +21,12 @@
 
 ```
 KanbanFlow/
+├── docs/                       # Документация проекта
+│   ├── json-model.md           # Справка по JSON-модели (конфигурация, состояние, метрики)
+│   ├── roadmap.md              # Продуктовый роадмап
+│   ├── todo.md                 # Технический долг и TODO
+│   ├── training-scenarios.md   # Дизайн обучающих сценариев (тренинг по TOC)
+│   └── training-scenarios/     # JSON-сценарии (импорт через UI) + README фасилитатору
 ├── KanbanFlowApi/              # Веб-API и UI
 │   ├── Controllers/
 │   │   ├── SimulationController.cs    # Endpoint'ы: GET /process-presets, /worker-pools, /task-presets; POST /start, /simulate-day, /all-metrics
@@ -445,6 +451,14 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"
 - Симуляция работает только на уровне дней (без часов/тиков)
 - Все события в день происходят в тик 0
 - Если задача занимает 50% дня, воркер всё равно считается занятым весь день (упрощение)
+
+## Обучающие сценарии
+
+Для тренинга по теории ограничений (TOC) подготовлены 4 намеренно кривых
+конфига (один явный затор, избыточное QA, WIP-хаос, плохая декомпозиция) —
+JSON-файлы в `docs/training-scenarios/`, импортируются через UI кнопкой
+«Импорт». Дизайн, измеренные baseline-метрики и ориентиры «на что выйти после
+фикса» — в [`docs/training-scenarios.md`](docs/training-scenarios.md).
 
 ## Ссылки
 

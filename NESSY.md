@@ -12,7 +12,11 @@
 
 **Справка по JSON**: компактное описание входной модели (конфигурация),
 состояния симуляции (round-trip `simulate-day`) и модели метрик — см.
-[`json-model.md`](./json-model.md).
+[`json-model.md`](./docs/json-model.md).
+
+**Документация** — вся в каталоге [`docs/`](./docs/): `json-model.md`,
+`roadmap.md`, `todo.md` (техдолг), `training-scenarios.md` (дизайн обучающих
+сценариев) и `training-scenarios/` (JSON-файлы сценариев + README фасилитатору).
 
 **Статус:** Активная разработка. Последние изменения:
 - ✅ **Раздельные пресеты**: процесс + команда + задачи (комбинаторика)
@@ -28,6 +32,12 @@
 
 ```
 KanbanFlow/
+├── docs/                       # Документация проекта
+│   ├── json-model.md           # Справка по JSON-модели (конфигурация, состояние, метрики)
+│   ├── roadmap.md              # Продуктовый роадмап
+│   ├── todo.md                 # Технический долг и TODO
+│   ├── training-scenarios.md   # Дизайн обучающих сценариев (тренинг по TOC)
+│   └── training-scenarios/     # JSON-сценарии (импорт через UI) + README фасилитатору
 ├── KanbanFlowApi/              # Веб-API + UI (wwwroot)
 │   ├── Controllers/
 │   │   ├── SimulationController.cs    # GET /process-presets, /worker-pools, /task-presets; POST /start, /all-metrics
