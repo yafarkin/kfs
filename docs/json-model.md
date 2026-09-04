@@ -52,7 +52,7 @@
 {
   "key": "TASK-1",
   "summary": "...",
-  "shirtType": "S|M|L|XL",       // S=1д, M=3д, L=5д, XL=8д
+  "shirtType": "XS|S|M|L|XL",    // XS=1д, S=2-3д, M=4-6д, L=7-15д, XL=16-30д (диапазон, не фикс. число)
   "requiredSkills": ["backend"], // достаточно одного общего навыка со стадией
   "children": [ Task, ... ],     // опционально, иерархия
   "acceptableWorkers": { "Developing": "dev1" } // опционально: stage -> login

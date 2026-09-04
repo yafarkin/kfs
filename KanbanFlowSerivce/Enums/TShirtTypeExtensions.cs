@@ -17,6 +17,7 @@ public static class TShirtTypeExtensions
             TShirtType.S => (2, 3),
             TShirtType.M => (4, 6),
             TShirtType.L => (7, 15),
+            TShirtType.XL => (16, 30),
             _ => (1, 1)
         };
     }

@@ -54,6 +54,18 @@ let configEditorData = {
     tasks: []
 };
 
+// Диапазон дней (min, max) по T-Shirt размеру задачи — зеркалит
+// KanbanFlowSerivce/Enums/TShirtTypeExtensions.GetDaysToComplete на бэке.
+// Используется только для оценочного счётчика "общая длительность" в редакторе задач,
+// на сам расчёт симуляции не влияет — если поменяете диапазоны на бэке, поправьте и тут.
+const SHIRT_TYPE_DAYS_RANGE = {
+    XS: [1, 1],
+    S: [2, 3],
+    M: [4, 6],
+    L: [7, 15],
+    XL: [16, 30]
+};
+
 // ============================================================================
 // Открытие/закрытие модального окна
 // ============================================================================
@@ -717,6 +729,41 @@ function moveWorkerDown(index) {
 // Вкладка: Задачи
 // ============================================================================
 
+// Суммарная оценочная длительность всех задач (сумма диапазонов min-max по каждой),
+// чтобы было легче оценивать масштаб набора задач при ручной нарезке/генерации.
+// Дети (task.children) не учитываются — движок их сейчас не разворачивает при симуляции,
+// это просто вспомогательная группировка в модели.
+function renderTasksTotalDuration(tasks) {
+    const totalEl = document.getElementById('tasksTotalDuration');
+    if (!totalEl) return;
+
+    if (tasks.length === 0) {
+        totalEl.innerHTML = '';
+        return;
+    }
+
+    let minTotal = 0;
+    let maxTotal = 0;
+    tasks.forEach(task => {
+        const shirtType = task.shirtType || 'S';
+        const range = SHIRT_TYPE_DAYS_RANGE[shirtType] || SHIRT_TYPE_DAYS_RANGE.S;
+        minTotal += range[0];
+        maxTotal += range[1];
+    });
+
+    totalEl.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>${tasks.length} ` +
+        `${pluralizeTasks(tasks.length)} · ${minTotal}–${maxTotal} дней суммарно (по оценке размера, без учёта воркеров)`;
+}
+
+// Склонение слова "задача" под число (1 задача, 2 задачи, 5 задач).
+function pluralizeTasks(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'задача';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'задачи';
+    return 'задач';
+}
+
 function renderTasks() {
     const container = document.getElementById('tasksContainer');
     if (!container) {
@@ -725,6 +772,8 @@ function renderTasks() {
     }
 
     const tasks = configEditorData.tasks || [];
+
+    renderTasksTotalDuration(tasks);
 
     if (tasks.length === 0) {
         container.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-inbox me-2"></i>Нет задач. Добавьте первую задачу.</div>';
