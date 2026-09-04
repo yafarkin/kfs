@@ -23,5 +23,10 @@ public enum TShirtType
     /// <summary>
     ///     Большой размер (7-15 дней)
     /// </summary>
-    L
+    L,
+
+    /// <summary>
+    ///     Очень большой размер (16-30 дней)
+    /// </summary>
+    XL
 }
