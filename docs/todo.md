@@ -43,6 +43,15 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   на тот же вложенный формат, что и backend API (`stage.transitions`) — убраны
   `buildWorkflowForBackend()`/`flattenStageTransitions()`, конвертеры туда-обратно, которые
   дважды становились источником багов потери данных.
+- **Баг**: дублирующиеся логины воркеров проходили `/start` без единой ошибки, но валили
+  первый же `/simulate-day` необработанным `InvalidOperationException` (`ApiMapper.ToDomainBoard`
+  ищет воркера по логину через `.Single()` — с дублем находит два совпадения). Клиент получал
+  500 с голым stack trace вместо JSON и показывал в тосте нечитаемую ошибку — выглядело как
+  «метрики странно себя ведут». Добавлена явная проверка уникальности логинов в
+  `SimulationController.StartSimulation` (400 с понятным сообщением) и в
+  `config-editor.js` (`saveConfigFromEditor` блокирует сохранение конфига с дублями/пустыми
+  логинами, по аналогии с уже существующей проверкой уникальности ключей задач). Регресс-тест:
+  `SimulationControllerValidationTests`.
 
 ### Осталось
 - **`ApiBoardWorkerDto` хранит назначения дважды**: и `AssignedTaskKeys` (список строк), и

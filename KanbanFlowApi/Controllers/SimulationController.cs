@@ -35,6 +35,24 @@ public class SimulationController : ControllerBase
             return BadRequest(new { error = "Конфигурация должна содержать хотя бы одного работника" });
         }
 
+        // Логины воркеров используются как ключ при round-trip состояния симуляции
+        // (ApiMapper.ToDomainBoard ищет воркера по логину через .Single) — дубликаты
+        // проходят /start без ошибок, но валят первый же /simulate-day необработанным
+        // исключением. Проверяем здесь, чтобы конфигурация с дублями вообще не запускалась.
+        var duplicateWorkerLogins = request.Workers
+            .GroupBy(w => w.Login)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateWorkerLogins.Count > 0)
+        {
+            return BadRequest(new
+            {
+                error = $"Логины воркеров должны быть уникальны. Дублируются: {string.Join(", ", duplicateWorkerLogins)}"
+            });
+        }
+
         if (request.Workflow == null || request.Workflow.Stages == null || request.Workflow.Stages.Count == 0)
         {
             return BadRequest(new { error = "Конфигурация должна содержать хотя бы одну стадию" });

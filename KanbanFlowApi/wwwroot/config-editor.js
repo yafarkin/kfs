@@ -156,6 +156,20 @@ function saveConfigFromEditor() {
             return;
         }
 
+        // Логины воркеров должны быть уникальны и непустыми — иначе backend падает
+        // (ApiMapper.ToDomainBoard ищет воркера по логину через .Single), а UI просто
+        // показывает малопонятную ошибку симуляции на первом же дне.
+        const workerLogins = configEditorData.workers.map(w => (w.login || '').trim());
+        if (workerLogins.some(l => !l)) {
+            showToast('У всех воркеров должен быть логин', 'danger');
+            return;
+        }
+        const dupLogin = workerLogins.find((l, i) => workerLogins.indexOf(l) !== i);
+        if (dupLogin) {
+            showToast(`Дублирующийся логин воркера: ${dupLogin}. Логины должны быть уникальны.`, 'danger');
+            return;
+        }
+
         if (!configEditorData.tasks || configEditorData.tasks.length === 0) {
             showToast('Добавьте хотя бы одну задачу', 'warning');
             return;
