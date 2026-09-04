@@ -54,6 +54,10 @@ let configEditorData = {
     tasks: []
 };
 
+// Пресеты грейдов воркера (роль+уровень), подгружаются один раз при открытии редактора —
+// используются только для quick-fill полей Performance/Deviation/CostPerDay.
+let workerGradePresets = [];
+
 // ============================================================================
 // Открытие/закрытие модального окна
 // ============================================================================
@@ -97,6 +101,7 @@ function openConfigEditor() {
         // Загружаем шаблоны процессов и воркеров
         loadProcessTemplates();
         loadWorkerTemplates();
+        loadWorkerGradePresets();
 
         // Рендерим все вкладки сразу (без setTimeout)
         try {
@@ -485,6 +490,18 @@ function renderWorkersEditor() {
                         <input type="number" value="${wipLimit}" onchange="updateWorker(${index}, 'wipLimit', parseInt(this.value) || 1)">
                     </div>
                     <div class="config-field">
+                        <label>Грейд (быстрое заполнение)</label>
+                        <select onchange="applyWorkerGrade(${index}, this.value)">
+                            <option value="">— выбрать —</option>
+                            ${workerGradePresets.map(preset => {
+                                const presetName = preset.name || preset.Name;
+                                const presetDisplayName = preset.displayName || preset.DisplayName || presetName;
+                                return `<option value="${escapeHtml(presetName)}">${escapeHtml(presetDisplayName)}</option>`;
+                            }).join('')}
+                        </select>
+                        <small class="text-muted">Подставляет Performance/Отклонения/Стоимость — поля ниже остаются редактируемыми вручную</small>
+                    </div>
+                    <div class="config-field">
                         <label>Performance (%)</label>
                         <input type="number" value="${performance}" min="0" max="200" onchange="updateWorker(${index}, 'performance', parseInt(this.value) || 100)">
                     </div>
@@ -507,6 +524,24 @@ function renderWorkersEditor() {
     });
 
     container.innerHTML = html;
+}
+
+// Загрузка пресетов грейдов воркера (роль+уровень) при открытии редактора
+async function loadWorkerGradePresets() {
+    try {
+        const response = await fetch('/api/editor/workers/grade-presets');
+        if (!response.ok) {
+            console.error('Failed to load worker grade presets:', response.status);
+            return;
+        }
+        workerGradePresets = await response.json();
+
+        // Пресеты подгружаются асинхронно и могли не успеть к первому рендеру карточек —
+        // перерисовываем, чтобы выпадающий список грейдов в карточках воркеров заполнился.
+        renderWorkersEditor();
+    } catch (error) {
+        console.error('Error loading worker grade presets:', error);
+    }
 }
 
 // Загрузка шаблонов воркеров при открытии редактора
@@ -696,6 +731,27 @@ function updateWorker(index, field, value) {
 function updateWorkerSkills(index, value) {
     const skills = value.split(',').map(s => s.trim()).filter(s => s);
     configEditorData.workers[index].skills = skills;
+    renderWorkersEditor();
+}
+
+// Применение пресета грейда к воркеру — одноразовый quick-fill: подставляет числа
+// в существующие поля, ничего не запоминает. Поля остаются доступны для ручной правки,
+// и пресет можно применить повторно (селектор сбрасывается на плейсхолдер).
+function applyWorkerGrade(index, presetName) {
+    if (!presetName) return;
+
+    const preset = workerGradePresets.find(p => (p.name || p.Name) === presetName);
+    if (!preset) {
+        console.error('Worker grade preset not found:', presetName);
+        return;
+    }
+
+    const worker = configEditorData.workers[index];
+    worker.performance = preset.performance ?? preset.Performance;
+    worker.deviationDownPercent = preset.deviationDownPercent ?? preset.DeviationDownPercent;
+    worker.deviationUpPercent = preset.deviationUpPercent ?? preset.DeviationUpPercent;
+    worker.costPerDay = preset.costPerDay ?? preset.CostPerDay;
+
     renderWorkersEditor();
 }
 
