@@ -39,6 +39,17 @@ public class WorkerEditorController : ControllerBase
     }
 
     /// <summary>
+    /// Получить список пресетов «грейдов» воркера (роль + уровень) — готовые наборы
+    /// Performance/Deviation/CostPerDay для быстрого заполнения полей одного воркера.
+    /// </summary>
+    [HttpGet("grade-presets")]
+    public ActionResult<List<WorkerGradePresetDto>> GetGradePresets()
+    {
+        var presets = WorkerGradePresetsFactory.GetAllPresets();
+        return Ok(presets);
+    }
+
+    /// <summary>
     /// Валидировать и сохранить пользовательский пресет воркеров.
     /// Backend выполняет валидацию, сохранение происходит в LocalStorage браузера.
     /// </summary>

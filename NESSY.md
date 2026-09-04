@@ -402,6 +402,9 @@ dotnet test --filter "FullyQualifiedName~WorkerMetrics"  # Конкретный 
 **Редактор команд** (`/editor/workers.html`):
 - CRUD операций для воркеров (логин, навыки, WIP-лимит, performance, отклонения)
 - Навыки в виде строки через запятую
+- Грейд воркера (`/api/editor/workers/grade-presets`) — выпадающий список «роль,
+  уровень» (напр. «Backend, джун»), одноразово заполняет Performance/Отклонения/
+  CostPerDay; поля остаются редактируемыми вручную после применения
 - Сохранение в LocalStorage, валидация на backend (`/api/editor/workers/presets`)
 - Экспорт/импорт пресетов в JSON
 

@@ -222,10 +222,14 @@ GET /api/simulation/task-presets
 ```http
 GET /api/editor/processes/presets
 GET /api/editor/workers/presets
+GET /api/editor/workers/grade-presets
 GET /api/editor/tasks/presets
 ```
 
 Возвращают пресеты для редакторов (серверные + пользовательские из LocalStorage).
+`grade-presets` — пресеты «грейдов» воркера (роль backend/frontend/qa × уровень
+стажёр..лид): готовые наборы Performance/Deviation/CostPerDay для одноразового
+заполнения полей воркера в редакторе (quick-fill, поля остаются редактируемыми).
 
 ### Запуск симуляции
 
