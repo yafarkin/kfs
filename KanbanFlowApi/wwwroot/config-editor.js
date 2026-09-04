@@ -70,6 +70,16 @@ const SHIRT_TYPE_DAYS_RANGE = {
     XL: [16, 30]
 };
 
+// Лесенка split/join по T-Shirt размеру задачи. Split идёт вниз (XL -> L -> M -> S -> XS),
+// join — вверх (обратное отображение). XS — нижняя граница (нельзя разбить дальше),
+// XL — верхняя граница (нечего объединять дальше, в ключе нет записи).
+const SHIRT_SPLIT_DOWN = { XL: 'L', L: 'M', M: 'S', S: 'XS' };
+const SHIRT_JOIN_UP = { XS: 'S', S: 'M', M: 'L', L: 'XL' };
+
+// Индекс задачи, для которой сейчас открыт выбор партнёра для join (null — никто не выбирает).
+// Сбрасывается при каждом открытии редактора (openConfigEditor).
+let pendingJoinTaskIndex = null;
+
 // ============================================================================
 // Открытие/закрытие модального окна
 // ============================================================================
@@ -80,6 +90,8 @@ function openConfigEditor() {
     // 1. configTemplate (редактируемый шаблон) — полный конфиг с workflow, workers, tasks
     // 2. Пустая конфигурация (если configTemplate сброшен)
     // simulationState.config НЕ используется чтобы не загружать старую симуляцию
+
+    pendingJoinTaskIndex = null;
 
     let workflow = null;
     let workers = null;
@@ -887,6 +899,9 @@ function renderTasks() {
         const skillsArray = task.requiredSkills || [];
         const skillsString = Array.isArray(skillsArray) ? skillsArray.join(', ') : (skillsArray || '');
 
+        const splitTargetSize = SHIRT_SPLIT_DOWN[shirtType];
+        const joinCandidates = getJoinCandidates(index);
+
         html += `
             <div class="config-item" data-task-index="${index}">
                 <div class="config-item-header">
@@ -901,11 +916,20 @@ function renderTasks() {
                         <button class="btn btn-sm btn-outline-secondary" onclick="moveTaskDown(${index})" ${index === tasks.length - 1 ? 'disabled' : ''} title="Ниже">
                             <i class="bi bi-arrow-down"></i>
                         </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="splitTask(${index})" ${splitTargetSize ? '' : 'disabled'}
+                                title="${splitTargetSize ? `Разбить на 2×${splitTargetSize}` : 'XS нельзя разбить дальше'}">
+                            <i class="bi bi-scissors"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="startJoinTask(${index})" ${joinCandidates.length > 0 ? '' : 'disabled'}
+                                title="${joinCandidates.length > 0 ? 'Объединить с похожей задачей' : 'Нет подходящей задачи для объединения (нужны такие же размер и навыки)'}">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${index})" title="Удалить">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
                 </div>
+                ${pendingJoinTaskIndex === index ? renderJoinPendingBar(index, joinCandidates) : ''}
                 <div class="config-item-body">
                     <div class="config-field">
                         <label>Ключ</label>
@@ -935,6 +959,132 @@ function renderTasks() {
     });
 
     container.innerHTML = html;
+}
+
+// ============================================================================
+// Split / Join задач
+// ============================================================================
+// Split — разбить задачу на 2 клона меньшего размера (XL->L, L->M, M->S, S->XS,
+// XS разбить нельзя). Однозначная операция, без выбора — сразу выполняется по клику.
+//
+// Join — обратная операция, но неоднозначная (в списке может быть несколько задач
+// того же размера), поэтому оформлена как явный выбор партнёра: клик по "Join" открывает
+// выпадающий список подходящих задач (тот же shirtType и тот же набор requiredSkills —
+// иначе непонятно, что делать с навыками при слиянии), "Подтвердить" — выполняет объединение.
+
+// Кандидаты на join для задачи с данным индексом: тот же shirtType, тот же набор
+// requiredSkills (без учёта порядка), не сама задача, и размер не на верхней границе (XL).
+function getJoinCandidates(index) {
+    const tasks = configEditorData.tasks || [];
+    const task = tasks[index];
+    if (!task) return [];
+
+    const shirtType = task.shirtType || 'S';
+    if (!SHIRT_JOIN_UP[shirtType]) return []; // XL — объединять уже не во что
+
+    const skillsKey = (task.requiredSkills || []).slice().sort().join(',');
+    return tasks
+        .map((t, i) => ({ task: t, i }))
+        .filter(({ task: t, i }) =>
+            i !== index &&
+            (t.shirtType || 'S') === shirtType &&
+            (t.requiredSkills || []).slice().sort().join(',') === skillsKey
+        );
+}
+
+// Панель выбора партнёра для join — рендерится вместо обычного тела карточки, пока
+// pendingJoinTaskIndex указывает на эту задачу.
+function renderJoinPendingBar(index, candidates) {
+    const options = candidates
+        .map(({ task, i }) => `<option value="${i}">${escapeHtml(task.key || `#${i}`)} (${task.shirtType || 'S'})</option>`)
+        .join('');
+
+    return `
+        <div class="config-item-join-bar d-flex align-items-center gap-2 px-3 py-2 border-top">
+            <span class="text-muted small">Объединить с:</span>
+            <select id="joinPartnerSelect-${index}" class="form-select form-select-sm" style="width: auto;">
+                <option value="">— выбрать —</option>
+                ${options}
+            </select>
+            <button class="btn btn-sm btn-primary" onclick="confirmJoinTask(${index})">Подтвердить</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="cancelJoinTask()">Отмена</button>
+        </div>
+    `;
+}
+
+function startJoinTask(index) {
+    pendingJoinTaskIndex = index;
+    renderTasks();
+}
+
+function cancelJoinTask() {
+    pendingJoinTaskIndex = null;
+    renderTasks();
+}
+
+// Выполняет объединение: задача, с которой начали join, получает следующий размер вверх
+// по лесенке (SHIRT_JOIN_UP), выбранный партнёр удаляется из списка. Ключ/описание/навыки
+// исходной задачи сохраняются как есть — партнёр просто исчезает.
+function confirmJoinTask(index) {
+    const select = document.getElementById(`joinPartnerSelect-${index}`);
+    const partnerIndex = select ? parseInt(select.value, 10) : NaN;
+    if (isNaN(partnerIndex)) {
+        showToast('Выберите задачу для объединения', 'warning');
+        return;
+    }
+
+    const tasks = configEditorData.tasks;
+    const task = tasks[index];
+    const partner = tasks[partnerIndex];
+    if (!task || !partner) return;
+
+    task.shirtType = SHIRT_JOIN_UP[task.shirtType || 'S'];
+    configEditorData.tasks = tasks.filter((t, i) => i !== partnerIndex);
+
+    pendingJoinTaskIndex = null;
+    renderTasks();
+}
+
+// Split: заменяет задачу на 2 клона вдвое меньшего размера с общими ключом-основой
+// (key-a/key-b). Summary/навыки/прочие поля копируются как есть в обе половины.
+function splitTask(index) {
+    const task = configEditorData.tasks[index];
+    if (!task) return;
+
+    const smallerSize = SHIRT_SPLIT_DOWN[task.shirtType || 'S'];
+    if (!smallerSize) return; // XS — дальше не разбить
+
+    const [keyA, keyB] = nextSplitTaskKeys(task.key || 'TASK');
+
+    const partA = JSON.parse(JSON.stringify(task));
+    partA.key = keyA;
+    partA.shirtType = smallerSize;
+
+    const partB = JSON.parse(JSON.stringify(task));
+    partB.key = keyB;
+    partB.shirtType = smallerSize;
+
+    configEditorData.tasks.splice(index, 1, partA, partB);
+    renderTasks();
+}
+
+// Подбирает пару свободных ключей вида "key-a"/"key-b" (при коллизии — "key-a2", "key-a3", ...
+// — например, если задачу разбить дважды подряд).
+function nextSplitTaskKeys(baseKey) {
+    const existingKeys = new Set((configEditorData.tasks || []).map(t => t.key));
+
+    function reserveUnique(suffix) {
+        let candidate = `${baseKey}-${suffix}`;
+        let n = 2;
+        while (existingKeys.has(candidate)) {
+            candidate = `${baseKey}-${suffix}${n}`;
+            n++;
+        }
+        existingKeys.add(candidate);
+        return candidate;
+    }
+
+    return [reserveUnique('a'), reserveUnique('b')];
 }
 
 // Следующий свободный номер для ключа TASK-N: максимум существующего суффикса + 1.
