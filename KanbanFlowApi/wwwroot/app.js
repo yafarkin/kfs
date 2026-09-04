@@ -189,10 +189,26 @@ function restoreSimulationFromStorage() {
     }
 }
 
-// Сохранение состояния симуляции в LocalStorage
+// Сохранение состояния симуляции в LocalStorage.
+// Намеренно не бросает исключение наружу: это побочный эффект (чтобы пережить перезагрузку
+// страницы), а не часть основного потока запуска/симуляции. Длинные прогоны с высоким WIP
+// (много активных назначений в день) легко дают состояние на десятки МБ — квота localStorage
+// (обычно 5-10 МБ) превышается раньше, чем у реального результата симуляции. Раньше
+// QuotaExceededError вылетал прямо из startSimulation() ДО renderBoard()/calculateAllMetrics(),
+// и пользователь вместо готового результата видел "Ошибка запуска: The quota has been
+// exceeded" — хотя сама симуляция на бэкенде отработала полностью корректно.
 function saveSimulationToStorage() {
-    if (simulationState) {
+    if (!simulationState) return;
+
+    try {
         localStorage.setItem(STORAGE_KEYS.SIMULATION, JSON.stringify(simulationState));
+    } catch (error) {
+        console.error('Error saving simulation to localStorage:', error);
+        showToast(
+            'Результат симуляции слишком большой для сохранения в браузере — ' +
+            'работает в текущей вкладке, но не переживёт перезагрузку страницы',
+            'warning'
+        );
     }
 }
 
