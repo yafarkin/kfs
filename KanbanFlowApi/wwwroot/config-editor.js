@@ -483,6 +483,9 @@ function renderWorkersEditor() {
                         <button class="btn btn-sm btn-outline-secondary" onclick="moveWorkerDown(${index})" ${index === workers.length - 1 ? 'disabled' : ''} title="Ниже">
                             <i class="bi bi-arrow-down"></i>
                         </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="cloneWorker(${index})" title="Склонировать">
+                            <i class="bi bi-copy"></i>
+                        </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteWorker(${index})" title="Удалить">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -733,6 +736,31 @@ function addWorker() {
 function deleteWorker(index) {
     configEditorData.workers.splice(index, 1);
     renderWorkersEditor();
+}
+
+// Склонировать воркера: копия всех полей, кроме логина (логин должен быть уникален —
+// backend отклоняет пресет с дублирующимися логинами). Копия вставляется сразу после
+// оригинала, чтобы было видно, что это его клон.
+function cloneWorker(index) {
+    const original = configEditorData.workers[index];
+    const clone = JSON.parse(JSON.stringify(original));
+    clone.login = nextClonedWorkerLogin(original.login || 'worker');
+
+    configEditorData.workers.splice(index + 1, 0, clone);
+    renderWorkersEditor();
+}
+
+// Подбирает свободный логин вида "login-copy", "login-copy-2", "login-copy-3", ...
+function nextClonedWorkerLogin(baseLogin) {
+    const existingLogins = new Set((configEditorData.workers || []).map(w => w.login));
+
+    let candidate = `${baseLogin}-copy`;
+    let suffix = 2;
+    while (existingLogins.has(candidate)) {
+        candidate = `${baseLogin}-copy-${suffix}`;
+        suffix++;
+    }
+    return candidate;
 }
 
 function updateWorker(index, field, value) {
