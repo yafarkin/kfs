@@ -42,62 +42,10 @@ public class TaskMetricsServiceTests
         Assert.True(task.LeadTimeDays <= 20);
     }
 
-    [Fact]
-    public void CalculateTaskMetrics_ActiveWaitTime_NonNegative()
-    {
-        // Arrange
-        var config = CreateSimpleConfig();
-        var simulation = new Simulation();
-        simulation.InitFromConfig(config);
-
-        var movementService = new TaskMovementService(simulation);
-        var progressService = new WorkProgressService(simulation);
-
-        // Симулируем до завершения
-        for (var i = 0; i < 15; i++)
-        {
-            simulation.StartNewDay();
-            movementService.ProcessMovements();
-            progressService.SimulateWorkDay();
-        }
-
-        // Act
-        var taskMetricsService = new TaskMetricsService(simulation);
-        var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
-
-        // Assert
-        var task = taskMetrics.First();
-        Assert.True(task.ActiveTimeDays >= 0);
-        Assert.True(task.WaitTimeDays >= 0);
-    }
-
-    [Fact]
-    public void CalculateTaskMetrics_Efficiency_InValidRange()
-    {
-        // Arrange
-        var config = CreateSimpleConfig();
-        var simulation = new Simulation();
-        simulation.InitFromConfig(config);
-
-        var movementService = new TaskMovementService(simulation);
-        var progressService = new WorkProgressService(simulation);
-
-        // Симулируем до завершения
-        for (var i = 0; i < 15; i++)
-        {
-            simulation.StartNewDay();
-            movementService.ProcessMovements();
-            progressService.SimulateWorkDay();
-        }
-
-        // Act
-        var taskMetricsService = new TaskMetricsService(simulation);
-        var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
-
-        // Assert
-        var task = taskMetrics.First();
-        Assert.InRange(task.FlowEfficiencyPercent, 0, 100);
-    }
+    // Тавтологии "ActiveTimeDays >= 0" / "FlowEfficiencyPercent в [0,100]" удалены:
+    // диапазон гарантирован типом/формулой. Точные значения — в
+    // CalculateTaskMetrics_ActiveTime_PlusWaitTime_EqualsTotal и
+    // CalculateTaskMetrics_FlowEfficiency_CalculatedCorrectly.
 
     [Fact]
     public void CalculateTaskMetrics_ActiveTime_PlusWaitTime_EqualsTotal()

@@ -103,9 +103,9 @@ public class WorkerExtensionsTests
     }
 
     [Theory]
-    [InlineData(100)]   // 100% performance
-    [InlineData(50)]    // 50% performance
-    public void GetDaysForTask_StageProgressPercent_AppliedCorrectly(int performance)
+    [InlineData(100, 3)]   // L·25% → (2..4), среднее 3; performance 100% → 3
+    [InlineData(50, 6)]    // performance 50% (в 2 раза медленнее) → 3 * 2 = 6
+    public void GetDaysForTask_StageProgressPercent_AppliedCorrectly(int performance, int expectedDays)
     {
         // Arrange
         var worker = new Worker
@@ -130,9 +130,8 @@ public class WorkerExtensionsTests
         // Performance применяется к среднему
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
-        // Assert - значение должно быть в разумном диапазоне
-        // При 100%: 3 дня, при 50%: 6 дней
-        Assert.InRange(days, 2, 7);
+        // Assert
+        Assert.Equal(expectedDays, days);
     }
 
     [Fact]
@@ -158,8 +157,8 @@ public class WorkerExtensionsTests
         // Act
         var days = worker.GetDaysForTask(stage, TShirtType.L, useVariability: false);
 
-        // Assert - как при 100% performance
-        Assert.InRange(days, 2, 4);
+        // Assert - как при 100% performance: L·25% → (2..4), среднее 3
+        Assert.Equal(3, days);
     }
 
     [Fact]

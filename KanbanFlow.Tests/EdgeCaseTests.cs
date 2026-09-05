@@ -47,17 +47,24 @@ public class EdgeCaseTests
         var movementService = new TaskMovementService(simulation);
         var progressService = new WorkProgressService(simulation);
 
-        // Act
-        simulation.StartNewDay();
-        movementService.ProcessMovements();
-        progressService.SimulateWorkDay();
+        // Act - 3 дня без единого воркера
+        for (var i = 0; i < 3; i++)
+        {
+            simulation.StartNewDay();
+            movementService.ProcessMovements();
+            progressService.SimulateWorkDay();
+        }
 
-        // Assert - задачи не должны переместиться на рабочую стадию без воркеров
+        // Assert - задача не может зайти на Work-стадию без воркера и не двигается вовсе
         var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
+        var task = simulation.Board.Tasks.Single();
 
-        // Задача остаётся в Todo или перемещается но без воркера
         Assert.Empty(developingStage.Tasks);
+        Assert.Single(todoStage.Tasks);
+        Assert.Equal("Todo", task.CurrentStage?.Stage.Name);
+        Assert.Null(task.Worker);
+        Assert.Equal(0, task.Progress);
     }
 
     [Fact]
@@ -79,12 +86,9 @@ public class EdgeCaseTests
         var metricsService = new WorkerMetricsService(simulation);
         var workerMetrics = metricsService.CalculateAllWorkersMetrics();
 
-        // Assert
-        foreach (var metrics in workerMetrics)
-        {
-            Assert.Equal(0, metrics.Throughput);
-            Assert.True(metrics.LeadTime >= 0); // Может быть > 0 если задача началась
-        }
+        // Assert - ни одна задача не дошла до Done → нулевой throughput у всех
+        Assert.NotEmpty(workerMetrics);
+        Assert.All(workerMetrics, metrics => Assert.Equal(0m, metrics.Throughput));
     }
 
     [Fact]
@@ -137,9 +141,9 @@ public class EdgeCaseTests
     }
 
     [Fact]
-    public void FlowEfficiency_WithOnlyActiveTime_IsHigh()
+    public void FlowEfficiency_OneQuickTaskOverFiveDays_ReflectsIdleTime()
     {
-        // Arrange - конфигурация где задача выполняется быстро
+        // Arrange - одна XS-задача (1 день работы), симуляция крутится 5 дней
         var config = CreateConfigWithInstantCompletion();
         var simulation = new Simulation();
         simulation.InitFromConfig(config);
@@ -155,20 +159,17 @@ public class EdgeCaseTests
             progressService.SimulateWorkDay();
         }
 
-        var metricsService = new WorkerMetricsService(simulation);
-        var workerMetrics = metricsService.CalculateAllWorkersMetrics();
+        var metrics = new WorkerMetricsService(simulation).CalculateAllWorkersMetrics().Single();
 
-        // Assert - Efficiency должен быть в допустимых пределах
-        var metrics = workerMetrics.First();
-        // Проверяем что метрики рассчитаны (не null/NaN)
-        Assert.True(metrics.EfficiencyPercent >= 0);
-        Assert.True(metrics.EfficiencyPercent <= 100);
-        // Throughput должен быть > 0 если задача завершена
-        Assert.True(metrics.Throughput >= 0);
+        // Assert - активен ровно 1 день из 5 → эффективность 20%, throughput 1/5
+        Assert.Equal(20m, metrics.EfficiencyPercent);
+        Assert.Equal(1m, metrics.WorkTimeDays);
+        Assert.Equal(0.2m, metrics.Throughput);
+        Assert.Equal(1, metrics.ValuableTasksCount);
     }
 
     [Fact]
-    public void TaskMovement_WithZeroWipLimit_DoesNotBlockMovement()
+    public void TaskMovement_WithZeroWipLimit_BlocksMovementIntoStage()
     {
         // Arrange
         var config = CreateConfigWithZeroWipLimit();
@@ -191,7 +192,7 @@ public class EdgeCaseTests
     }
 
     [Fact]
-    public void WorkerWithZeroPerformance_TaskTakesNormalTime()
+    public void WorkerWithZeroPerformance_IsTreatedAs100Percent()
     {
         // Arrange
         var config = CreateConfigWithZeroPerformanceWorker();
@@ -201,7 +202,7 @@ public class EdgeCaseTests
         var movementService = new TaskMovementService(simulation);
         var progressService = new WorkProgressService(simulation);
 
-        // Act - несколько дней
+        // Act - 5 дней (день 1: перемещение+назначение, дни 1..5: работа)
         for (var i = 0; i < 5; i++)
         {
             simulation.StartNewDay();
@@ -209,11 +210,10 @@ public class EdgeCaseTests
             progressService.SimulateWorkDay();
         }
 
-        // Assert - performance=0 трактуется как 100% (защита от деления на ноль)
-        // Задача M (4-6 дней, среднее 5) должна быть завершена или близка к завершению
-        var task = simulation.Board.Tasks.First();
-        // За 5 дней при 100% performance задача M должна быть завершена (100%)
-        Assert.True(task.Progress >= 80, $"Progress {task.Progress}% should be >= 80%");
+        // Assert - performance=0 трактуется как 100% (защита от деления на ноль).
+        // M: (4+6)/2 = 5 дней · множитель 1.0 → DaysRequired=5 → за 5 рабочих дней ровно 100%.
+        var task = simulation.Board.Tasks.Single();
+        Assert.Equal(100, task.Progress);
     }
 
     [Fact]
@@ -242,10 +242,13 @@ public class EdgeCaseTests
             a.Type == ActivityType.WorkerCompletedTask
         ).ToList();
 
-        foreach (var workerEvent in workerEvents)
-        {
-            Assert.NotEqual(Guid.Empty, workerEvent.CorrelationId);
-        }
+        Assert.NotEmpty(workerEvents);
+        Assert.All(workerEvents, e => Assert.NotEqual(Guid.Empty, e.CorrelationId));
+
+        // took и completed для одной задачи связаны одним CorrelationId
+        var took = workerEvents.Single(a => a.Type == ActivityType.WorkerTookTask);
+        var completed = workerEvents.Single(a => a.Type == ActivityType.WorkerCompletedTask);
+        Assert.Equal(took.CorrelationId, completed.CorrelationId);
     }
 
     [Fact]
@@ -262,9 +265,13 @@ public class EdgeCaseTests
         simulation.StartNewDay();
         movementService.ProcessMovements();
 
-        // Assert - задача должна переместиться на Developing
+        // Assert - задача без навыков заходит на стадию без требований и берётся воркером
+        var todoStage = simulation.Board.Stages.First(s => s.Stage.Name == "Todo");
         var developingStage = simulation.Board.Stages.First(s => s.Stage.Name == "Developing");
-        Assert.NotEmpty(developingStage.Tasks);
+
+        Assert.Empty(todoStage.Tasks);
+        var task = Assert.Single(developingStage.Tasks);
+        Assert.Equal("dev1", task.Worker?.Worker.Login);
     }
 
     #region Helper Methods

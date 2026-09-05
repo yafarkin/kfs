@@ -35,12 +35,11 @@ public class WorkProgressServiceTests
 
         var progressService = new WorkProgressService(simulation);
 
-        // Act
+        // Act - 1 день из 5 требуемых, воркер один → share = 1
         progressService.SimulateWorkDay();
 
-        // Assert
-        Assert.True(task.Progress > 0);
-        Assert.True(task.Progress <= 100);
+        // Assert - progress = round(100 * 1/5) = 20
+        Assert.Equal(20m, task.Progress);
     }
 
     [Fact]
@@ -223,9 +222,8 @@ public class WorkProgressServiceTests
             progressService.SimulateWorkDay();
         }
 
-        // Assert - при performance 50% (в 2 раза медленнее) прогресс за 5 дней должен быть ~50%
-        // M = 5 дней (среднее), performance 50% = 10 дней всего → 5/10 = 50%
-        Assert.True(task.Progress >= 40 && task.Progress <= 60, $"Progress {task.Progress}% should be around 50%");
+        // Assert - DaysRequired=10, отработано 5 дней → round(100 * 5/10) = 50
+        Assert.Equal(50m, task.Progress);
     }
 
     [Fact]
@@ -255,9 +253,8 @@ public class WorkProgressServiceTests
             progressService.SimulateWorkDay();
         }
 
-        // Assert
+        // Assert - прогресс упирается в 100 и не переваливает за него
         Assert.Equal(100, task.Progress);
-        Assert.True(task.Progress <= 100);
     }
 
     [Fact]
@@ -334,12 +331,12 @@ public class WorkProgressServiceTests
 
         var progressService = new WorkProgressService(simulation);
 
-        // Act - CodeReview имеет StageProgressPercent = 25%, значит выполняется быстрее
+        // Act - DaysRequired задан вручную (5), StageProgressPercent на прогресс уже не влияет
         simulation.StartNewDay();
         progressService.SimulateWorkDay();
 
-        // Assert - прогресс должен быть больше благодаря StageProgressPercent
-        Assert.True(task.Progress > 0);
+        // Assert - progress = round(100 * 1/5) = 20
+        Assert.Equal(20m, task.Progress);
     }
 
     [Fact]
@@ -566,11 +563,10 @@ public class WorkProgressServiceTests
         simulation.StartNewDay();
         progressService.SimulateWorkDay();
 
-        // Assert - при 2 задачах прогресс должен быть в 2 раза медленнее
-        // M = 5 дней (среднее), 100/5 = 20% в день для одной задачи
-        // С 2 задачами: 20% / 2 = 10% в день
-        Assert.True(task1.Progress >= 8 && task1.Progress <= 12, $"Progress {task1.Progress}% should be around 10%");
-        Assert.True(task2.Progress >= 8 && task2.Progress <= 12, $"Progress {task2.Progress}% should be around 10%");
+        // Assert - 2 задачи у одного воркера → share = 1/2 в день.
+        // DaysRequired=5, DaysWorked=0.5 → round(100 * 0.5/5) = 10
+        Assert.Equal(10m, task1.Progress);
+        Assert.Equal(10m, task2.Progress);
     }
 
     #endregion
