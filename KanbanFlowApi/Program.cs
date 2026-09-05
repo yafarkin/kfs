@@ -9,7 +9,6 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     // Подтягиваем XML-докстринги (GenerateDocumentationFile в .csproj) в схему —

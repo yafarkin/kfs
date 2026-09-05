@@ -156,16 +156,8 @@ public class SimulationController : ControllerBase
             movementService.ProcessMovements(completedTasks);
         }
 
-        // Проверяем, завершилась ли симуляция (все задачи в Done)
-        var allTasksDone = simulation.Board.Tasks.All(t =>
-            t.CurrentStage?.Stage.Name == "Done" || t.CurrentStage == null);
-
-        if (allTasksDone && simulation.CurrentDay > 0)
-        {
-            // Симуляция завершена — возвращаем результат, но следующий вызов вернёт 400
-        }
-
-        // Возвращаем полное обновлённое состояние
+        // Возвращаем полное обновлённое состояние.
+        // Если все задачи в Done — следующий вызов /simulate-day вернёт 400 из ValidateCanContinue.
         return Ok(ApiMapper.ToApiDto(simulation));
     }
 
