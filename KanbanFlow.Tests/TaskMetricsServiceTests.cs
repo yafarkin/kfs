@@ -34,12 +34,10 @@ public class TaskMetricsServiceTests
         var taskMetricsService = new TaskMetricsService(simulation);
         var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
-        // Assert
-        var task = taskMetrics.First();
-        // Lead Time должен быть неотрицательным
-        Assert.True(task.LeadTimeDays >= 0);
-        // Lead Time не должен превышать длительность симуляции значительно
-        Assert.True(task.LeadTimeDays <= 20);
+        // Assert - задача завершилась, значит Lead Time строго положителен и в пределах прогона
+        var task = Assert.Single(taskMetrics);
+        Assert.Equal("Done", task.Status);
+        Assert.InRange(task.LeadTimeDays, 1m, simulation.CurrentDay);
     }
 
     // Тавтологии "ActiveTimeDays >= 0" / "FlowEfficiencyPercent в [0,100]" удалены:
@@ -70,21 +68,15 @@ public class TaskMetricsServiceTests
         var taskMetricsService = new TaskMetricsService(simulation);
         var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
-        // Assert
-        var task = taskMetrics.First();
+        // Assert - задача завершена → есть ненулевое суммарное время,
+        // и FlowEfficiencyPercent == ActiveTime / (Active + Wait) * 100 (с учётом округления).
+        var task = Assert.Single(taskMetrics);
         var totalTime = task.ActiveTimeDays + task.WaitTimeDays;
+        Assert.True(totalTime > 0, "у завершённой задачи Active+Wait должно быть > 0");
 
-        // Общее время должно быть неотрицательным
-        Assert.True(totalTime >= 0);
-
-        // Если totalTime > 0, проверяем что Efficiency соответствует
-        if (totalTime > 0)
-        {
-            var expectedEfficiency = (task.ActiveTimeDays / totalTime) * 100;
-            // Допускаем погрешность из-за округления
-            var diff = Math.Abs(expectedEfficiency - task.FlowEfficiencyPercent);
-            Assert.True(diff < 1);
-        }
+        var expectedEfficiency = task.ActiveTimeDays / totalTime * 100;
+        Assert.True(Math.Abs(expectedEfficiency - task.FlowEfficiencyPercent) < 1,
+            $"efficiency: ожидалось ~{expectedEfficiency}, получено {task.FlowEfficiencyPercent}");
     }
 
     [Fact]
@@ -225,15 +217,15 @@ public class TaskMetricsServiceTests
         var taskMetricsService = new TaskMetricsService(simulation);
         var taskMetrics = taskMetricsService.CalculateAllTasksMetrics();
 
-        // Assert
-        Assert.Equal(3, taskMetrics.Count);
-
-        foreach (var task in taskMetrics)
+        // Assert - метрики есть у всех трёх задач, все завершены с положительным Lead Time
+        Assert.Equal(
+            new[] { "TASK-1", "TASK-2", "TASK-3" },
+            taskMetrics.Select(t => t.TaskKey).OrderBy(k => k).ToArray());
+        Assert.All(taskMetrics, task =>
         {
-            Assert.NotNull(task.TaskKey);
-            Assert.True(task.LeadTimeDays >= 0);
-            Assert.True(task.FlowEfficiencyPercent >= 0 && task.FlowEfficiencyPercent <= 100);
-        }
+            Assert.Equal("Done", task.Status);
+            Assert.True(task.LeadTimeDays > 0, $"{task.TaskKey}: нулевой Lead Time");
+        });
     }
 
     [Fact]
@@ -302,15 +294,19 @@ public class TaskMetricsServiceTests
 
     #region Helper Methods
 
+    // Backlog (старт) → Todo (IsLeadTimeStart) → Developing → Done.
+    // IsLeadTimeStart стоит на стадии, В КОТОРУЮ задача перемещается (как в реальных пресетах,
+    // где перед Todo есть Backlog) — иначе событие LeadTimeStarted не пишется и LeadTimeDays == 0.
     private static SimulationConfig CreateSimpleConfig()
     {
+        var backlog = new Stage { Name = "Backlog", Type = StageType.Buffer, CreatesValue = false, Transitions = [] };
         var todo = new Stage
         {
             Name = "Todo",
             Type = StageType.Buffer,
             IsLeadTimeStart = true,
             CreatesValue = false,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var developing = new Stage
@@ -320,17 +316,12 @@ public class TaskMetricsServiceTests
             CreatesValue = true,
             StageProgressPercent = 100,
             RequiredSkills = ["dev"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
-        var done = new Stage
-        {
-            Name = "Done",
-            Type = StageType.Buffer,
-            CreatesValue = false,
-            Transitions = new List<StageTransition>()
-        };
+        var done = new Stage { Name = "Done", Type = StageType.Buffer, CreatesValue = false, Transitions = [] };
 
+        backlog.Transitions.Add(new StageTransition { Stage = todo, Probability = 1.0 });
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
         developing.Transitions.Add(new StageTransition { Stage = done, Probability = 1.0 });
 
@@ -338,7 +329,7 @@ public class TaskMetricsServiceTests
         {
             Seed = 42,
             Workers = [new() { Login = "dev1", Skills = ["dev"], Performance = 100, WipLimit = 1 }],
-            Workflow = new Workflow { Stages = [todo, developing, done] },
+            Workflow = new Workflow { Stages = [backlog, todo, developing, done] },
             Tasks = [new() { Key = "TASK-1", ShirtType = TShirtType.M, RequiredSkills = ["dev"] }],
             UseVariability = false
         };
@@ -346,13 +337,14 @@ public class TaskMetricsServiceTests
 
     private static SimulationConfig CreateConfigWithMultipleTasks()
     {
+        var backlog = new Stage { Name = "Backlog", Type = StageType.Buffer, CreatesValue = false, Transitions = [] };
         var todo = new Stage
         {
             Name = "Todo",
             Type = StageType.Buffer,
             IsLeadTimeStart = true,
             CreatesValue = false,
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
         var developing = new Stage
@@ -362,17 +354,12 @@ public class TaskMetricsServiceTests
             CreatesValue = true,
             StageProgressPercent = 100,
             RequiredSkills = ["dev"],
-            Transitions = new List<StageTransition>()
+            Transitions = []
         };
 
-        var done = new Stage
-        {
-            Name = "Done",
-            Type = StageType.Buffer,
-            CreatesValue = false,
-            Transitions = new List<StageTransition>()
-        };
+        var done = new Stage { Name = "Done", Type = StageType.Buffer, CreatesValue = false, Transitions = [] };
 
+        backlog.Transitions.Add(new StageTransition { Stage = todo, Probability = 1.0 });
         todo.Transitions.Add(new StageTransition { Stage = developing, Probability = 1.0 });
         developing.Transitions.Add(new StageTransition { Stage = done, Probability = 1.0 });
 
@@ -383,7 +370,7 @@ public class TaskMetricsServiceTests
                 new() { Login = "dev1", Skills = ["dev"], Performance = 100, WipLimit = 1 },
                 new() { Login = "dev2", Skills = ["dev"], Performance = 100, WipLimit = 1 }
             ],
-            Workflow = new Workflow { Stages = [todo, developing, done] },
+            Workflow = new Workflow { Stages = [backlog, todo, developing, done] },
             Tasks = [
                 new() { Key = "TASK-1", ShirtType = TShirtType.S, RequiredSkills = ["dev"] },
                 new() { Key = "TASK-2", ShirtType = TShirtType.M, RequiredSkills = ["dev"] },

@@ -217,8 +217,11 @@ public class MetricsServiceFlowEfficiencyTests
                 new() { Login = "dev1", Skills = ["backend"], WipLimit = 1, Performance = 100 }
             ],
             Workflow = new Workflow { Stages = stages },
+            // Две задачи, один воркер (WIP=1): пока он делает TASK-1 (~3 дня на Developing),
+            // TASK-2 вынужденно простаивает в буфере Ready → это и есть Wait Time.
             Tasks = [
-                new() { Key = "TASK-1", ShirtType = TShirtType.S, RequiredSkills = ["backend"] }
+                new() { Key = "TASK-1", ShirtType = TShirtType.S, RequiredSkills = ["backend"] },
+                new() { Key = "TASK-2", ShirtType = TShirtType.S, RequiredSkills = ["backend"] }
             ],
             UseVariability = false
         };
@@ -229,8 +232,8 @@ public class MetricsServiceFlowEfficiencyTests
         var movementService = new TaskMovementService(simulation);
         var progressService = new WorkProgressService(simulation);
 
-        // Симулируем пока задача не завершится
-        for (var i = 0; i < 10; i++)
+        // Симулируем пока обе задачи не завершатся
+        for (var i = 0; i < 15; i++)
         {
             simulation.StartNewDay();
             movementService.ProcessMovements();
@@ -238,11 +241,12 @@ public class MetricsServiceFlowEfficiencyTests
         }
 
         // Act
-        var metricsService = new MetricsService(simulation);
-        var flowEfficiency = metricsService.CalculateFlowEfficiency();
+        var flowEfficiency = new MetricsService(simulation).CalculateFlowEfficiency();
 
-        // Assert - время в буферных стадиях (Todo, Ready) до Developing считается как Wait
-        // WaitTime включает время в Todo и Ready до перехода в Developing
-        Assert.True(flowEfficiency.WaitTime >= 0, "WaitTime должен быть >= 0");
+        // Assert - у TASK-2 реально было ожидание в буфере → агрегатный WaitTime > 0,
+        // и эффективность потока строго меньше 100%.
+        Assert.True(flowEfficiency.ActiveTime > 0);
+        Assert.True(flowEfficiency.WaitTime > 0, "ожидание TASK-2 в буфере Ready должно попасть в WaitTime");
+        Assert.True(flowEfficiency.EfficiencyPercent < 100m);
     }
 }

@@ -139,16 +139,16 @@ public class ApiMapperCorrelationTests
         var tookTasks = restoredActivities.Where(a => a.Type == ActivityType.WorkerTookTask).ToList();
         var completedTasks = restoredActivities.Where(a => a.Type == ActivityType.WorkerCompletedTask).ToList();
 
-        foreach (var took in tookTasks)
-        {
-            Assert.NotEqual(Guid.Empty, took.CorrelationId);
+        Assert.NotEmpty(tookTasks);
+        Assert.NotEmpty(completedTasks);
+        Assert.All(tookTasks, took => Assert.NotEqual(Guid.Empty, took.CorrelationId));
 
-            var completed = completedTasks.FirstOrDefault(c => c.CorrelationId == took.CorrelationId);
-            if (completed != null)
-            {
-                Assert.Equal(took.CorrelationId, completed.CorrelationId);
-                Assert.Equal(took.TaskKey, completed.TaskKey);
-            }
+        // Ключевой инвариант: после roundtrip каждое WorkerCompletedTask по-прежнему
+        // связано парным WorkerTookTask через CorrelationId и относится к той же задаче.
+        foreach (var completed in completedTasks)
+        {
+            var took = tookTasks.Single(t => t.CorrelationId == completed.CorrelationId);
+            Assert.Equal(took.TaskKey, completed.TaskKey);
         }
     }
 
