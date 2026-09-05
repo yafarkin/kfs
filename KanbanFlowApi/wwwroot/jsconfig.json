@@ -1,0 +1,17 @@
+{
+  // Границы «JS-проекта» фронта для редактора/IDE: подхватывает api-types.d.ts,
+  // даёт автодополнение и проверку типов по JSDoc-аннотациям (@type/@typedef/@param).
+  //
+  // checkJs=false намеренно: app.js/config-editor.js исторически без типов, включать
+  // проверку всего файла сразу — шумно. Точечно включай в файле через `// @ts-check`.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true
+  },
+  "include": ["*.js", "api-types.d.ts"]
+}

@@ -19,6 +19,11 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Restore
         run: dotnet restore KanbanFlow.sln
 
@@ -27,3 +32,12 @@ jobs:
 
       - name: Test
         run: dotnet test KanbanFlow.sln --no-build --configuration Release --verbosity normal
+
+      # Контракт фронт/бэк: openapi/KanbanFlowApi.json и wwwroot/api-types.d.ts
+      # генерируются из C#-DTO и коммитятся. Если кто-то поменял DTO и не перегенерировал —
+      # падаем здесь, а не ловим рассинхрон в браузере. См. docs/api-contract.md.
+      - name: Check API types are up to date
+        run: |
+          node tools/generate-api-types.mjs
+          git diff --exit-code -- KanbanFlowApi/openapi KanbanFlowApi/wwwroot/api-types.d.ts \
+            || { echo '::error::api-types.d.ts / openapi устарели. Запусти: node tools/generate-api-types.mjs'; exit 1; }

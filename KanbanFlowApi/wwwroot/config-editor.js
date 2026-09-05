@@ -1,6 +1,15 @@
 // KanbanFlow Configuration Editor
 // Единый редактор конфигурации: процесс + команда + задачи
 
+// Типы DTO бэкенда — сгенерированы из OpenAPI-схемы, см. docs/api-contract.md.
+// Перегенерация: node tools/generate-api-types.mjs
+/** @typedef {import('./api-types').ProcessPresetDto} ProcessPresetDto */
+/** @typedef {import('./api-types').WorkerPoolPresetDto} WorkerPoolPresetDto */
+/** @typedef {import('./api-types').WorkerGradePresetDto} WorkerGradePresetDto */
+/** @typedef {import('./api-types').ApiWorkerDto} ApiWorkerDto */
+/** @typedef {import('./api-types').ApiTaskDto} ApiTaskDto */
+/** @typedef {import('./api-types').ApiWorkflowDto} ApiWorkflowDto */
+
 // ============================================================================
 // Переключение вкладок
 // ============================================================================

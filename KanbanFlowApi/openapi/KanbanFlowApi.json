@@ -1,0 +1,1610 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "KanbanFlowApi",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/editor/processes/presets": {
+      "get": {
+        "tags": [
+          "ProcessEditor"
+        ],
+        "summary": "Получить список системных пресетов процессов (read-only).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessPresetDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessPresetDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessPresetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ProcessEditor"
+        ],
+        "summary": "Валидировать и сохранить пользовательский пресет процесса.\r\nBackend выполняет валидацию, сохранение происходит в LocalStorage браузера.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPresetDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPresetDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPresetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessPresetDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessPresetDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessPresetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/processes/presets/{presetName}": {
+      "get": {
+        "tags": [
+          "ProcessEditor"
+        ],
+        "summary": "Получить конкретный системный пресет по имени для редактирования.",
+        "parameters": [
+          {
+            "name": "presetName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessPresetDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessPresetDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessPresetDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ProcessEditor"
+        ],
+        "summary": "Удалить пользовательский пресет процесса.\r\nBackend только подтверждает удаление, реальное удаление происходит в LocalStorage браузера.",
+        "parameters": [
+          {
+            "name": "presetName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Simulation/start": {
+      "post": {
+        "tags": [
+          "Simulation"
+        ],
+        "summary": "Запустить симуляцию из полной конфигурации.\r\nВозвращает состояние симуляции на день 0 (готово к началу работы).\r\nЕсли указан параметр DaysToSimulate - выполняет симуляцию на N дней или до завершения всех задач.",
+        "requestBody": {
+          "description": "Запрос с полной конфигурацией",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSimulationRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSimulationRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSimulationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSimulationStateDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSimulationStateDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSimulationStateDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Simulation/simulate-day": {
+      "post": {
+        "tags": [
+          "Simulation"
+        ],
+        "summary": "Выполнить расчёт одного дня симуляции.\r\nПринимает полное состояние симуляции (конфиг + доска + история) и возвращает обновлённое состояние.\r\nМожно использовать результат предыдущего вызова для симуляции следующего дня.",
+        "requestBody": {
+          "description": "Состояние симуляции",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSimulationStateDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSimulationStateDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSimulationStateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSimulationStateDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSimulationStateDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSimulationStateDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Simulation/all-metrics": {
+      "post": {
+        "tags": [
+          "Simulation"
+        ],
+        "summary": "Рассчитать все метрики симуляции (общие, работников, задач, стадий).\r\nПринимает полное состояние симуляции и возвращает полный набор метрик.",
+        "requestBody": {
+          "description": "Состояние симуляции",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSimulationStateDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSimulationStateDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSimulationStateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllMetricsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllMetricsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllMetricsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/tasks/validate": {
+      "post": {
+        "tags": [
+          "TaskEditor"
+        ],
+        "summary": "Валидировать список задач (для генератора/редактора).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ApiTaskDto"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ApiTaskDto"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ApiTaskDto"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/editor/workers/presets": {
+      "get": {
+        "tags": [
+          "WorkerEditor"
+        ],
+        "summary": "Получить список системных пресетов воркеров (read-only).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "WorkerEditor"
+        ],
+        "summary": "Валидировать и сохранить пользовательский пресет воркеров.\r\nBackend выполняет валидацию, сохранение происходит в LocalStorage браузера.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerPoolPresetDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerPoolPresetDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerPoolPresetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/workers/presets/{presetName}": {
+      "get": {
+        "tags": [
+          "WorkerEditor"
+        ],
+        "summary": "Получить конкретный системный пресет по имени для редактирования.",
+        "parameters": [
+          {
+            "name": "presetName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerPoolPresetDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "WorkerEditor"
+        ],
+        "summary": "Удалить пользовательский пресет воркеров.\r\nBackend только подтверждает удаление, реальное удаление происходит в LocalStorage браузера.",
+        "parameters": [
+          {
+            "name": "presetName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/editor/workers/grade-presets": {
+      "get": {
+        "tags": [
+          "WorkerEditor"
+        ],
+        "summary": "Получить список пресетов «грейдов» воркера (роль + уровень) — готовые наборы\r\nPerformance/Deviation/CostPerDay для быстрого заполнения полей одного воркера.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerGradePresetDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerGradePresetDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerGradePresetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivityType": {
+        "enum": [
+          "WorkerTookTask",
+          "WorkerCompletedTask",
+          "TaskMoved",
+          "TaskProgressUpdated",
+          "LeadTimeStarted",
+          "TaskWaiting",
+          "TaskResumed"
+        ],
+        "type": "string"
+      },
+      "AllMetricsDto": {
+        "type": "object",
+        "properties": {
+          "simulationMetrics": {
+            "$ref": "#/components/schemas/ApiMetricsDto"
+          },
+          "workerMetrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiWorkerMetricsDto"
+            },
+            "description": "Метрики работников (Throughput, Lead Time, Efficiency).",
+            "nullable": true
+          },
+          "taskMetrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskMetricsDto"
+            },
+            "description": "Метрики задач (Lead Time, Flow Efficiency, время по стадиям).",
+            "nullable": true
+          },
+          "stageMetrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StageMetricsAggregatedDto"
+            },
+            "description": "Агрегированные метрики стадий (P50, P85, P95, Avg, Max).",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Единый DTO для всех метрик симуляции.\r\nВключает общие метрики, метрики работников, задач и стадий."
+      },
+      "ApiBoardDto": {
+        "type": "object",
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiBoardStageDto"
+            },
+            "description": "Список стадий доски.",
+            "nullable": true
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiBoardWorkerDto"
+            },
+            "description": "Список исполнителей (воркеров).",
+            "nullable": true
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiBoardTaskDto"
+            },
+            "description": "Список задач на доске.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для доски (полное состояние всех задач, стадий и исполнителей)."
+      },
+      "ApiBoardStageDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Имя стадии.",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/StageType"
+          },
+          "isLeadTimeStart": {
+            "type": "boolean",
+            "description": "Является ли стадия началом для измерения Lead Time."
+          },
+          "wipLimit": {
+            "type": "integer",
+            "description": "WIP-лимит (максимум задач одновременно). Null = без лимита.",
+            "format": "int32",
+            "nullable": true
+          },
+          "wipCount": {
+            "type": "integer",
+            "description": "Текущее количество задач на стадии.",
+            "format": "int32"
+          },
+          "canAcceptTasks": {
+            "type": "boolean",
+            "description": "Может ли стадия принять ещё задачи (с учётом WIP-лимита)."
+          },
+          "taskKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ключи задач, находящихся на этой стадии.",
+            "nullable": true
+          },
+          "nextStageNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Имена следующих стадий, куда можно перейти из текущей.",
+            "nullable": true
+          },
+          "excludedStageName": {
+            "type": "string",
+            "description": "Имя исключающей стадии (для RequiresDifferentResource).",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для стадии на доске (состояние стадии в симуляции)."
+      },
+      "ApiBoardTaskDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Уникальный ключ задачи (например, TASK-1).",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "description": "Краткое описание задачи.",
+            "nullable": true
+          },
+          "shirtType": {
+            "$ref": "#/components/schemas/TShirtType"
+          },
+          "requiredSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Навыки, необходимые для выполнения задачи.",
+            "nullable": true
+          },
+          "progress": {
+            "type": "number",
+            "description": "Прогресс выполнения (0-100).",
+            "format": "double"
+          },
+          "workerLogin": {
+            "type": "string",
+            "description": "Логин исполнителя, работающего над задачей.",
+            "nullable": true
+          },
+          "currentStageName": {
+            "type": "string",
+            "description": "Имя текущей стадии, где находится задача.",
+            "nullable": true
+          },
+          "selectedNextStageName": {
+            "type": "string",
+            "description": "Имя выбранной следующей стадии (для вероятностных переходов).",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для задачи на доске (состояние задачи в симуляции)."
+      },
+      "ApiBoardWorkerDto": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "Логин исполнителя.",
+            "nullable": true
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Навыки исполнителя.",
+            "nullable": true
+          },
+          "wipLimit": {
+            "type": "integer",
+            "description": "Персональный WIP-лимит (максимум задач одновременно). Null = без лимита.",
+            "format": "int32",
+            "nullable": true
+          },
+          "wipCount": {
+            "type": "integer",
+            "description": "Текущее количество задач у исполнителя.",
+            "format": "int32"
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "description": "Доступен ли исполнитель для взятия новых задач."
+          },
+          "assignedAssignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiTaskAssignmentDto"
+            },
+            "description": "Детали назначений задач (с DaysRequired/DaysWorked) для сериализации состояния.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для воркера на доске (состояние исполнителя в симуляции)."
+      },
+      "ApiFlowEfficiencyMetricsDto": {
+        "type": "object",
+        "properties": {
+          "activeTime": {
+            "type": "number",
+            "description": "Общее время в рабочих статусах (в днях).",
+            "format": "double"
+          },
+          "waitTime": {
+            "type": "number",
+            "description": "Общее время в нерабочих статусах (ожидание, буферы) в днях.",
+            "format": "double"
+          },
+          "efficiencyPercent": {
+            "type": "number",
+            "description": "Процент активного времени (ActiveTime / (ActiveTime + WaitTime) * 100).",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для метрик Flow Efficiency."
+      },
+      "ApiFrequencyMetricsDto": {
+        "type": "object",
+        "properties": {
+          "distribution": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Распределение задач по диапазонам времени (в днях).\r\nКлюч - диапазон времени (например, \"0-7\", \"7-14\"), значение - количество задач.",
+            "nullable": true
+          },
+          "taskCount": {
+            "type": "integer",
+            "description": "Общее количество задач.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для частотной метрики (распределение задач по времени выполнения)."
+      },
+      "ApiHistoryActivityDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ActivityType"
+          },
+          "description": {
+            "type": "string",
+            "description": "Текстовое описание события.",
+            "nullable": true
+          },
+          "taskKey": {
+            "type": "string",
+            "description": "Ключ задачи, связанной с событием.",
+            "nullable": true
+          },
+          "workerLogin": {
+            "type": "string",
+            "description": "Логин исполнителя, связанного с событием.",
+            "nullable": true
+          },
+          "stageName": {
+            "type": "string",
+            "description": "Имя стадии, связанной с событием.",
+            "nullable": true
+          },
+          "progress": {
+            "type": "number",
+            "description": "Прогресс задачи после события (если применимо).",
+            "format": "double",
+            "nullable": true
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Уникальный идентификатор для корреляции связанных событий.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для события истории симуляции."
+      },
+      "ApiHistoryDayDto": {
+        "type": "object",
+        "properties": {
+          "dayNumber": {
+            "type": "integer",
+            "description": "Номер дня симуляции.",
+            "format": "int32"
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiHistoryActivityDto"
+            },
+            "description": "Список событий, произошедших в этот день.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для дня истории симуляции (содержит все события за день)."
+      },
+      "ApiLeadTimeMetricsDto": {
+        "type": "object",
+        "properties": {
+          "p50": {
+            "type": "number",
+            "description": "50-й перцентиль Lead Time (медиана) в днях.",
+            "format": "double"
+          },
+          "p85": {
+            "type": "number",
+            "description": "85-й перцентиль Lead Time в днях.",
+            "format": "double"
+          },
+          "taskCount": {
+            "type": "integer",
+            "description": "Общее количество задач, использованных для расчёта.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для метрик Lead Time."
+      },
+      "ApiMetricsDto": {
+        "type": "object",
+        "properties": {
+          "leadTime": {
+            "$ref": "#/components/schemas/ApiLeadTimeMetricsDto"
+          },
+          "throughput": {
+            "$ref": "#/components/schemas/ApiThroughputMetricsDto"
+          },
+          "flowEfficiency": {
+            "$ref": "#/components/schemas/ApiFlowEfficiencyMetricsDto"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/ApiFrequencyMetricsDto"
+          },
+          "totalCost": {
+            "type": "number",
+            "description": "Общая стоимость проекта (сумма по всем воркерам).",
+            "format": "double"
+          },
+          "workCost": {
+            "type": "number",
+            "description": "Стоимость полезной работы (сумма по всем воркерам).",
+            "format": "double"
+          },
+          "bufferCost": {
+            "type": "number",
+            "description": "Стоимость простоя (сумма по всем воркерам).",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для всех рассчитанных метрик симуляции."
+      },
+      "ApiSimulationConfigDto": {
+        "type": "object",
+        "properties": {
+          "seed": {
+            "type": "integer",
+            "description": "Seed для генератора случайных чисел (воспроизводимость симуляции).",
+            "format": "int64"
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiWorkerDto"
+            },
+            "description": "Список исполнителей (воркеров).",
+            "nullable": true
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/ApiWorkflowDto"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiTaskDto"
+            },
+            "description": "Список задач для симуляции.",
+            "nullable": true
+          },
+          "useVariability": {
+            "type": "boolean",
+            "description": "Использовать ли вариативность при расчёте времени выполнения задач."
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для конфигурации симуляции (без циклических ссылок).\r\nИспользуется для описания параметров симуляции: воркфлоу, воркеры, задачи.\r\nБазовый тип для KanbanFlowApi.Dtos.Config.StartSimulationRequestDto — набор полей конфигурации один и тот\r\nже что при запуске, что внутри состояния запущенной симуляции, отличается только тем,\r\nчто запрос на запуск дополнительно несёт одноразовую инструкцию DaysToSimulate."
+      },
+      "ApiSimulationStateDto": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ApiSimulationConfigDto"
+          },
+          "board": {
+            "$ref": "#/components/schemas/ApiBoardDto"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiHistoryDayDto"
+            },
+            "description": "История симуляции по дням.",
+            "nullable": true
+          },
+          "currentDay": {
+            "type": "integer",
+            "description": "Текущий день симуляции (0 = ещё не началась).",
+            "format": "int32"
+          },
+          "randomCallCount": {
+            "type": "integer",
+            "description": "Количество вызовов Random.NextDouble для детерминированной перемотки.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для полного состояния симуляции (конфигурация + доска + история + текущий день/тик).\r\nИспользуется для итеративной симуляции: POST /api/simulation/simulate-day принимает и возвращает это состояние."
+      },
+      "ApiStageDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Имя стадии.",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/StageType"
+          },
+          "isLeadTimeStart": {
+            "type": "boolean",
+            "description": "Является ли стадия началом для измерения Lead Time."
+          },
+          "wipLimit": {
+            "type": "integer",
+            "description": "WIP-лимит (максимум задач одновременно). Null = без лимита.",
+            "format": "int32",
+            "nullable": true
+          },
+          "requiredSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Навыки, требуемые для работы на стадии.\r\nНапример: [\"backend\"], [\"qa-manual\"], [\"qa-auto\"].",
+            "nullable": true
+          },
+          "requiresDifferentResource": {
+            "type": "boolean",
+            "description": "Требует ли стадия отдельного ресурса (например, Code Review)."
+          },
+          "requiresDifferentResourceFromStage": {
+            "type": "string",
+            "description": "Имя стадии, от которой требуется отдельный ресурс.",
+            "nullable": true
+          },
+          "stageProgressPercent": {
+            "type": "integer",
+            "description": "Процент прогресса, который даёт стадия (для Work-стадий).",
+            "format": "int32"
+          },
+          "createsValue": {
+            "type": "boolean",
+            "description": "Создаёт ли стадия ценность для бизнеса.\r\nНапример: Developing = true, Testing = true, Code Review = false."
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiStageTransitionDto"
+            },
+            "description": "Список переходов в другие стадии с вероятностями.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для стадии workflow (без циклических ссылок)."
+      },
+      "ApiStageTransitionDto": {
+        "type": "object",
+        "properties": {
+          "targetStageName": {
+            "type": "string",
+            "description": "Имя целевой стадии.",
+            "nullable": true
+          },
+          "probability": {
+            "type": "number",
+            "description": "Вероятность перехода (0.0 - 1.0).",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Переход из стадии в другую стадию."
+      },
+      "ApiTaskAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "taskKey": {
+            "type": "string",
+            "description": "Ключ задачи.",
+            "nullable": true
+          },
+          "stageName": {
+            "type": "string",
+            "description": "Имя стадии, на которой воркер работает над задачей.",
+            "nullable": true
+          },
+          "daysRequired": {
+            "type": "number",
+            "description": "Сколько дней требуется для выполнения задачи.",
+            "format": "double"
+          },
+          "daysWorked": {
+            "type": "number",
+            "description": "Сколько дней уже отработано.",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для назначения задачи воркеру."
+      },
+      "ApiTaskDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Уникальный ключ задачи (например, TASK-1).",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "description": "Краткое описание задачи.",
+            "nullable": true
+          },
+          "shirtType": {
+            "$ref": "#/components/schemas/TShirtType"
+          },
+          "requiredSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Навыки, необходимые для выполнения задачи.\r\nНапример: [\"backend\"], [\"frontend\", \"react\"], [\"qa-manual\"].\r\nЗадача подходит стадии, если есть хотя бы один общий навык.",
+            "nullable": true
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiTaskDto"
+            },
+            "description": "Дочерние задачи (для иерархических структур).",
+            "nullable": true
+          },
+          "acceptableWorkers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Предпочтительные исполнители для стадий (ключ: имя стадии, значение: логин воркера).",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для задачи (тип, описание)."
+      },
+      "ApiThroughputDayDto": {
+        "type": "object",
+        "properties": {
+          "dayNumber": {
+            "type": "integer",
+            "description": "Номер дня.",
+            "format": "int32"
+          },
+          "completedTasksCount": {
+            "type": "integer",
+            "description": "Количество завершённых задач в этот день.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для пропускной способности за один день."
+      },
+      "ApiThroughputMetricsDto": {
+        "type": "object",
+        "properties": {
+          "overall": {
+            "type": "number",
+            "description": "Общая пропускная способность (задач в день).",
+            "format": "double"
+          },
+          "dailyHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiThroughputDayDto"
+            },
+            "description": "История пропускной способности по дням.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для метрик Throughput (пропускная способность)."
+      },
+      "ApiWorkerDto": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "Логин исполнителя.",
+            "nullable": true
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Навыки исполнителя. Например: [\"backend\", \"api\"], [\"frontend\", \"react\"], [\"qa-manual\", \"qa-auto\"].",
+            "nullable": true
+          },
+          "wipLimit": {
+            "type": "integer",
+            "description": "Персональный WIP-лимит (максимум задач одновременно). Null = без лимита.",
+            "format": "int32",
+            "nullable": true
+          },
+          "performance": {
+            "type": "number",
+            "description": "Производительность (100 = базовая, 150 = на 50% быстрее).",
+            "format": "double"
+          },
+          "deviationDownPercent": {
+            "type": "number",
+            "description": "Отклонение вниз в процентах (на сколько % может быть быстрее базовой оценки).",
+            "format": "double"
+          },
+          "deviationUpPercent": {
+            "type": "number",
+            "description": "Отклонение вверх в процентах (на сколько % может быть медленнее базовой оценки).",
+            "format": "double"
+          },
+          "costPerDay": {
+            "type": "integer",
+            "description": "Стоимость дня работы исполнителя (в условных единицах).",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для исполнителя (воркера)."
+      },
+      "ApiWorkerMetricsDto": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "Логин работника.",
+            "nullable": true
+          },
+          "throughput": {
+            "type": "number",
+            "description": "Throughput — количество задач с ценными стадиями, завершённых за период / количество дней.",
+            "format": "double"
+          },
+          "leadTime": {
+            "type": "number",
+            "description": "Lead Time — среднее время задач (от isLeadTimeStart до Done/сейчас), где работник участвовал в ценной стадии.",
+            "format": "double"
+          },
+          "valuableTasksCount": {
+            "type": "integer",
+            "description": "Количество задач с ценными стадиями, где работник участвовал.",
+            "format": "int32"
+          },
+          "efficiencyPercent": {
+            "type": "number",
+            "description": "Flow Efficiency — процент активного времени (Work стадии) от общего.",
+            "format": "double"
+          },
+          "workTimeDays": {
+            "type": "number",
+            "description": "Активное время (на Work стадиях) в днях.",
+            "format": "double"
+          },
+          "bufferTimeDays": {
+            "type": "number",
+            "description": "Время ожидания (на Buffer стадиях) в днях.",
+            "format": "double"
+          },
+          "costPerDay": {
+            "type": "integer",
+            "description": "Стоимость дня работы исполнителя (в условных единицах).",
+            "format": "int32"
+          },
+          "totalCost": {
+            "type": "number",
+            "description": "Общая стоимость работы исполнителя (WorkCost + BufferCost).",
+            "format": "double"
+          },
+          "workCost": {
+            "type": "number",
+            "description": "Стоимость полезной работы (Work-стадии).",
+            "format": "double"
+          },
+          "bufferCost": {
+            "type": "number",
+            "description": "Стоимость простоя (Buffer-стадии).",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для метрик работника."
+      },
+      "ApiWorkflowDto": {
+        "type": "object",
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiStageDto"
+            },
+            "description": "Список стадий workflow.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для workflow (набор стадий и переходов)."
+      },
+      "ProcessPresetDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Уникальное имя пресета (ключ для загрузки).",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Отображаемое название пресета.",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Описание пресета.",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Является ли этот пресет пресетом по умолчанию."
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/ApiWorkflowDto"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiTaskDto"
+            },
+            "description": "Задачи по умолчанию для этого процесса.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для пресета производственного процесса — содержит workflow и задачи по умолчанию."
+      },
+      "StageMetricsAggregatedDto": {
+        "type": "object",
+        "properties": {
+          "stageName": {
+            "type": "string",
+            "description": "Название стадии.",
+            "nullable": true
+          },
+          "stageType": {
+            "type": "string",
+            "description": "Тип стадии (Work, Buffer).",
+            "nullable": true
+          },
+          "p50Days": {
+            "type": "number",
+            "description": "P50 (медиана) времени в стадии в днях.",
+            "format": "double"
+          },
+          "p85Days": {
+            "type": "number",
+            "description": "P85 времени в стадии в днях.",
+            "format": "double"
+          },
+          "p95Days": {
+            "type": "number",
+            "description": "P95 времени в стадии в днях.",
+            "format": "double"
+          },
+          "avgDays": {
+            "type": "number",
+            "description": "Среднее время в стадии в днях.",
+            "format": "double"
+          },
+          "maxDays": {
+            "type": "number",
+            "description": "Максимальное время в стадии в днях.",
+            "format": "double"
+          },
+          "taskCount": {
+            "type": "integer",
+            "description": "Количество задач, прошедших через стадию.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для агрегированных метрик стадий (P50, P85) по всем задачам."
+      },
+      "StageMetricsDto": {
+        "type": "object",
+        "properties": {
+          "stageName": {
+            "type": "string",
+            "description": "Название стадии.",
+            "nullable": true
+          },
+          "stageType": {
+            "type": "string",
+            "description": "Тип стадии (Work, Buffer).",
+            "nullable": true
+          },
+          "timeInStageDays": {
+            "type": "number",
+            "description": "Время проведённое в стадии в днях.",
+            "format": "double"
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Воркер(и), которые работали над задачей на этой стадии.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для метрик стадии в рамках задачи."
+      },
+      "StageType": {
+        "enum": [
+          "Work",
+          "Buffer"
+        ],
+        "type": "string"
+      },
+      "StartSimulationRequestDto": {
+        "type": "object",
+        "properties": {
+          "seed": {
+            "type": "integer",
+            "description": "Seed для генератора случайных чисел (воспроизводимость симуляции).",
+            "format": "int64"
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiWorkerDto"
+            },
+            "description": "Список исполнителей (воркеров).",
+            "nullable": true
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/ApiWorkflowDto"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiTaskDto"
+            },
+            "description": "Список задач для симуляции.",
+            "nullable": true
+          },
+          "useVariability": {
+            "type": "boolean",
+            "description": "Использовать ли вариативность при расчёте времени выполнения задач."
+          },
+          "daysToSimulate": {
+            "type": "integer",
+            "description": "Количество дней для симуляции (опционально).\r\nЕсли null - симуляция выполняется на 1 день.\r\nЕсли 0 - симуляция выполняется до завершения всех задач.\r\nЕсли > 0 - симуляция выполняется на указанное количество дней.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для запроса на запуск симуляции с полной конфигурацией.\r\nBackend stateless — конфигурация передаётся полностью с клиента.\r\nНабор полей конфигурации (Seed/UseVariability/Workflow/Workers/Tasks) наследуется от\r\nKanbanFlowApi.Dtos.Config.ApiSimulationConfigDto — это та же конфигурация, что живёт внутри состояния\r\nзапущенной симуляции, плюс одноразовая инструкция DaysToSimulate. JSON-формат при этом не\r\nменяется: System.Text.Json сериализует унаследованные свойства в тот же плоский объект."
+      },
+      "TShirtType": {
+        "enum": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "type": "string"
+      },
+      "TaskMetricsDto": {
+        "type": "object",
+        "properties": {
+          "taskKey": {
+            "type": "string",
+            "description": "Ключ задачи (например, TASK-1).",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "description": "Краткое описание задачи.",
+            "nullable": true
+          },
+          "shirtType": {
+            "type": "string",
+            "description": "Размер задачи (S, M, L, XL).",
+            "nullable": true
+          },
+          "leadTimeDays": {
+            "type": "number",
+            "description": "Lead Time задачи в днях (от первой стадии до Done).",
+            "format": "double"
+          },
+          "flowEfficiencyPercent": {
+            "type": "number",
+            "description": "Flow Efficiency задачи в процентах.",
+            "format": "double"
+          },
+          "activeTimeDays": {
+            "type": "number",
+            "description": "Активное время (работа) в днях.",
+            "format": "double"
+          },
+          "waitTimeDays": {
+            "type": "number",
+            "description": "Время ожидания (буфер) в днях.",
+            "format": "double"
+          },
+          "status": {
+            "type": "string",
+            "description": "Статус задачи (In Progress, Done).",
+            "nullable": true
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StageMetricsDto"
+            },
+            "description": "Детальная информация по стадиям.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для метрик отдельной задачи."
+      },
+      "WorkerGradePresetDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Уникальное имя пресета (ключ для загрузки).",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Отображаемое название пресета.",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Описание пресета.",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Является ли этот пресет пресетом по умолчанию."
+          },
+          "role": {
+            "type": "string",
+            "description": "Роль, для которой подобраны параметры. Например: \"backend\", \"frontend\", \"qa\".",
+            "nullable": true
+          },
+          "grade": {
+            "type": "string",
+            "description": "Уровень грейда. Например: \"intern\", \"junior\", \"middle\", \"senior\", \"lead\".",
+            "nullable": true
+          },
+          "performance": {
+            "type": "number",
+            "description": "Производительность (100 = базовая, 150 = на 50% быстрее).",
+            "format": "double"
+          },
+          "deviationDownPercent": {
+            "type": "number",
+            "description": "Отклонение вниз в процентах (на сколько % может быть быстрее базовой оценки).",
+            "format": "double"
+          },
+          "deviationUpPercent": {
+            "type": "number",
+            "description": "Отклонение вверх в процентах (на сколько % может быть медленнее базовой оценки).",
+            "format": "double"
+          },
+          "costPerDay": {
+            "type": "integer",
+            "description": "Стоимость дня работы исполнителя (в условных единицах).",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для пресета «грейда» воркера — готовый набор Performance/Deviation/CostPerDay\r\nдля конкретной роли (backend/frontend/qa) и уровня (стажёр..лид).\r\nИспользуется фронтом только для одноразового заполнения полей воркера (quick-fill) —\r\nпосле применения значения становятся обычными редактируемыми числами."
+      },
+      "WorkerPoolPresetDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Уникальное имя пресета (ключ для загрузки).",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Отображаемое название пресета.",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Описание пресета.",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Является ли этот пресет пресетом по умолчанию."
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiWorkerDto"
+            },
+            "description": "Список работников в пуле.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO для пресета пула работников — содержит набор исполнителей."
+      }
+    }
+  }
+}

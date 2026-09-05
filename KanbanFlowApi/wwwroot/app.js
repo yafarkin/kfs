@@ -1,23 +1,41 @@
 // KanbanFlow Simulation - Client Logic
 
+// Типы DTO бэкенда — сгенерированы из OpenAPI-схемы, см. docs/api-contract.md.
+// Перегенерация: node tools/generate-api-types.mjs
+/** @typedef {import('./api-types').StartSimulationRequestDto} StartSimulationRequestDto */
+/** @typedef {import('./api-types').ApiSimulationStateDto} ApiSimulationStateDto */
+/** @typedef {import('./api-types').ApiSimulationConfigDto} ApiSimulationConfigDto */
+/** @typedef {import('./api-types').AllMetricsDto} AllMetricsDto */
+
 // Две независимые модели:
 // 1. configTemplate — редактируемый шаблон конфигурации (развёрнутый: workflow, workers, tasks, seed, useVariability)
 // 2. simulationState — текущая запущенная симуляция (config + board + history + currentDay)
+/** @type {(ApiSimulationConfigDto & { daysToSimulate?: number }) | null} */
 let configTemplate = null;
+/** @type {ApiSimulationStateDto | null} */
 let simulationState = null;
 
 let autoPlayInterval = null;
 let isAutoPlaying = false;
 let isLoading = false;
+/** @type {AllMetricsDto | null} */
 let currentAllMetrics = null;
 
-// Ключи LocalStorage для пользовательских пресетов и состояний
+// Ключи LocalStorage, которые фронт реально читает/пишет сейчас.
 const STORAGE_KEYS = {
-    PROCESS_PRESETS: 'kanbanflow_process_presets',
-    WORKER_PRESETS: 'kanbanflow_worker_presets',
     CONFIG_TEMPLATE: 'kanbanflow_config_template',
     SIMULATION: 'kanbanflow_simulation'
 };
+
+// Ключи прошлых версий: код, который их писал, давно удалён (пользовательские пресеты
+// процессов/команд, состояние редакторов). Здесь — только чтобы вычистить их у тех, у кого
+// они ещё лежат в браузере с тех времён. Новые записи по этим ключам не создаются.
+const LEGACY_STORAGE_KEYS = [
+    'kanbanflow_process_presets',
+    'kanbanflow_worker_presets',
+    'kanbanflow_worker_editor',
+    'kanbanflow_task_editor'
+];
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,14 +64,11 @@ function clearAllLocalStorage() {
     }
 
     try {
-        // Удаляем все ключи KanbanFlow
+        // Удаляем все ключи KanbanFlow — актуальные и легаси с прошлых версий
         const keysToRemove = [
-            STORAGE_KEYS.PROCESS_PRESETS,
-            STORAGE_KEYS.WORKER_PRESETS,
             STORAGE_KEYS.CONFIG_TEMPLATE,
             STORAGE_KEYS.SIMULATION,
-            'kanbanflow_worker_editor',  // Состояние редактора команд
-            'kanbanflow_task_editor'     // Состояние редактора задач
+            ...LEGACY_STORAGE_KEYS
         ];
 
         keysToRemove.forEach(key => localStorage.removeItem(key));
@@ -257,6 +272,10 @@ function syncConfigTemplateFromUi() {
 }
 
 // Проверяет configTemplate и запрашивает у backend новое состояние симуляции (day 0, если daysToSimulate = null)
+/**
+ * @param {number|null} daysToSimulate
+ * @returns {Promise<ApiSimulationStateDto>}
+ */
 async function requestSimulationStart(daysToSimulate) {
     syncConfigTemplateFromUi();
 
@@ -269,6 +288,7 @@ async function requestSimulationStart(daysToSimulate) {
 
     // configTemplate.workflow уже хранится в формате backend API (transitions вложены в стадии),
     // отдельного преобразования не требуется.
+    /** @type {StartSimulationRequestDto} */
     const request = {
         seed: configTemplate.seed || 42,
         useVariability: configTemplate.useVariability ?? true,
@@ -375,10 +395,10 @@ async function simulateDay() {
     updateLoadingIndicator();
 
     try {
-        // Обновляем состояние вариативности в конфиге
-        const variabilityToggle = document.getElementById('variabilityToggle');
-        simulationState.config.useVariability = variabilityToggle?.checked ?? true;
-
+        // useVariability НЕ трогаем: он зафиксирован в simulationState.config при /start.
+        // Менять режим детерминизма посреди прогона нельзя — это смешало бы дни в разных
+        // режимах в одном прогоне и сломало воспроизводимость через seed + RandomCallCount.
+        // Тумблер заблокирован в updateControls(), пока идёт симуляция; для смены — сброс к дню 0.
         const response = await fetch('/api/simulation/simulate-day', {
             method: 'POST',
             headers: {
@@ -800,6 +820,18 @@ function updateControls() {
     if (btnSimulateDay) btnSimulateDay.disabled = !isSimulationRunning;
     if (btnSimulateToEnd) btnSimulateToEnd.disabled = !isSimulationRunning;
     if (btnAutoPlay) btnAutoPlay.disabled = !isSimulationRunning;
+
+    // Seed и вариативность применяются только при /start и вшиты в simulationState.config.
+    // Пока идёт прогон — блокируем, иначе пользователь думает, что переключил режим на лету
+    // (а раньше это ещё и тихо ломало воспроизводимость, см. simulateDay).
+    const seedInput = document.getElementById('seedInput');
+    const variabilityToggle = document.getElementById('variabilityToggle');
+    const lockHint = 'Заблокировано во время прогона. Чтобы изменить — сбросьте симуляцию к дню 0.';
+    for (const el of [seedInput, variabilityToggle]) {
+        if (!el) continue;
+        el.disabled = isSimulationRunning;
+        el.title = isSimulationRunning ? lockHint : '';
+    }
 
     if (currentDay) {
         currentDay.textContent = simulationState?.currentDay || 0;

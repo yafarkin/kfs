@@ -5,12 +5,27 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <!-- XML-докстринги DTO попадают в OpenAPI-схему и дальше в wwwroot/api-types.d.ts.
+             CS1591 (нет docstring у public-члена) гасим — документируем только контракт. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+        <!-- Даёт MSBuild-таргет GenerateOpenApiDocuments: пишет openapi/KanbanFlowApi.json
+             из Swagger без запуска сервера. Вызывается явно (tools/generate-api-types.mjs),
+             НЕ на каждый build — см. docs/api-contract.md. -->
+        <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="9.0.0" PrivateAssets="all" />
     </ItemGroup>
+
+    <PropertyGroup>
+        <!-- OpenApiGenerateDocumentsOnBuild намеренно НЕ включаем (дефолт false в SDK) —
+             иначе каждый build поднимал бы приложение ради схемы. -->
+        <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/openapi</OpenApiDocumentsDirectory>
+        <OpenApiGenerateDocumentsOptions>--file-name KanbanFlowApi</OpenApiGenerateDocumentsOptions>
+    </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\KanbanFlowSerivce\KanbanFlowSerivce.csproj" />

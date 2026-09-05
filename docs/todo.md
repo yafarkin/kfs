@@ -12,13 +12,15 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   `SimulationController` (а не имитируют его логику), с полным DTO↔domain roundtrip через
   `ApiMapper` на каждом дне и проверкой метрик после полного прогона. Закрывает часть дыр
   ниже, но не все.
+- ✅ Добавлен `HttpEndpointTests.cs` — 12 тестов на уровне настоящего HTTP через
+  `WebApplicationFactory<Program>` (пакет `Microsoft.AspNetCore.Mvc.Testing`, в `Program.cs`
+  добавлен `public partial class Program`). Покрывают именно границу запрос↔DTO: полный цикл
+  `/start → /simulate-day → /all-metrics` через реальный JSON-биндинг; enum сериализуется
+  строкой, а не числом; рукописный camelCase-JSON «как шлёт фронт» биндится корректно
+  (в т.ч. `shirtType` не молчит в дефолт enum); дубли логинов / пустой `{}` / битый JSON →
+  400 с JSON, а не 500; GET-пресеты и `tasks/validate`. Всего тестов в проекте: 198.
 
 ### Осталось
-- **Нет тестов на уровне настоящего HTTP.** Все 184+ теста (включая новые
-  `EndToEndSimulationTests`) вызывают C#-классы/контроллер напрямую в процессе — ни один не
-  поднимает `WebApplicationFactory` и не бьёт по `/api/...` через настоящий JSON-биндинг
-  ASP.NET. Баги сериализации на границе запрос↔DTO (например, отсутствующее поле в JSON,
-  неправильный `[FromBody]`) такие тесты в принципе не поймают.
 - **Нет браузерных E2E-тестов в CI** (Playwright/Cypress). Весь визуальный слой — доска,
   редактор конфигурации, анимация перемещения карточек — не защищён от регрессий ничем, кроме
   ручной проверки по запросу. За этот проект уже несколько раз баг находился только руками в
@@ -59,30 +61,39 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   логинами, по аналогии с уже существующей проверкой уникальности ключей задач). Регресс-тест:
   `SimulationControllerValidationTests`.
 
+### Сделано (продолжение)
+- ✅ **Контракт между C#-DTO и JS.** Из C#-DTO генерируется OpenAPI-схема
+  (`KanbanFlowApi/openapi/KanbanFlowApi.json`, MSBuild-таргет `GenerateOpenApiDocuments` от
+  `Microsoft.Extensions.ApiDescription.Server` — без запуска сервера), из неё —
+  `KanbanFlowApi/wwwroot/api-types.d.ts` (`tools/generate-api-types.mjs`, чистый Node без
+  зависимостей). XML-докстринги DTO проброшены в схему и в `.d.ts`
+  (`GenerateDocumentationFile` + `IncludeXmlComments`). Фронт (`app.js`, `config-editor.js`)
+  ссылается на типы через `/** @typedef {import('./api-types')...} */`, границы JS-проекта —
+  `wwwroot/jsconfig.json` (`checkJs: false`, точечный `// @ts-check`). CI-шаг **Check API
+  types are up to date** перегенерирует и падает на `git diff`. Оба артефакта коммитятся.
+  Подробно — `docs/api-contract.md`.
+
 ### Осталось
-- **Нет контракта между C#-DTO и JS.** Формат JSON нигде не зафиксирован, кроме как "читай
-  C#-класс и угадывай" — именно отсюда взялись все три бага этого проекта на границе
-  бэкенд/фронт (`costPerDay`, `createsValue`, формат `transitions`). Swagger/OpenAPI уже
-  подключён (`AddSwaggerGen` в `Program.cs`), но следующего шага — генерации TS/JSDoc-типов
-  для фронта из OpenAPI-схемы — нет. С ним такие рассинхроны ловились бы на этапе разработки.
+- Докстринги enum-ов из `KanbanFlowSerivce` (`ActivityType`/`StageType`/`TShirtType`) в
+  схему не попадают — у проекта `KanbanFlowSerivce` нет `GenerateDocumentationFile`.
+- Типы только на уровне схем DTO, не операций/эндпоинтов.
+- `// @ts-check` в `app.js`/`config-editor.js` не включён (нужно разобрать текущие ошибки типов).
 
 ## Движок (TaskMovementService / SimulationValidationService)
 
-- Мёртвый код в `TaskMovementService`: `GetRequiredSkillsForStage`, `HasAllRequiredSkills`
-  (строки ~548, ~564) — нигде не вызываются, можно удалить.
+- ✅ Мёртвый код в `TaskMovementService` удалён: `GetRequiredSkillsForStage`,
+  `HasAllRequiredSkills` — нигде не вызывались.
 - `SimulationValidationService.ValidateCanContinue` — самый мутный метод в движке, несколько
   почти дублирующих друг друга проверок "можно ли продолжать". Работает, но при следующем
   touch стоит упростить.
 - `TaskMovementService` (~690 строк) многовато на один класс: поиск/назначение воркера,
   топология графа стадий и вероятностные переходы можно разнести на 2 класса.
-- **Новая находка**: `simulateDay()` в `app.js` (~строка 370) на каждый день перезаписывает
-  `simulationState.config.useVariability` из текущего состояния UI-тумблера. Если пользователь
-  переключит "Вариативность" посреди уже идущей симуляции, режим детерминизма тихо меняется
-  для последующих дней, и предыдущие дни (в одном режиме) смешиваются с последующими (в
-  другом) в рамках одного прогона — подрывает воспроизводимость через `seed`+
-  `RandomCallCount`, ради которой это всё затевалось. Стоит либо блокировать смену
-  вариативности после старта симуляции, либо явно предупреждать пользователя, что это повлияет
-  только на будущие дни.
+- ✅ **Исправлено**: `simulateDay()` в `app.js` на каждый день перезаписывал
+  `simulationState.config.useVariability` из UI-тумблера — переключение "Вариативности"
+  посреди прогона тихо меняло режим детерминизма и подрывало воспроизводимость через
+  `seed`+`RandomCallCount`. Теперь `simulateDay()` не трогает `config` (значение вшито при
+  `/start`), а `updateControls()` блокирует `seedInput` и `variabilityToggle` на время
+  прогона (title-подсказка про сброс к дню 0). Хинт под тумблером в `index.html` обновлён.
 
 ## Frontend: инфраструктура
 
@@ -94,9 +105,10 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   `simulationState`), которые дёргают друг друга по имени".
 - ~1860 строк встроенного `<style>` внутри `index.html` — стоит вынести в отдельный CSS-файл
   при следующей серьёзной правке стилей.
-- Забытые ключи localStorage в `clearAllLocalStorage()` (`kanbanflow_worker_editor`,
-  `kanbanflow_process_presets`, `kanbanflow_worker_presets`) — код, который их писал, давно
-  удалён. Не вредят, но стоит либо убрать, либо задокументировать, зачем оставлены.
+- ✅ Забытые ключи localStorage разведены: `STORAGE_KEYS` теперь только актуальные
+  (`CONFIG_TEMPLATE`, `SIMULATION`), а легаси-ключи прошлых версий вынесены в
+  `LEGACY_STORAGE_KEYS` с комментарием — `clearAllLocalStorage()` их всё ещё чистит у тех,
+  у кого остались, но новых записей по ним нет.
 - ✅ **Баг (исправлено)**: `saveSimulationToStorage()` не ловила `QuotaExceededError` от
   `localStorage.setItem` — на длинных прогонах с высоким `wipLimit` (много активных назначений
   в день → по записи активности на каждое, см. `WorkProgressService.SimulateWorkDay`) итоговое
@@ -122,8 +134,9 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   ни ESLint/Prettier для JS, ни `dotnet format --verify-no-changes` для C#.
 - `<Nullable>enable</Nullable>` включён в обоих csproj, но без `TreatWarningsAsErrors` —
   предупреждения о nullability могут молча накапливаться.
-- Swagger/OpenAPI уже подключены (см. раздел DTO выше) — можно опереться на это для
-  контрактных проверок фронт/бэк, а не только для документации.
+- ✅ Swagger/OpenAPI используется для контрактных проверок фронт/бэк: CI-шаг **Check API
+  types are up to date** генерирует `api-types.d.ts` из схемы и падает на рассинхроне
+  (см. раздел DTO и `docs/api-contract.md`).
 
 ## Архитектура (не проблема, просто ограничение на будущее)
 

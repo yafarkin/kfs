@@ -542,37 +542,6 @@ public sealed class TaskMovementService
     }
 
     /// <summary>
-    ///     Получает требуемые навыки для задачи на данной стадии
-    ///     Упрощённая логика: используем навыки задачи, стадия сама решит подходит ли она
-    /// </summary>
-    private List<string> GetRequiredSkillsForStage(BoardTask task, BoardStage toStage)
-    {
-        // Используем навыки задачи
-        if (task.Task.RequiredSkills.Count > 0)
-        {
-            return task.Task.RequiredSkills;
-        }
-        
-        // Нет требований
-        return [];
-    }
-
-    /// <summary>
-    ///     Проверяет, есть ли у воркера хотя бы один требуемый навык (пересечение)
-    ///     Логика: если у воркера есть ХОТЯ БЫ ОДИН навык из requiredSkills — он подходит
-    /// </summary>
-    private bool HasAllRequiredSkills(BoardWorker worker, List<string> requiredSkills)
-    {
-        if (requiredSkills.Count == 0)
-        {
-            return true; // Нет требований к навыкам
-        }
-
-        // Проверяем пересечение: есть ли у воркера хотя бы один требуемый навык
-        return requiredSkills.Any(skill => worker.Worker.Skills.Contains(skill));
-    }
-
-    /// <summary>
     ///     Получает требуемого worker'а для задачи на конкретной стадии из AcceptableWorkers
     /// </summary>
     private static string? GetRequiredWorkerForStage(BoardTask task, BoardStage stage)
