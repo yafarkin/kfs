@@ -37,12 +37,4 @@ public sealed class CountingRandom
             NextDouble();
         }
     }
-
-    /// <summary>
-    /// Сбросить счётчик (для тестов).
-    /// </summary>
-    public void ResetCallCount()
-    {
-        CallCount = 0;
-    }
 }

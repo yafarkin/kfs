@@ -69,9 +69,6 @@ KanbanFlow/
 │   │   ├── ActivityType.cs    # Типы событий истории
 │   │   ├── StageType.cs       # Типы стадий (Buffer, Work)
 │   │   └── TShirtType.cs      # Размеры задач (S, M, L, XL)
-│   ├── Factories/
-│   │   ├── ConfigFactory.cs   # Фабрика тестовых конфигураций
-│   │   └── SimulationFactory.cs # Фабрика симуляций
 │   ├── Mappers/
 │   │   └── DomainMapper.cs    # Маппинг доменных DTO
 │   └── Services/

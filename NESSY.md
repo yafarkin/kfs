@@ -78,9 +78,6 @@ KanbanFlow/
 │   │   ├── ActivityType.cs    # WorkerTookTask, WorkerCompletedTask, TaskMoved, TaskProgressUpdated, TaskWaiting, TaskResumed, LeadTimeStarted
 │   │   ├── StageType.cs       # Buffer, Work
 │   │   └── TShirtType.cs      # S=1день, M=3дня, L=5дней, XL=8дней
-│   ├── Factories/
-│   │   ├── ConfigFactory.cs   # Фабрика тестовых конфигураций
-│   │   └── SimulationFactory.cs # Фабрика симуляций
 │   ├── Mappers/
 │   │   └── DomainMapper.cs    # Маппинг доменных DTO
 │   └── Services/
