@@ -180,7 +180,6 @@ public static class ApiMapper
             WipLimit = worker.WipLimit,
             WipCount = worker.WipCount,
             IsAvailable = worker.IsAvailable,
-            AssignedTaskKeys = worker.Assignments.Select(a => a.Task.Task.Key).ToList(),
             AssignedAssignments = worker.Assignments.Select(a => new ApiTaskAssignmentDto
             {
                 TaskKey = a.Task.Task.Key,
@@ -309,40 +308,19 @@ public static class ApiMapper
         foreach (var workerDto in dto.Workers)
         {
             var boardWorker = workersMap[workerDto.Login];
-            
-            // Используем AssignedAssignments если есть (новый формат), иначе AssignedTaskKeys (старый формат)
-            if (workerDto.AssignedAssignments.Count > 0)
+
+            boardWorker.Assignments = workerDto.AssignedAssignments.Select(a =>
             {
-                boardWorker.Assignments = workerDto.AssignedAssignments.Select(a =>
+                var task = tasksMap[a.TaskKey];
+                var stage = stagesMap[a.StageName];
+                return new BoardTaskAssignment
                 {
-                    var task = tasksMap[a.TaskKey];
-                    var stage = stagesMap[a.StageName];
-                    return new BoardTaskAssignment
-                    {
-                        Task = task,
-                        Stage = stage,
-                        DaysRequired = a.DaysRequired,
-                        DaysWorked = a.DaysWorked
-                    };
-                }).ToList();
-            }
-            else
-            {
-                // Старый формат: только ключи задач
-                boardWorker.Assignments = workerDto.AssignedTaskKeys
-                    .Select(key =>
-                    {
-                        var task = tasksMap[key];
-                        return new BoardTaskAssignment
-                        {
-                            Task = task,
-                            Stage = task.CurrentStage ?? stagesMap.Values.Single(s => s.PrevStages.Count == 0),
-                            DaysRequired = 0, // Будет установлено при первом взятии задачи
-                            DaysWorked = 0
-                        };
-                    })
-                    .ToList();
-            }
+                    Task = task,
+                    Stage = stage,
+                    DaysRequired = a.DaysRequired,
+                    DaysWorked = a.DaysWorked
+                };
+            }).ToList();
         }
 
         // Восстанавливаем SelectedNextStage для задач

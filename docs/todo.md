@@ -37,6 +37,12 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   унаследованные свойства в тот же плоский объект). Дублирующая перегрузка
   `ApiMapper.ToDomainConfig(StartSimulationRequestDto)` убрана.
 - `ConfigPresetDto` и `TaskPresetDto` удалены как мёртвый код (нигде не использовались).
+- `ApiBoardWorkerDto.AssignedTaskKeys` (дублировавшее назначения списком ключей задач) и
+  легаси-ветка в `ApiMapper.ToDomainBoard` (фолбэк на этот формат) удалены — продюсер
+  (`ToApiDto`) всегда заполнял оба поля синхронно, фронтенд `AssignedTaskKeys`/
+  `AssignedAssignments` вообще не читал (берёт назначение из `task.workerLogin`), а фикстур/
+  сохранённых JSON в старом формате в репозитории не нашлось. Остался только
+  `AssignedAssignments` (с `DaysRequired`/`DaysWorked`). Тест `ApiMapperTests.cs` обновлён.
 - `ProcessPresetDto`/`WorkerPoolPresetDto` теперь наследуются от общего `PresetDto`
   (Name/DisplayName/Description/IsDefault) вместо дублирования этой четвёрки в каждом.
 - На фронте `configTemplate.workflow.transitions` (был отдельным плоским списком) переведён
@@ -54,11 +60,6 @@ ApiSimulationConfigDto, пресетов) + сквозные тесты + ани
   `SimulationControllerValidationTests`.
 
 ### Осталось
-- **`ApiBoardWorkerDto` хранит назначения дважды**: и `AssignedTaskKeys` (список строк), и
-  `AssignedAssignments` (полные объекты). `ApiMapper.ToDomainBoard` держит ветку "если есть
-  новый формат — используем его, иначе старый" (легаси-фолбэк на случай старых экспортов).
-  Кандидат на удаление `AssignedTaskKeys` и старой ветки, если обратная совместимость со
-  старыми JSON-экспортами не важна.
 - **Нет контракта между C#-DTO и JS.** Формат JSON нигде не зафиксирован, кроме как "читай
   C#-класс и угадывай" — именно отсюда взялись все три бага этого проекта на границе
   бэкенд/фронт (`costPerDay`, `createsValue`, формат `transitions`). Swagger/OpenAPI уже

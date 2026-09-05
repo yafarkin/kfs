@@ -31,11 +31,6 @@ public sealed record ApiBoardWorkerDto
     public bool IsAvailable { get; set; }
 
     /// <summary>
-    /// Ключи задач, назначенных исполнителю.
-    /// </summary>
-    public List<string> AssignedTaskKeys { get; set; } = new();
-
-    /// <summary>
     /// Детали назначений задач (с DaysRequired/DaysWorked) для сериализации состояния.
     /// </summary>
     public List<ApiTaskAssignmentDto> AssignedAssignments { get; set; } = new();

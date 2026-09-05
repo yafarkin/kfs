@@ -492,7 +492,7 @@ public class ApiMapperTests
         // Assert
         Assert.Contains("backend", devWorker.Skills);
         Assert.True(devWorker.IsAvailable);
-        Assert.Empty(devWorker.AssignedTaskKeys);
+        Assert.Empty(devWorker.AssignedAssignments);
     }
 
     [Fact]
